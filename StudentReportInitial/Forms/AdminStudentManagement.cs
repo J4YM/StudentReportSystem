@@ -1,0 +1,775 @@
+using StudentReportInitial.Models;
+using StudentReportInitial.Data;
+using System.Data.SqlClient;
+using System.Data;
+
+namespace StudentReportInitial.Forms
+{
+    public partial class AdminStudentManagement : UserControl
+    {
+        private DataGridView dgvStudents = null!;
+        private Button btnAddStudent = null!;
+        private Button btnEditStudent = null!;
+        private Button btnDeleteStudent = null!;
+        private Button btnRefresh = null!;
+        private TextBox txtSearch = null!;
+        private ComboBox cmbGradeFilter = null!;
+        private Panel pnlStudentForm = null!;
+        private bool isEditMode = false;
+        private int selectedStudentId = -1;
+
+        public AdminStudentManagement()
+        {
+            InitializeComponent();
+            ApplyModernStyling();
+            LoadStudents();
+            LoadGuardians();
+        }
+
+        private void InitializeComponent()
+        {
+            this.SuspendLayout();
+
+            // Main container
+            this.Dock = DockStyle.Fill;
+            this.BackColor = Color.FromArgb(248, 250, 252);
+
+            // Search and filter panel
+            var pnlSearch = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 60,
+                BackColor = Color.White,
+                Padding = new Padding(20)
+            };
+
+            txtSearch = new TextBox
+            {
+                PlaceholderText = "Search students...",
+                Size = new Size(200, 30),
+                Location = new Point(20, 15)
+            };
+            txtSearch.TextChanged += TxtSearch_TextChanged;
+
+            cmbGradeFilter = new ComboBox
+            {
+                Size = new Size(150, 30),
+                Location = new Point(240, 15),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            cmbGradeFilter.Items.AddRange(new[] { "All Grades", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12" });
+            cmbGradeFilter.SelectedIndex = 0;
+            cmbGradeFilter.SelectedIndexChanged += CmbGradeFilter_SelectedIndexChanged;
+
+            btnRefresh = new Button
+            {
+                Text = "Refresh",
+                Size = new Size(70, 28),
+                Location = new Point(350, 15),
+                BackColor = Color.FromArgb(59, 130, 246),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9),
+                Cursor = Cursors.Hand
+            };
+            btnRefresh.Click += BtnRefresh_Click;
+
+            pnlSearch.Controls.AddRange(new Control[] { txtSearch, cmbGradeFilter, btnRefresh });
+
+            // Action buttons panel
+            var pnlActions = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 50,
+                BackColor = Color.White,
+                Padding = new Padding(20, 10, 20, 10)
+            };
+
+            btnAddStudent = new Button
+            {
+                Text = "Add Student",
+                Size = new Size(90, 28),
+                Location = new Point(20, 10),
+                BackColor = Color.FromArgb(34, 197, 94),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9),
+                Cursor = Cursors.Hand
+            };
+            btnAddStudent.Click += BtnAddStudent_Click;
+
+            btnEditStudent = new Button
+            {
+                Text = "Edit Student",
+                Size = new Size(90, 28),
+                Location = new Point(120, 10),
+                BackColor = Color.FromArgb(59, 130, 246),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9),
+                Cursor = Cursors.Hand
+            };
+            btnEditStudent.Click += BtnEditStudent_Click;
+
+            btnDeleteStudent = new Button
+            {
+                Text = "Delete Student",
+                Size = new Size(90, 28),
+                Location = new Point(220, 10),
+                BackColor = Color.FromArgb(239, 68, 68),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9),
+                Cursor = Cursors.Hand
+            };
+            btnDeleteStudent.Click += BtnDeleteStudent_Click;
+
+            pnlActions.Controls.AddRange(new Control[] { btnAddStudent, btnEditStudent, btnDeleteStudent });
+
+            // Data grid view
+            dgvStudents = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                ReadOnly = true,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                RowHeadersVisible = false
+            };
+            dgvStudents.SelectionChanged += DgvStudents_SelectionChanged;
+
+            // Student form panel (initially hidden)
+            pnlStudentForm = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                Visible = false,
+                Padding = new Padding(20)
+            };
+
+            this.Controls.Add(dgvStudents);
+            this.Controls.Add(pnlStudentForm);
+            this.Controls.Add(pnlActions);
+            this.Controls.Add(pnlSearch);
+
+            this.ResumeLayout(false);
+        }
+
+        private void ApplyModernStyling()
+        {
+            var font = new Font("Segoe UI", 9);
+            var headerFont = new Font("Segoe UI", 10, FontStyle.Bold);
+
+            foreach (Control control in this.Controls)
+            {
+                if (control is Button button)
+                {
+                    button.Font = font;
+                }
+                else if (control is TextBox textBox)
+                {
+                    textBox.Font = font;
+                    textBox.BorderStyle = BorderStyle.FixedSingle;
+                }
+                else if (control is ComboBox comboBox)
+                {
+                    comboBox.Font = font;
+                }
+            }
+
+            dgvStudents.Font = font;
+            dgvStudents.ColumnHeadersDefaultCellStyle.Font = headerFont;
+            dgvStudents.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
+            dgvStudents.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(51, 65, 85);
+            dgvStudents.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
+        }
+
+        private async void LoadStudents()
+        {
+            try
+            {
+                using var connection = DatabaseHelper.GetConnection();
+                await connection.OpenAsync();
+
+                var query = @"
+                    SELECT s.Id, s.StudentId, s.FirstName, s.LastName, s.DateOfBirth, s.Gender, 
+                           s.GradeLevel, s.Section, s.Email, s.Phone, s.EnrollmentDate, s.IsActive,
+                           u.FirstName + ' ' + u.LastName as GuardianName
+                    FROM Students s
+                    INNER JOIN Users u ON s.GuardianId = u.Id
+                    WHERE s.IsActive = 1
+                    ORDER BY s.EnrollmentDate DESC";
+
+                using var command = new SqlCommand(query, connection);
+                using var adapter = new SqlDataAdapter(command);
+                var dataTable = new DataTable();
+                adapter.Fill(dataTable);
+
+                dgvStudents.DataSource = dataTable;
+
+                // Format columns
+                if (dgvStudents.Columns.Count > 0)
+                {
+                    dgvStudents.Columns["Id"].Visible = false;
+                    dgvStudents.Columns["StudentId"].HeaderText = "Student ID";
+                    dgvStudents.Columns["FirstName"].HeaderText = "First Name";
+                    dgvStudents.Columns["LastName"].HeaderText = "Last Name";
+                    dgvStudents.Columns["DateOfBirth"].HeaderText = "Date of Birth";
+                    dgvStudents.Columns["Gender"].HeaderText = "Gender";
+                    dgvStudents.Columns["GradeLevel"].HeaderText = "Grade";
+                    dgvStudents.Columns["Section"].HeaderText = "Section";
+                    dgvStudents.Columns["Email"].HeaderText = "Email";
+                    dgvStudents.Columns["Phone"].HeaderText = "Phone";
+                    dgvStudents.Columns["EnrollmentDate"].HeaderText = "Enrollment Date";
+                    dgvStudents.Columns["GuardianName"].HeaderText = "Guardian";
+                    dgvStudents.Columns["IsActive"].HeaderText = "Active";
+
+                    dgvStudents.Columns["DateOfBirth"].DefaultCellStyle.Format = "MM/dd/yyyy";
+                    dgvStudents.Columns["EnrollmentDate"].DefaultCellStyle.Format = "MM/dd/yyyy";
+                }
+
+                // Clear any existing filters
+                if (dataTable.DefaultView.RowFilter != "")
+                {
+                    dataTable.DefaultView.RowFilter = "";
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading students: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void LoadGuardians()
+        {
+            try
+            {
+                using var connection = DatabaseHelper.GetConnection();
+                await connection.OpenAsync();
+
+                var query = "SELECT Id, FirstName + ' ' + LastName as FullName FROM Users WHERE Role = 3 AND IsActive = 1";
+                using var command = new SqlCommand(query, connection);
+                using var reader = await command.ExecuteReaderAsync();
+
+                // Store guardians for later use in forms
+                // This would be used when creating the student form
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading guardians: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void TxtSearch_TextChanged(object sender, EventArgs e)
+        {
+            if (dgvStudents.DataSource is DataTable dataTable)
+            {
+                var filter = $"FirstName LIKE '%{txtSearch.Text}%' OR LastName LIKE '%{txtSearch.Text}%' OR StudentId LIKE '%{txtSearch.Text}%'";
+                
+                if (cmbGradeFilter.SelectedIndex > 0)
+                {
+                    var grade = cmbGradeFilter.SelectedItem.ToString()?.Replace("Grade ", "");
+                    filter += $" AND GradeLevel = '{grade}'";
+                }
+
+                dataTable.DefaultView.RowFilter = filter;
+            }
+        }
+
+        private void CmbGradeFilter_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            TxtSearch_TextChanged(sender, e);
+        }
+
+        private void BtnRefresh_Click(object sender, EventArgs e)
+        {
+            LoadStudents();
+        }
+
+        private void DgvStudents_SelectionChanged(object sender, EventArgs e)
+        {
+            btnEditStudent.Enabled = btnDeleteStudent.Enabled = dgvStudents.SelectedRows.Count > 0;
+        }
+
+        private void BtnAddStudent_Click(object sender, EventArgs e)
+        {
+            ShowStudentForm();
+        }
+
+        private void BtnEditStudent_Click(object sender, EventArgs e)
+        {
+            if (dgvStudents.SelectedRows.Count > 0)
+            {
+                selectedStudentId = Convert.ToInt32(dgvStudents.SelectedRows[0].Cells["Id"].Value);
+                ShowStudentForm(selectedStudentId);
+            }
+        }
+
+        private async void BtnDeleteStudent_Click(object sender, EventArgs e)
+        {
+            if (dgvStudents.SelectedRows.Count > 0)
+            {
+                var result = MessageBox.Show("Are you sure you want to delete this student?", "Confirm Delete", 
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    try
+                    {
+                        var studentId = Convert.ToInt32(dgvStudents.SelectedRows[0].Cells["Id"].Value);
+                        await DeleteStudentAsync(studentId);
+                        LoadStudents();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error deleting student: {ex.Message}", "Error", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
+        private void ShowStudentForm(int studentId = -1)
+        {
+            pnlStudentForm.Controls.Clear();
+            pnlStudentForm.Visible = true;
+            dgvStudents.Visible = false;
+
+            isEditMode = studentId > 0;
+            selectedStudentId = studentId;
+
+            // Create a scrollable panel for the form content
+            var scrollPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                Padding = new Padding(10)
+            };
+
+            var lblTitle = new Label
+            {
+                Text = isEditMode ? "Edit Student" : "Add New Student",
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                ForeColor = Color.FromArgb(51, 65, 85),
+                AutoSize = true,
+                Location = new Point(20, 20)
+            };
+
+            var yPos = 50;
+            var spacing = 40;
+
+            // Student ID
+            var lblStudentId = new Label { Text = "Student ID:", Location = new Point(20, yPos), AutoSize = true };
+            var txtStudentId = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25) };
+            
+            // Auto-generate student ID for new students
+            if (!isEditMode)
+            {
+                txtStudentId.Text = GenerateStudentId();
+                txtStudentId.ReadOnly = false; // Allow manual override
+            }
+            yPos += spacing;
+
+            // First Name
+            var lblFirstName = new Label { Text = "First Name:", Location = new Point(20, yPos), AutoSize = true };
+            var txtFirstName = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25) };
+            yPos += spacing;
+
+            // Last Name
+            var lblLastName = new Label { Text = "Last Name:", Location = new Point(20, yPos), AutoSize = true };
+            var txtLastName = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25) };
+            yPos += spacing;
+
+            // Date of Birth
+            var lblDateOfBirth = new Label { Text = "Date of Birth:", Location = new Point(20, yPos), AutoSize = true };
+            var dtpDateOfBirth = new DateTimePicker { Location = new Point(20, yPos + 20), Size = new Size(250, 25) };
+            yPos += spacing;
+
+            // Gender
+            var lblGender = new Label { Text = "Gender:", Location = new Point(20, yPos), AutoSize = true };
+            var cmbGender = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+            cmbGender.Items.AddRange(new[] { "Male", "Female", "Other" });
+            yPos += spacing;
+
+            // Grade Level
+            var lblGradeLevel = new Label { Text = "Grade Level:", Location = new Point(20, yPos), AutoSize = true };
+            var cmbGradeLevel = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+            cmbGradeLevel.Items.AddRange(new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12" });
+            yPos += spacing;
+
+            // Section
+            var lblSection = new Label { Text = "Section:", Location = new Point(20, yPos), AutoSize = true };
+            var txtSection = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25) };
+            yPos += spacing;
+
+            // Email
+            var lblEmail = new Label { Text = "Email:", Location = new Point(20, yPos), AutoSize = true };
+            var txtEmail = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25) };
+            yPos += spacing;
+
+            // Phone
+            var lblPhone = new Label { Text = "Phone:", Location = new Point(20, yPos), AutoSize = true };
+            var txtPhone = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25) };
+            yPos += spacing;
+
+            // Address
+            var lblAddress = new Label { Text = "Address:", Location = new Point(20, yPos), AutoSize = true };
+            var txtAddress = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25) };
+            yPos += spacing;
+
+            // Guardian info removed - will be created automatically
+
+            // Buttons
+            var btnSave = new Button
+            {
+                Text = "Save",
+                Location = new Point(20, yPos + 20),
+                Size = new Size(90, 28),
+                BackColor = Color.FromArgb(34, 197, 94),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9),
+                Cursor = Cursors.Hand
+            };
+
+            var btnCancel = new Button
+            {
+                Text = "Cancel",
+                Location = new Point(120, yPos + 20),
+                Size = new Size(90, 28),
+                BackColor = Color.FromArgb(107, 114, 128),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9),
+                Cursor = Cursors.Hand
+            };
+
+            btnCancel.Click += (s, e) => {
+                pnlStudentForm.Visible = false;
+                dgvStudents.Visible = true;
+            };
+            btnSave.Click += async (s, e) =>
+            {
+                try
+                {
+                    var student = new Student
+                    {
+                        StudentId = txtStudentId.Text,
+                        FirstName = txtFirstName.Text,
+                        LastName = txtLastName.Text,
+                        DateOfBirth = dtpDateOfBirth.Value,
+                        Gender = cmbGender.SelectedItem?.ToString() ?? "",
+                        GradeLevel = cmbGradeLevel.SelectedItem?.ToString() ?? "",
+                        Section = txtSection.Text,
+                        Email = txtEmail.Text,
+                        Phone = txtPhone.Text,
+                        Address = txtAddress.Text,
+                        GuardianId = 0, // Will be set when creating guardian
+                        IsActive = true
+                    };
+
+                    if (isEditMode)
+                    {
+                        student.Id = selectedStudentId;
+                        await UpdateStudentAsync(student);
+                    }
+                    else
+                    {
+                        await AddStudentAsync(student);
+                    }
+
+                    pnlStudentForm.Visible = false;
+                    dgvStudents.Visible = true;
+                    LoadStudents();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error saving student: {ex.Message}", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            // Add all controls to the scrollable panel
+            scrollPanel.Controls.AddRange(new Control[] {
+                lblTitle, lblStudentId, txtStudentId, lblFirstName, txtFirstName, lblLastName, txtLastName,
+                lblDateOfBirth, dtpDateOfBirth, lblGender, cmbGender, lblGradeLevel, cmbGradeLevel,
+                lblSection, txtSection, lblEmail, txtEmail, lblPhone, txtPhone, lblAddress, txtAddress,
+                btnSave, btnCancel
+            });
+
+            // Add the scrollable panel to the main form panel
+            pnlStudentForm.Controls.Add(scrollPanel);
+
+            // Load student data if editing
+            if (isEditMode)
+            {
+                LoadStudentData(selectedStudentId, txtStudentId, txtFirstName, txtLastName, dtpDateOfBirth, 
+                    cmbGender, cmbGradeLevel, txtSection, txtEmail, txtPhone, txtAddress);
+            }
+        }
+
+        private async void LoadGuardiansForComboBox(ComboBox cmbGuardian)
+        {
+            try
+            {
+                using var connection = DatabaseHelper.GetConnection();
+                await connection.OpenAsync();
+
+                var query = "SELECT Id, FirstName + ' ' + LastName as FullName FROM Users WHERE Role = 3 AND IsActive = 1";
+                using var command = new SqlCommand(query, connection);
+                using var adapter = new SqlDataAdapter(command);
+                var dataTable = new DataTable();
+                adapter.Fill(dataTable);
+
+                cmbGuardian.DataSource = dataTable;
+                cmbGuardian.DisplayMember = "FullName";
+                cmbGuardian.ValueMember = "Id";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading guardians: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void LoadStudentData(int studentId, TextBox txtStudentId, TextBox txtFirstName, 
+            TextBox txtLastName, DateTimePicker dtpDateOfBirth, ComboBox cmbGender, ComboBox cmbGradeLevel,
+            TextBox txtSection, TextBox txtEmail, TextBox txtPhone, TextBox txtAddress)
+        {
+            try
+            {
+                using var connection = DatabaseHelper.GetConnection();
+                await connection.OpenAsync();
+
+                var query = "SELECT * FROM Students WHERE Id = @id";
+                using var command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@id", studentId);
+
+                using var reader = await command.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    txtStudentId.Text = reader.GetString("StudentId");
+                    txtFirstName.Text = reader.GetString("FirstName");
+                    txtLastName.Text = reader.GetString("LastName");
+                    dtpDateOfBirth.Value = reader.GetDateTime("DateOfBirth");
+                    cmbGender.SelectedItem = reader.GetString("Gender");
+                    cmbGradeLevel.SelectedItem = reader.GetString("GradeLevel");
+                    txtSection.Text = reader.GetString("Section");
+                    txtEmail.Text = reader.IsDBNull("Email") ? "" : reader.GetString("Email");
+                    txtPhone.Text = reader.IsDBNull("Phone") ? "" : reader.GetString("Phone");
+                    txtAddress.Text = reader.IsDBNull("Address") ? "" : reader.GetString("Address");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading student data: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async Task AddStudentAsync(Student student)
+        {
+            using var connection = DatabaseHelper.GetConnection();
+            await connection.OpenAsync();
+            using var transaction = connection.BeginTransaction();
+
+            try
+            {
+                // Generate student credentials
+                var studentUsername = GenerateStudentUsername(student);
+                var studentPassword = GenerateStudentPassword(student);
+                PasswordHasher.CreatePasswordHash(studentPassword, out string studentPasswordHash, out string studentPasswordSalt);
+
+                // First, create the student account in the Users table
+                var studentUserId = await AccountHelper.CreateStudentAccountAsync(connection, transaction, student);
+
+                // Then create the guardian account automatically
+                var guardianId = await CreateGuardianAccountAsync(connection, transaction, student);
+                var guardianUsername = GenerateGuardianUsername(student);
+                var guardianPassword = GenerateGuardianPassword(student);
+
+                // Finally, create the student record in the Students table
+                var query = @"
+                    INSERT INTO Students (StudentId, FirstName, LastName, DateOfBirth, Gender, GradeLevel, 
+                                        Section, Email, Phone, Address, GuardianId, IsActive, EnrollmentDate,
+                                        Username, PasswordHash, PasswordSalt)
+                    VALUES (@studentId, @firstName, @lastName, @dateOfBirth, @gender, @gradeLevel, 
+                            @section, @email, @phone, @address, @guardianId, @isActive, @enrollmentDate,
+                            @username, @passwordHash, @passwordSalt)";
+
+                using var command = new SqlCommand(query, connection, transaction);
+                command.Parameters.AddWithValue("@studentId", student.StudentId);
+                command.Parameters.AddWithValue("@firstName", student.FirstName);
+                command.Parameters.AddWithValue("@lastName", student.LastName);
+                command.Parameters.AddWithValue("@dateOfBirth", student.DateOfBirth);
+                command.Parameters.AddWithValue("@gender", student.Gender);
+                command.Parameters.AddWithValue("@gradeLevel", student.GradeLevel);
+                command.Parameters.AddWithValue("@section", student.Section);
+                command.Parameters.AddWithValue("@email", student.Email);
+                command.Parameters.AddWithValue("@phone", student.Phone);
+                command.Parameters.AddWithValue("@address", student.Address);
+                command.Parameters.AddWithValue("@guardianId", guardianId);
+                command.Parameters.AddWithValue("@isActive", student.IsActive);
+                command.Parameters.AddWithValue("@enrollmentDate", DateTime.Now);
+                command.Parameters.AddWithValue("@username", studentUsername);
+                command.Parameters.AddWithValue("@passwordHash", studentPasswordHash);
+                command.Parameters.AddWithValue("@passwordSalt", studentPasswordSalt);
+
+                await command.ExecuteNonQueryAsync();
+
+                transaction.Commit();
+
+                // Show success message with both sets of credentials
+                MessageBox.Show($"Student added successfully!\n\n" +
+                    $"Student account created:\n" +
+                    $"Username: {studentUsername}\n" +
+                    $"Password: {studentPassword}\n\n" +
+                    $"Guardian account created:\n" +
+                    $"Username: {guardianUsername}\n" +
+                    $"Password: {guardianPassword}\n\n" +
+                    "Please provide these credentials to both the student and guardian.", 
+                    "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                throw new Exception($"Error adding student: {ex.Message}", ex);
+            }
+        }
+
+        private async Task UpdateStudentAsync(Student student)
+        {
+            using var connection = DatabaseHelper.GetConnection();
+            await connection.OpenAsync();
+
+                var query = @"
+                UPDATE Students 
+                SET StudentId = @studentId, FirstName = @firstName, LastName = @lastName, 
+                    DateOfBirth = @dateOfBirth, Gender = @gender, GradeLevel = @gradeLevel,
+                    Section = @section, Email = @email, Phone = @phone, Address = @address
+                WHERE Id = @id";
+
+            using var command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@id", student.Id);
+            command.Parameters.AddWithValue("@studentId", student.StudentId);
+            command.Parameters.AddWithValue("@firstName", student.FirstName);
+            command.Parameters.AddWithValue("@lastName", student.LastName);
+            command.Parameters.AddWithValue("@dateOfBirth", student.DateOfBirth);
+            command.Parameters.AddWithValue("@gender", student.Gender);
+            command.Parameters.AddWithValue("@gradeLevel", student.GradeLevel);
+            command.Parameters.AddWithValue("@section", student.Section);
+            command.Parameters.AddWithValue("@email", student.Email);
+            command.Parameters.AddWithValue("@phone", student.Phone);
+            command.Parameters.AddWithValue("@address", student.Address);
+
+            await command.ExecuteNonQueryAsync();
+        }
+
+        private async Task DeleteStudentAsync(int studentId)
+        {
+            using var connection = DatabaseHelper.GetConnection();
+            await connection.OpenAsync();
+
+            var query = "UPDATE Students SET IsActive = 0 WHERE Id = @id";
+            using var command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@id", studentId);
+
+            await command.ExecuteNonQueryAsync();
+        }
+
+        private async Task<int> CreateGuardianAccountAsync(SqlConnection connection, SqlTransaction transaction, Student student)
+        {
+            var guardianUsername = GenerateGuardianUsername(student);
+            var guardianPassword = GenerateGuardianPassword(student);
+            var guardianFirstName = $"Guardian of {student.FirstName}";
+            var guardianLastName = student.LastName;
+            var guardianEmail = $"guardian.{student.StudentId.ToLower()}@school.com";
+
+            // Hash the password
+            string passwordHash, passwordSalt;
+            PasswordHasher.CreatePasswordHash(guardianPassword, out passwordHash, out passwordSalt);
+
+            var query = @"
+                INSERT INTO Users (Username, PasswordHash, PasswordSalt, FirstName, LastName, Email, Phone, Role, CreatedDate, IsActive)
+                VALUES (@username, @passwordHash, @passwordSalt, @firstName, @lastName, @email, @phone, @role, @createdDate, @isActive);
+                SELECT SCOPE_IDENTITY();";
+
+            using var command = new SqlCommand(query, connection, transaction);
+            command.Parameters.AddWithValue("@username", guardianUsername);
+            command.Parameters.AddWithValue("@passwordHash", passwordHash);
+            command.Parameters.AddWithValue("@passwordSalt", passwordSalt);
+            command.Parameters.AddWithValue("@firstName", guardianFirstName);
+            command.Parameters.AddWithValue("@lastName", guardianLastName);
+            command.Parameters.AddWithValue("@email", guardianEmail);
+            command.Parameters.AddWithValue("@phone", student.Phone);
+            command.Parameters.AddWithValue("@role", 3); // Guardian
+            command.Parameters.AddWithValue("@createdDate", DateTime.Now);
+            command.Parameters.AddWithValue("@isActive", true);
+
+            var result = await command.ExecuteScalarAsync();
+            return Convert.ToInt32(result);
+        }
+
+        private string GenerateGuardianUsername(Student student)
+        {
+            // Generate username like: guardian_STU001
+            var studentId = student.StudentId.Replace(" ", "").ToLower();
+            return $"guardian_{studentId}";
+        }
+
+        private string GenerateGuardianPassword(Student student)
+        {
+            // Generate password like: Guardian@STU001!2024
+            var year = DateTime.Now.Year;
+            var studentId = student.StudentId.Replace(" ", "");
+            return $"Guardian@{studentId}!{year}";
+        }
+
+        private string GenerateStudentUsername(Student student)
+        {
+            // Format: studentnumber@baliuag.sti.edu.ph
+            var studentNumber = student.StudentId.Replace("-", ""); // Remove dashes from student ID
+            return $"{studentNumber}@baliuag.sti.edu.ph";
+        }
+
+        private string GenerateStudentPassword(Student student)
+        {
+            // Format: studentnumber@LastName
+            return $"{student.StudentId}@{student.LastName}";
+        }
+
+        private string GenerateStudentId()
+        {
+            // Generate student ID like: 24-0001 (year-sequence)
+            var year = DateTime.Now.Year.ToString().Substring(2);
+            var sequence = GetNextStudentSequence();
+            return $"{year}-{sequence:D4}";
+        }
+
+        private int GetNextStudentSequence()
+        {
+            try
+            {
+                using var connection = DatabaseHelper.GetConnection();
+                connection.Open();
+                
+                var query = "SELECT COUNT(*) FROM Students WHERE YEAR(EnrollmentDate) = @year";
+                using var command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@year", DateTime.Now.Year);
+                
+                var count = Convert.ToInt32(command.ExecuteScalar());
+                return count + 1;
+            }
+            catch
+            {
+                return 1; // Default to 1 if there's an error
+            }
+        }
+    }
+}

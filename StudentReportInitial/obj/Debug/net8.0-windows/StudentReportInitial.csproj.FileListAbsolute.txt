@@ -1,0 +1,82 @@
+Z:/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.csproj.AssemblyReference.cache
+Z:/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.Form1.resources
+Z:/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.Forms.AdminSubjectManagement.resources
+Z:/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.Forms.MainDashboard.resources
+Z:/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.csproj.GenerateResource.cache
+Z:/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.GeneratedMSBuildEditorConfig.editorconfig
+Z:/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.AssemblyInfoInputs.cache
+Z:/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.AssemblyInfo.cs
+Z:/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.csproj.CoreCompileInputs.cache
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.csproj.AssemblyReference.cache
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.Form1.resources
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.Forms.AdminSubjectManagement.resources
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.Forms.MainDashboard.resources
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.csproj.GenerateResource.cache
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.GeneratedMSBuildEditorConfig.editorconfig
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.AssemblyInfoInputs.cache
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.AssemblyInfo.cs
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.csproj.CoreCompileInputs.cache
+Z:/StudentReportInitial/bin/Debug/net8.0-windows/StudentReportInitial.exe
+Z:/StudentReportInitial/bin/Debug/net8.0-windows/StudentReportInitial.deps.json
+Z:/StudentReportInitial/bin/Debug/net8.0-windows/StudentReportInitial.runtimeconfig.json
+Z:/StudentReportInitial/bin/Debug/net8.0-windows/StudentReportInitial.dll
+Z:/StudentReportInitial/bin/Debug/net8.0-windows/StudentReportInitial.pdb
+Z:/StudentReportInitial/bin/Debug/net8.0-windows/System.Data.SqlClient.dll
+Z:/StudentReportInitial/bin/Debug/net8.0-windows/runtimes/win-arm64/native/sni.dll
+Z:/StudentReportInitial/bin/Debug/net8.0-windows/runtimes/win-x64/native/sni.dll
+Z:/StudentReportInitial/bin/Debug/net8.0-windows/runtimes/win-x86/native/sni.dll
+Z:/StudentReportInitial/bin/Debug/net8.0-windows/runtimes/unix/lib/net8.0/System.Data.SqlClient.dll
+Z:/StudentReportInitial/bin/Debug/net8.0-windows/runtimes/win/lib/net8.0/System.Data.SqlClient.dll
+Z:/StudentReportInitial/obj/Debug/net8.0-windows/StudentR.2DD60CF2.Up2Date
+Z:/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.dll
+Z:/StudentReportInitial/obj/Debug/net8.0-windows/refint/StudentReportInitial.dll
+Z:/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.pdb
+Z:/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.genruntimeconfig.cache
+Z:/StudentReportInitial/obj/Debug/net8.0-windows/ref/StudentReportInitial.dll
+Z:/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.Forms.LoginForm.resources
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.Forms.LoginForm.resources
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.dll
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/obj/Debug/net8.0-windows/refint/StudentReportInitial.dll
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.pdb
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/bin/Debug/net8.0-windows/StudentReportInitial
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/bin/Debug/net8.0-windows/StudentReportInitial.deps.json
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/bin/Debug/net8.0-windows/StudentReportInitial.runtimeconfig.json
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/bin/Debug/net8.0-windows/StudentReportInitial.dll
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/bin/Debug/net8.0-windows/StudentReportInitial.pdb
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/bin/Debug/net8.0-windows/System.Data.SqlClient.dll
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/bin/Debug/net8.0-windows/runtimes/win-arm64/native/sni.dll
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/bin/Debug/net8.0-windows/runtimes/win-x64/native/sni.dll
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/bin/Debug/net8.0-windows/runtimes/win-x86/native/sni.dll
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/bin/Debug/net8.0-windows/runtimes/unix/lib/net8.0/System.Data.SqlClient.dll
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/bin/Debug/net8.0-windows/runtimes/win/lib/net8.0/System.Data.SqlClient.dll
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/bin/Debug/net8.0-windows/runtimes/win/lib/net8.0/System.Diagnostics.EventLog.Messages.dll
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/obj/Debug/net8.0-windows/StudentR.2DD60CF2.Up2Date
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/obj/Debug/net8.0-windows/StudentReportInitial.genruntimeconfig.cache
+/mnt/42f8f83f-7882-4936-b08c-104d1d824aff/DOTNET PROJECTS/StudentReportInitial/obj/Debug/net8.0-windows/ref/StudentReportInitial.dll
+Z:\StudentReportInitial\bin\Debug\net8.0-windows\StudentReportInitial.exe
+Z:\StudentReportInitial\bin\Debug\net8.0-windows\StudentReportInitial.deps.json
+Z:\StudentReportInitial\bin\Debug\net8.0-windows\StudentReportInitial.runtimeconfig.json
+Z:\StudentReportInitial\bin\Debug\net8.0-windows\StudentReportInitial.dll
+Z:\StudentReportInitial\bin\Debug\net8.0-windows\StudentReportInitial.pdb
+Z:\StudentReportInitial\bin\Debug\net8.0-windows\System.Data.SqlClient.dll
+Z:\StudentReportInitial\bin\Debug\net8.0-windows\runtimes\win-arm64\native\sni.dll
+Z:\StudentReportInitial\bin\Debug\net8.0-windows\runtimes\win-x64\native\sni.dll
+Z:\StudentReportInitial\bin\Debug\net8.0-windows\runtimes\win-x86\native\sni.dll
+Z:\StudentReportInitial\bin\Debug\net8.0-windows\runtimes\unix\lib\net8.0\System.Data.SqlClient.dll
+Z:\StudentReportInitial\bin\Debug\net8.0-windows\runtimes\win\lib\net8.0\System.Data.SqlClient.dll
+Z:\StudentReportInitial\obj\Debug\net8.0-windows\StudentReportInitial.csproj.AssemblyReference.cache
+Z:\StudentReportInitial\obj\Debug\net8.0-windows\StudentReportInitial.Form1.resources
+Z:\StudentReportInitial\obj\Debug\net8.0-windows\StudentReportInitial.Forms.AdminSubjectManagement.resources
+Z:\StudentReportInitial\obj\Debug\net8.0-windows\StudentReportInitial.Forms.LoginForm.resources
+Z:\StudentReportInitial\obj\Debug\net8.0-windows\StudentReportInitial.Forms.MainDashboard.resources
+Z:\StudentReportInitial\obj\Debug\net8.0-windows\StudentReportInitial.csproj.GenerateResource.cache
+Z:\StudentReportInitial\obj\Debug\net8.0-windows\StudentReportInitial.GeneratedMSBuildEditorConfig.editorconfig
+Z:\StudentReportInitial\obj\Debug\net8.0-windows\StudentReportInitial.AssemblyInfoInputs.cache
+Z:\StudentReportInitial\obj\Debug\net8.0-windows\StudentReportInitial.AssemblyInfo.cs
+Z:\StudentReportInitial\obj\Debug\net8.0-windows\StudentReportInitial.csproj.CoreCompileInputs.cache
+Z:\StudentReportInitial\obj\Debug\net8.0-windows\StudentR.2DD60CF2.Up2Date
+Z:\StudentReportInitial\obj\Debug\net8.0-windows\StudentReportInitial.dll
+Z:\StudentReportInitial\obj\Debug\net8.0-windows\refint\StudentReportInitial.dll
+Z:\StudentReportInitial\obj\Debug\net8.0-windows\StudentReportInitial.pdb
+Z:\StudentReportInitial\obj\Debug\net8.0-windows\StudentReportInitial.genruntimeconfig.cache
+Z:\StudentReportInitial\obj\Debug\net8.0-windows\ref\StudentReportInitial.dll
