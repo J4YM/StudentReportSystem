@@ -1,6 +1,6 @@
 # Student Information and Progress Report System
 
-A comprehensive Windows Forms application built with .NET 8 for managing student information, attendance, and grades with role-based access control.
+A Windows Forms application built with .NET 8 for managing student information, attendance, and grades with role-based access control.
 
 ## Features
 
@@ -56,12 +56,6 @@ A comprehensive Windows Forms application built with .NET 8 for managing student
 - SQL Server LocalDB (included with Visual Studio)
 - Windows operating system
 
-### Installation
-1. Clone or download the project
-2. Open in Visual Studio 2022 or later
-3. Restore NuGet packages
-4. Build and run the application
-
 ### Default Login
 - **Username**: admin
 - **Password**: admin123
@@ -75,7 +69,7 @@ A comprehensive Windows Forms application built with .NET 8 for managing student
 4. Add students and assign guardians
 5. Create subjects and assign to professors
 
-### Daily Operations
+### USER LEVELS
 1. **Professors**: Record attendance and input grades
 2. **Guardians/Students**: View reports and progress
 3. **Admin**: Manage users and system settings
@@ -105,15 +99,6 @@ StudentReportInitial/
 └── Program.cs             # Application entry point
 ```
 
-## Modern UI Features
-
-- **Clean, modern design** with consistent color scheme
-- **Responsive layout** that adapts to different screen sizes
-- **Intuitive navigation** with sidebar menus
-- **Color-coded status indicators** for attendance and grades
-- **Professional typography** using Segoe UI font
-- **Smooth user experience** with proper loading states
-
 ## Security Features
 
 - **Role-based access control** ensuring users only see relevant data
@@ -130,14 +115,8 @@ StudentReportInitial/
 - Advanced reporting and analytics
 - Integration with external systems
 
-## Support
-
-For technical support or feature requests, please contact the development team.
-
 ---
 
 **Version**: 1.0.0  
-**Last Updated**: 2024  
+**Last Updated**: OCTOBER 2025 
 **Framework**: .NET 8.0 Windows Forms
-# StudentReportSystem
-# StudentReportSystem
