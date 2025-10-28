@@ -15,6 +15,8 @@ namespace StudentReportInitial.Forms
         private Panel pnlSubjectForm;
         private bool isEditMode = false;
         private int selectedSubjectId = -1;
+		private ComboBox? cmbSubjectsGradeFilter;
+		private ComboBox? cmbSubjectsSectionFilter;
 
         public AdminSubjectManagement()
         {
@@ -32,11 +34,11 @@ namespace StudentReportInitial.Forms
             this.Size = new Size(1000, 600);
             this.BackColor = Color.FromArgb(248, 250, 252);
 
-            // Action buttons panel
+			// Action buttons panel
             var pnlActions = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 50,
+				Height = 90,
                 BackColor = Color.White,
                 Padding = new Padding(20, 10, 20, 10)
             };
@@ -93,7 +95,20 @@ namespace StudentReportInitial.Forms
             };
             btnRefresh.Click += BtnRefresh_Click;
 
-            pnlActions.Controls.AddRange(new Control[] { btnAddSubject, btnEditSubject, btnDeleteSubject, btnRefresh });
+			// Filters row
+			var lblFilterGrade = new Label { Text = "Grade:", Location = new Point(450, 15), AutoSize = true };
+			cmbSubjectsGradeFilter = new ComboBox { Location = new Point(500, 12), Size = new Size(130, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+			cmbSubjectsGradeFilter.Items.AddRange(new[] { "All", "1st Year", "2nd Year", "3rd Year", "4th Year" });
+			cmbSubjectsGradeFilter.SelectedIndex = 0;
+			cmbSubjectsGradeFilter.SelectedIndexChanged += (s, e) => ApplySubjectsGridFilter();
+
+			var lblFilterSection = new Label { Text = "Section:", Location = new Point(650, 15), AutoSize = true };
+			cmbSubjectsSectionFilter = new ComboBox { Location = new Point(715, 12), Size = new Size(150, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+			cmbSubjectsSectionFilter.Items.AddRange(new[] { "All", "1A", "1B", "1C", "2A", "2B", "2C", "3A", "3B", "3C", "4A", "4B", "4C" });
+			cmbSubjectsSectionFilter.SelectedIndex = 0;
+			cmbSubjectsSectionFilter.SelectedIndexChanged += (s, e) => ApplySubjectsGridFilter();
+
+			pnlActions.Controls.AddRange(new Control[] { btnAddSubject, btnEditSubject, btnDeleteSubject, btnRefresh, lblFilterGrade, cmbSubjectsGradeFilter, lblFilterSection, cmbSubjectsSectionFilter });
 
             // Data grid view
             dgvSubjects = new DataGridView
@@ -277,16 +292,39 @@ namespace StudentReportInitial.Forms
             var txtDescription = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(300, 25) };
             yPos += spacing;
 
-            // Grade Level
-            var lblGradeLevel = new Label { Text = "Grade Level:", Location = new Point(20, yPos), AutoSize = true };
-            var cmbGradeLevel = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(300, 25), DropDownStyle = ComboBoxStyle.DropDownList };
-            cmbGradeLevel.Items.AddRange(new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12" });
-            yPos += spacing;
+			// Grade Level
+			var lblGradeLevel = new Label { Text = "Year Level:", Location = new Point(20, yPos), AutoSize = true };
+			var cmbGradeLevel = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(300, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+			cmbGradeLevel.Items.AddRange(new[] { "1st Year", "2nd Year", "3rd Year", "4th Year" });
+			yPos += spacing;
 
-            // Section
-            var lblSection = new Label { Text = "Section:", Location = new Point(20, yPos), AutoSize = true };
-            var txtSection = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(300, 25) };
-            yPos += spacing;
+			// Course
+			var lblCourse = new Label { Text = "Course:", Location = new Point(20, yPos), AutoSize = true };
+			var cmbCourse = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(300, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+			cmbCourse.Items.AddRange(new[] { "BSIT", "BSHM", "BSTM", "BSBA" });
+			yPos += spacing;
+
+			// Section Code (dependent on year level)
+			var lblSection = new Label { Text = "Section:", Location = new Point(20, yPos), AutoSize = true };
+			var cmbSectionCode = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(300, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+			yPos += spacing;
+
+			void PopulateSectionCodes()
+			{
+				cmbSectionCode.Items.Clear();
+				if (cmbGradeLevel.SelectedItem == null)
+				{
+					return;
+				}
+				var yearIdx = cmbGradeLevel.SelectedIndex + 1; // 1..4
+				var options = new[] { $"{yearIdx}A", $"{yearIdx}B", $"{yearIdx}C" };
+				cmbSectionCode.Items.AddRange(options);
+				if (cmbSectionCode.Items.Count > 0) cmbSectionCode.SelectedIndex = 0;
+			}
+
+			cmbGradeLevel.SelectedIndexChanged += (s, e) => PopulateSectionCodes();
+			if (cmbGradeLevel.Items.Count > 0) { cmbGradeLevel.SelectedIndex = 0; }
+			if (cmbCourse.Items.Count > 0) { cmbCourse.SelectedIndex = 0; }
 
             // Professor
             var lblProfessor = new Label { Text = "Professor:", Location = new Point(20, yPos), AutoSize = true };
@@ -322,17 +360,22 @@ namespace StudentReportInitial.Forms
             };
 
             btnCancel.Click += (s, e) => pnlSubjectForm.Visible = false;
-            btnSave.Click += async (s, e) =>
+			btnSave.Click += async (s, e) =>
             {
                 try
                 {
+					var composedSection = string.Empty;
+					if (cmbCourse.SelectedItem != null && cmbSectionCode.SelectedItem != null)
+					{
+						composedSection = $"{cmbCourse.SelectedItem}-{cmbSectionCode.SelectedItem}";
+					}
                     var subject = new Subject
                     {
                         Name = txtName.Text,
                         Code = txtCode.Text,
                         Description = txtDescription.Text,
-                        GradeLevel = cmbGradeLevel.SelectedItem?.ToString() ?? "",
-                        Section = txtSection.Text,
+						GradeLevel = cmbGradeLevel.SelectedItem?.ToString() ?? "",
+						Section = composedSection,
                         ProfessorId = Convert.ToInt32(cmbProfessor.SelectedValue),
                         IsActive = true
                     };
@@ -357,16 +400,16 @@ namespace StudentReportInitial.Forms
                 }
             };
 
-            pnlSubjectForm.Controls.AddRange(new Control[] {
-                lblTitle, lblName, txtName, lblCode, txtCode, lblDescription, txtDescription,
-                lblGradeLevel, cmbGradeLevel, lblSection, txtSection, lblProfessor, cmbProfessor,
-                btnSave, btnCancel
-            });
+			pnlSubjectForm.Controls.AddRange(new Control[] {
+				lblTitle, lblName, txtName, lblCode, txtCode, lblDescription, txtDescription,
+				lblGradeLevel, cmbGradeLevel, lblCourse, cmbCourse, lblSection, cmbSectionCode, lblProfessor, cmbProfessor,
+				btnSave, btnCancel
+			});
 
             // Load subject data if editing
             if (isEditMode)
             {
-                LoadSubjectData(selectedSubjectId, txtName, txtCode, txtDescription, cmbGradeLevel, txtSection, cmbProfessor);
+				LoadSubjectData(selectedSubjectId, txtName, txtCode, txtDescription, cmbGradeLevel, cmbSectionCode, cmbProfessor, cmbCourse);
             }
         }
 
@@ -394,8 +437,8 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private async void LoadSubjectData(int subjectId, TextBox txtName, TextBox txtCode, TextBox txtDescription,
-            ComboBox cmbGradeLevel, TextBox txtSection, ComboBox cmbProfessor)
+		private async void LoadSubjectData(int subjectId, TextBox txtName, TextBox txtCode, TextBox txtDescription,
+			ComboBox cmbGradeLevel, ComboBox cmbSectionCode, ComboBox cmbProfessor, ComboBox cmbCourse)
         {
             try
             {
@@ -412,8 +455,28 @@ namespace StudentReportInitial.Forms
                     txtName.Text = reader.GetString("Name");
                     txtCode.Text = reader.GetString("Code");
                     txtDescription.Text = reader.IsDBNull("Description") ? "" : reader.GetString("Description");
-                    cmbGradeLevel.SelectedItem = reader.GetString("GradeLevel");
-                    txtSection.Text = reader.GetString("Section");
+					cmbGradeLevel.SelectedItem = reader.GetString("GradeLevel");
+					var sectionVal = reader.GetString("Section");
+					// Expecting format COURSE-<nX>
+					var coursePart = sectionVal.Contains('-') ? sectionVal.Split('-')[0] : "";
+					var codePart = sectionVal.Contains('-') ? sectionVal.Split('-')[1] : sectionVal;
+					// Ensure section codes reflect current grade selection
+					if (cmbGradeLevel.SelectedIndex >= 0)
+					{
+						// repopulate codes based on grade
+						// same helper as in form setup
+						var yearIdx = cmbGradeLevel.SelectedIndex + 1;
+						cmbSectionCode.Items.Clear();
+						cmbSectionCode.Items.AddRange(new[] { $"{yearIdx}A", $"{yearIdx}B", $"{yearIdx}C" });
+					}
+					if (!string.IsNullOrEmpty(coursePart))
+					{
+						cmbCourse.SelectedItem = coursePart;
+					}
+					if (!string.IsNullOrEmpty(codePart) && cmbSectionCode.Items.Contains(codePart))
+					{
+						cmbSectionCode.SelectedItem = codePart;
+					}
                     cmbProfessor.SelectedValue = reader.GetInt32("ProfessorId");
                 }
             }
@@ -423,6 +486,26 @@ namespace StudentReportInitial.Forms
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+		private void ApplySubjectsGridFilter()
+		{
+			if (dgvSubjects.DataSource is DataTable dataTable)
+			{
+				var filters = new List<string>();
+				if (cmbSubjectsGradeFilter != null && cmbSubjectsGradeFilter.SelectedIndex > 0)
+				{
+					var grade = cmbSubjectsGradeFilter.SelectedItem?.ToString() ?? string.Empty;
+					filters.Add($"GradeLevel = '{grade.Replace("'", "''")}'");
+				}
+				if (cmbSubjectsSectionFilter != null && cmbSubjectsSectionFilter.SelectedIndex > 0)
+				{
+					var sectionCode = cmbSubjectsSectionFilter.SelectedItem?.ToString() ?? string.Empty;
+					// Section stored like COURSE-1A, so match endswith section code
+					filters.Add($"Section LIKE '%-{sectionCode.Replace("'", "''")}'");
+				}
+				dataTable.DefaultView.RowFilter = string.Join(" AND ", filters);
+			}
+		}
 
         private async Task AddSubjectAsync(Subject subject)
         {

@@ -51,13 +51,13 @@ namespace StudentReportInitial.Forms
             };
             txtSearch.TextChanged += TxtSearch_TextChanged;
 
-            cmbGradeFilter = new ComboBox
+			cmbGradeFilter = new ComboBox
             {
                 Size = new Size(150, 30),
                 Location = new Point(240, 15),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
-            cmbGradeFilter.Items.AddRange(new[] { "All Grades", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12" });
+			cmbGradeFilter.Items.AddRange(new[] { "All Grades", "1st Year", "2nd Year", "3rd Year", "4th Year" });
             cmbGradeFilter.SelectedIndex = 0;
             cmbGradeFilter.SelectedIndexChanged += CmbGradeFilter_SelectedIndexChanged;
 
@@ -266,17 +266,16 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private void TxtSearch_TextChanged(object sender, EventArgs e)
+		private void TxtSearch_TextChanged(object sender, EventArgs e)
         {
             if (dgvStudents.DataSource is DataTable dataTable)
             {
-                var filter = $"FirstName LIKE '%{txtSearch.Text}%' OR LastName LIKE '%{txtSearch.Text}%' OR StudentId LIKE '%{txtSearch.Text}%'";
-                
-                if (cmbGradeFilter.SelectedIndex > 0)
-                {
-                    var grade = cmbGradeFilter.SelectedItem.ToString()?.Replace("Grade ", "");
-                    filter += $" AND GradeLevel = '{grade}'";
-                }
+				var filter = $"FirstName LIKE '%{txtSearch.Text}%' OR LastName LIKE '%{txtSearch.Text}%' OR StudentId LIKE '%{txtSearch.Text}%'";
+				if (cmbGradeFilter.SelectedIndex > 0)
+				{
+					var grade = cmbGradeFilter.SelectedItem?.ToString()?.Replace("'", "''");
+					filter += $" AND GradeLevel = '{grade}'";
+				}
 
                 dataTable.DefaultView.RowFilter = filter;
             }
@@ -397,18 +396,35 @@ namespace StudentReportInitial.Forms
             cmbGender.Items.AddRange(new[] { "Male", "Female", "Other" });
             yPos += spacing;
 
-            // Grade Level
-            var lblGradeLevel = new Label { Text = "Year Level:", Location = new Point(20, yPos), AutoSize = true };
-            var cmbGradeLevel = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), DropDownStyle = ComboBoxStyle.DropDownList };
-            cmbGradeLevel.Items.AddRange(new[] { "1st Year", "2nd Year", "3rd Year", "4th Year" });
-            yPos += spacing;
+			// Grade Level
+			var lblGradeLevel = new Label { Text = "Year Level:", Location = new Point(20, yPos), AutoSize = true };
+			var cmbGradeLevel = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+			cmbGradeLevel.Items.AddRange(new[] { "1st Year", "2nd Year", "3rd Year", "4th Year" });
+			yPos += spacing;
 
-            // Section
-            var lblSection = new Label { Text = "Section:", Location = new Point(20, yPos), AutoSize = true };
-            var txtSection = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), DropDownStyle = ComboBoxStyle.DropDown };
-            // Add predefined IT section options
-            txtSection.Items.AddRange(new[] { "IT-1A", "IT-1B", "IT-1C", "IT-2A", "IT-2B", "IT-2C", "IT-3A", "IT-3B", "IT-3C", "IT-4A", "IT-4B", "IT-4C" });
-            yPos += spacing;
+			// Course
+			var lblCourse = new Label { Text = "Course:", Location = new Point(20, yPos), AutoSize = true };
+			var cmbCourse = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+			cmbCourse.Items.AddRange(new[] { "BSIT", "BSHM", "BSTM", "BSBA" });
+			yPos += spacing;
+
+			// Section Code (dependent)
+			var lblSection = new Label { Text = "Section:", Location = new Point(20, yPos), AutoSize = true };
+			var cmbSectionCode = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+			yPos += spacing;
+
+			void PopulateSectionCodes()
+			{
+				cmbSectionCode.Items.Clear();
+				if (cmbGradeLevel.SelectedItem == null) return;
+				var yearIdx = cmbGradeLevel.SelectedIndex + 1;
+				cmbSectionCode.Items.AddRange(new[] { $"{yearIdx}A", $"{yearIdx}B", $"{yearIdx}C" });
+				if (cmbSectionCode.Items.Count > 0) cmbSectionCode.SelectedIndex = 0;
+			}
+
+			cmbGradeLevel.SelectedIndexChanged += (s, e) => PopulateSectionCodes();
+			if (cmbGradeLevel.Items.Count > 0) cmbGradeLevel.SelectedIndex = 0;
+			if (cmbCourse.Items.Count > 0) cmbCourse.SelectedIndex = 0;
 
             // Email
             var lblEmail = new Label { Text = "Email:", Location = new Point(20, yPos), AutoSize = true };
@@ -467,8 +483,8 @@ namespace StudentReportInitial.Forms
                         LastName = txtLastName.Text,
                         DateOfBirth = dtpDateOfBirth.Value,
                         Gender = cmbGender.SelectedItem?.ToString() ?? "",
-                        GradeLevel = cmbGradeLevel.SelectedItem?.ToString() ?? "",
-                        Section = txtSection.SelectedItem?.ToString() ?? "",
+						GradeLevel = cmbGradeLevel.SelectedItem?.ToString() ?? "",
+						Section = (cmbCourse.SelectedItem != null && cmbSectionCode.SelectedItem != null) ? $"{cmbCourse.SelectedItem}-{cmbSectionCode.SelectedItem}" : "",
                         Email = txtEmail.Text,
                         Phone = txtPhone.Text,
                         Address = txtAddress.Text,
@@ -498,10 +514,10 @@ namespace StudentReportInitial.Forms
             };
 
             // Add all controls to the scrollable panel
-            scrollPanel.Controls.AddRange(new Control[] {
+			scrollPanel.Controls.AddRange(new Control[] {
                 lblTitle, lblStudentId, txtStudentId, lblFirstName, txtFirstName, lblLastName, txtLastName,
-                lblDateOfBirth, dtpDateOfBirth, lblGender, cmbGender, lblGradeLevel, cmbGradeLevel,
-                lblSection, txtSection, lblEmail, txtEmail, lblPhone, txtPhone, lblAddress, txtAddress,
+				lblDateOfBirth, dtpDateOfBirth, lblGender, cmbGender, lblGradeLevel, cmbGradeLevel,
+				lblCourse, cmbCourse, lblSection, cmbSectionCode, lblEmail, txtEmail, lblPhone, txtPhone, lblAddress, txtAddress,
                 btnSave, btnCancel
             });
 
@@ -511,8 +527,8 @@ namespace StudentReportInitial.Forms
             // Load student data if editing
             if (isEditMode)
             {
-                LoadStudentData(selectedStudentId, txtStudentId, txtFirstName, txtLastName, dtpDateOfBirth, 
-                    cmbGender, cmbGradeLevel, txtSection, txtEmail, txtPhone, txtAddress);
+				LoadStudentData(selectedStudentId, txtStudentId, txtFirstName, txtLastName, dtpDateOfBirth, 
+					cmbGender, cmbGradeLevel, cmbSectionCode, txtEmail, txtPhone, txtAddress);
             }
         }
 
@@ -540,9 +556,9 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private async void LoadStudentData(int studentId, TextBox txtStudentId, TextBox txtFirstName, 
-            TextBox txtLastName, DateTimePicker dtpDateOfBirth, ComboBox cmbGender, ComboBox cmbGradeLevel,
-            ComboBox txtSection, TextBox txtEmail, TextBox txtPhone, TextBox txtAddress)
+		private async void LoadStudentData(int studentId, TextBox txtStudentId, TextBox txtFirstName, 
+			TextBox txtLastName, DateTimePicker dtpDateOfBirth, ComboBox cmbGender, ComboBox cmbGradeLevel,
+			ComboBox cmbSectionCode, TextBox txtEmail, TextBox txtPhone, TextBox txtAddress)
         {
             try
             {
@@ -561,16 +577,21 @@ namespace StudentReportInitial.Forms
                     txtLastName.Text = reader.GetString("LastName");
                     dtpDateOfBirth.Value = reader.GetDateTime("DateOfBirth");
                     cmbGender.SelectedItem = reader.GetString("Gender");
-                    cmbGradeLevel.SelectedItem = reader.GetString("GradeLevel");
-                    var sectionValue = reader.GetString("Section");
-                    if (txtSection.Items.Contains(sectionValue))
-                    {
-                        txtSection.SelectedItem = sectionValue;
-                    }
-                    else
-                    {
-                        txtSection.SelectedItem = sectionValue; // Will show the value even if not in list
-                    }
+					cmbGradeLevel.SelectedItem = reader.GetString("GradeLevel");
+					var sectionValue = reader.GetString("Section"); // e.g., IT-1A
+					var coursePart = sectionValue.Contains('-') ? sectionValue.Split('-')[0] : "";
+					var codePart = sectionValue.Contains('-') ? sectionValue.Split('-')[1] : sectionValue;
+					// Ensure section codes reflect grade
+					if (cmbGradeLevel.SelectedIndex >= 0)
+					{
+						var yearIdx = cmbGradeLevel.SelectedIndex + 1;
+						cmbSectionCode.Items.Clear();
+						cmbSectionCode.Items.AddRange(new[] { $"{yearIdx}A", $"{yearIdx}B", $"{yearIdx}C" });
+					}
+					if (cmbSectionCode.Items.Contains(codePart))
+					{
+						cmbSectionCode.SelectedItem = codePart;
+					}
                     txtEmail.Text = reader.IsDBNull("Email") ? "" : reader.GetString("Email");
                     txtPhone.Text = reader.IsDBNull("Phone") ? "" : reader.GetString("Phone");
                     txtAddress.Text = reader.IsDBNull("Address") ? "" : reader.GetString("Address");

@@ -43,7 +43,7 @@ namespace StudentReportInitial.Forms
             // lblTitle
             // 
             lblTitle.AutoSize = true;
-            lblTitle.Location = new Point(44, 29);
+            lblTitle.Location = new Point(23, 34);
             lblTitle.Name = "lblTitle";
             lblTitle.Size = new Size(127, 15);
             lblTitle.TabIndex = 0;
@@ -52,7 +52,7 @@ namespace StudentReportInitial.Forms
             // lblSubtitle
             // 
             lblSubtitle.AutoSize = true;
-            lblSubtitle.Location = new Point(44, 68);
+            lblSubtitle.Location = new Point(44, 84);
             lblSubtitle.Name = "lblSubtitle";
             lblSubtitle.Size = new Size(165, 15);
             lblSubtitle.TabIndex = 1;
