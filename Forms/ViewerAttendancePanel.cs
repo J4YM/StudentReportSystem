@@ -190,6 +190,9 @@ namespace StudentReportInitial.Forms
         {
             try
             {
+                cmbSubject.Items.Clear();
+                cmbSubject.Items.Add("All Subjects");
+                
                 using var connection = DatabaseHelper.GetConnection();
                 await connection.OpenAsync();
 
@@ -207,6 +210,11 @@ namespace StudentReportInitial.Forms
                 while (await reader.ReadAsync())
                 {
                     cmbSubject.Items.Add(reader.GetString("Subject"));
+                }
+                
+                if (cmbSubject.Items.Count > 0)
+                {
+                    cmbSubject.SelectedIndex = 0;
                 }
             }
             catch (Exception ex)
@@ -253,13 +261,20 @@ namespace StudentReportInitial.Forms
                 var dataTable = new DataTable();
                 adapter.Fill(dataTable);
 
-                // Convert status numbers to text
+                // Add StatusText column for display
+                dataTable.Columns.Add("StatusText", typeof(string));
+                
+                // Convert status numbers to text in new column
                 foreach (DataRow row in dataTable.Rows)
                 {
                     if (row["Status"] != DBNull.Value)
                     {
                         var status = (AttendanceStatus)Convert.ToInt32(row["Status"]);
-                        row["Status"] = status.ToString();
+                        row["StatusText"] = status.ToString();
+                    }
+                    else
+                    {
+                        row["StatusText"] = "";
                     }
                 }
 
@@ -268,9 +283,11 @@ namespace StudentReportInitial.Forms
                 // Format columns
                 if (dgvAttendance.Columns.Count > 0)
                 {
+                    // Hide the integer Status column and show the text version
+                    dgvAttendance.Columns["Status"].Visible = false;
                     dgvAttendance.Columns["Subject"].HeaderText = "Subject";
                     dgvAttendance.Columns["Date"].HeaderText = "Date";
-                    dgvAttendance.Columns["Status"].HeaderText = "Status";
+                    dgvAttendance.Columns["StatusText"].HeaderText = "Status";
                     dgvAttendance.Columns["Notes"].HeaderText = "Notes";
                     dgvAttendance.Columns["RecordedDate"].HeaderText = "Recorded Date";
                     dgvAttendance.Columns["ProfessorName"].HeaderText = "Professor";
@@ -294,7 +311,7 @@ namespace StudentReportInitial.Forms
 
         private void DgvAttendance_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
-            if (dgvAttendance.Columns[e.ColumnIndex].Name == "Status")
+            if (dgvAttendance.Columns[e.ColumnIndex].Name == "StatusText")
             {
                 var status = e.Value?.ToString();
                 switch (status)

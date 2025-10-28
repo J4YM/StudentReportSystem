@@ -398,14 +398,16 @@ namespace StudentReportInitial.Forms
             yPos += spacing;
 
             // Grade Level
-            var lblGradeLevel = new Label { Text = "Grade Level:", Location = new Point(20, yPos), AutoSize = true };
+            var lblGradeLevel = new Label { Text = "Year Level:", Location = new Point(20, yPos), AutoSize = true };
             var cmbGradeLevel = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), DropDownStyle = ComboBoxStyle.DropDownList };
-            cmbGradeLevel.Items.AddRange(new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12" });
+            cmbGradeLevel.Items.AddRange(new[] { "1st Year", "2nd Year", "3rd Year", "4th Year" });
             yPos += spacing;
 
             // Section
             var lblSection = new Label { Text = "Section:", Location = new Point(20, yPos), AutoSize = true };
-            var txtSection = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25) };
+            var txtSection = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), DropDownStyle = ComboBoxStyle.DropDown };
+            // Add predefined IT section options
+            txtSection.Items.AddRange(new[] { "IT-1A", "IT-1B", "IT-1C", "IT-2A", "IT-2B", "IT-2C", "IT-3A", "IT-3B", "IT-3C", "IT-4A", "IT-4B", "IT-4C" });
             yPos += spacing;
 
             // Email
@@ -466,7 +468,7 @@ namespace StudentReportInitial.Forms
                         DateOfBirth = dtpDateOfBirth.Value,
                         Gender = cmbGender.SelectedItem?.ToString() ?? "",
                         GradeLevel = cmbGradeLevel.SelectedItem?.ToString() ?? "",
-                        Section = txtSection.Text,
+                        Section = txtSection.SelectedItem?.ToString() ?? "",
                         Email = txtEmail.Text,
                         Phone = txtPhone.Text,
                         Address = txtAddress.Text,
@@ -540,7 +542,7 @@ namespace StudentReportInitial.Forms
 
         private async void LoadStudentData(int studentId, TextBox txtStudentId, TextBox txtFirstName, 
             TextBox txtLastName, DateTimePicker dtpDateOfBirth, ComboBox cmbGender, ComboBox cmbGradeLevel,
-            TextBox txtSection, TextBox txtEmail, TextBox txtPhone, TextBox txtAddress)
+            ComboBox txtSection, TextBox txtEmail, TextBox txtPhone, TextBox txtAddress)
         {
             try
             {
@@ -560,7 +562,15 @@ namespace StudentReportInitial.Forms
                     dtpDateOfBirth.Value = reader.GetDateTime("DateOfBirth");
                     cmbGender.SelectedItem = reader.GetString("Gender");
                     cmbGradeLevel.SelectedItem = reader.GetString("GradeLevel");
-                    txtSection.Text = reader.GetString("Section");
+                    var sectionValue = reader.GetString("Section");
+                    if (txtSection.Items.Contains(sectionValue))
+                    {
+                        txtSection.SelectedItem = sectionValue;
+                    }
+                    else
+                    {
+                        txtSection.SelectedItem = sectionValue; // Will show the value even if not in list
+                    }
                     txtEmail.Text = reader.IsDBNull("Email") ? "" : reader.GetString("Email");
                     txtPhone.Text = reader.IsDBNull("Phone") ? "" : reader.GetString("Phone");
                     txtAddress.Text = reader.IsDBNull("Address") ? "" : reader.GetString("Address");

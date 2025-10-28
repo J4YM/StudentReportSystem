@@ -235,7 +235,7 @@ namespace StudentReportInitial.Forms
                     var subjectName = reader.GetString("Name");
                     var gradeLevel = reader.GetString("GradeLevel");
                     var section = reader.GetString("Section");
-                    cmbSubject.Items.Add($"{subjectName} - Grade {gradeLevel} - Section {section}");
+                    cmbSubject.Items.Add($"{subjectName} - {gradeLevel} - {section}");
                 }
             }
             catch (Exception ex)
@@ -254,8 +254,8 @@ namespace StudentReportInitial.Forms
                 var selectedSubject = cmbSubject.SelectedItem.ToString();
                 var parts = selectedSubject.Split(" - ");
                 var subjectName = parts[0];
-                var gradeLevel = parts[1].Replace("Grade ", "");
-                var section = parts[2].Replace("Section ", "");
+                var gradeLevel = parts[1];
+                var section = parts[2];
 
                 using var connection = DatabaseHelper.GetConnection();
                 await connection.OpenAsync();
