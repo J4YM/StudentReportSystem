@@ -53,7 +53,7 @@ namespace StudentReportInitial.Forms
 
 			cmbGradeFilter = new ComboBox
             {
-                Size = new Size(150, 30),
+                Size = new Size(170, 30),
                 Location = new Point(240, 15),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
@@ -64,8 +64,8 @@ namespace StudentReportInitial.Forms
             btnRefresh = new Button
             {
                 Text = "Refresh",
-                Size = new Size(70, 28),
-                Location = new Point(350, 15),
+                Size = new Size(90, 32),
+                Location = new Point(420, 14),
                 BackColor = Color.FromArgb(59, 130, 246),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -155,6 +155,11 @@ namespace StudentReportInitial.Forms
             this.Controls.Add(pnlStudentForm);
             this.Controls.Add(pnlActions);
             this.Controls.Add(pnlSearch);
+
+            UIStyleHelper.ApplyRoundedButton(btnRefresh, 10);
+            UIStyleHelper.ApplyRoundedButton(btnAddStudent, 10);
+            UIStyleHelper.ApplyRoundedButton(btnEditStudent, 10);
+            UIStyleHelper.ApplyRoundedButton(btnDeleteStudent, 10);
 
             this.ResumeLayout(false);
         }

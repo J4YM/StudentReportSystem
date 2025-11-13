@@ -52,7 +52,7 @@ namespace StudentReportInitial.Forms
 
             cmbRoleFilter = new ComboBox
             {
-                Size = new Size(150, 30),
+                Size = new Size(170, 30),
                 Location = new Point(240, 15),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
@@ -63,8 +63,8 @@ namespace StudentReportInitial.Forms
             btnRefresh = new Button
             {
                 Text = "Refresh",
-                Size = new Size(70, 28),
-                Location = new Point(350, 15),
+                Size = new Size(90, 32),
+                Location = new Point(420, 14),
                 BackColor = Color.FromArgb(59, 130, 246),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -154,6 +154,11 @@ namespace StudentReportInitial.Forms
             this.Controls.Add(pnlUserForm);
             this.Controls.Add(pnlActions);
             this.Controls.Add(pnlSearch);
+
+            UIStyleHelper.ApplyRoundedButton(btnRefresh, 10);
+            UIStyleHelper.ApplyRoundedButton(btnAddUser, 10);
+            UIStyleHelper.ApplyRoundedButton(btnEditUser, 10);
+            UIStyleHelper.ApplyRoundedButton(btnDeleteUser, 10);
 
             this.ResumeLayout(false);
         }
@@ -426,6 +431,9 @@ namespace StudentReportInitial.Forms
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             };
+
+            UIStyleHelper.ApplyRoundedButton(btnSave, 10);
+            UIStyleHelper.ApplyRoundedButton(btnCancel, 10);
 
             pnlUserForm.Controls.AddRange(new Control[] {
                 lblTitle, lblUsername, txtUsername, lblPassword, txtPassword,

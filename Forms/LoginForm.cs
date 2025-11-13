@@ -18,51 +18,65 @@ namespace StudentReportInitial.Forms
 
         private void ApplyModernStyling()
         {
-            this.BackColor = Color.FromArgb(240, 244, 248);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.Size = new Size(400, 500);
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
-            this.Text = "Student Report System - Login";
+            BackColor = Color.FromArgb(245, 247, 250);
+            StartPosition = FormStartPosition.CenterScreen;
+            ClientSize = new Size(700, 420);
+            MinimumSize = new Size(700, 420);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            Text = "Student Report System - Login";
+            AcceptButton = btnLogin;
 
-            // Title label
-            lblTitle.ForeColor = Color.FromArgb(51, 65, 85);
-            lblTitle.Font = new Font("Segoe UI", 24F, FontStyle.Bold);
-            lblTitle.TextAlign = ContentAlignment.MiddleCenter;
+            // Hero panel styling
+            pnlHero.Padding = new Padding(32, 56, 32, 32);
+            lblTitle.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
+            lblTitle.AutoSize = true;
+            lblTitle.MaximumSize = new Size(200, 0);
+            lblTitle.TextAlign = ContentAlignment.TopLeft;
+            lblHeroSubtitle.Font = new Font("Segoe UI", 10F);
+            lblHeroSubtitle.MaximumSize = new Size(200, 0);
 
-            // Subtitle label
-            lblSubtitle.ForeColor = Color.FromArgb(100, 116, 139);
+            // Login card styling
+            pnlLogin.BackColor = Color.FromArgb(245, 247, 250);
+            pnlLoginCard.BackColor = Color.White;
+            pnlLoginCard.BorderStyle = BorderStyle.None;
+            UIStyleHelper.ApplyRoundedCorners(pnlLoginCard, 18, drawBorder: true);
+
+            lblLoginHeading.Font = new Font("Segoe UI", 16F, FontStyle.Bold);
+            lblLoginHeading.Text = "Welcome back";
             lblSubtitle.Font = new Font("Segoe UI", 10F);
-            lblSubtitle.TextAlign = ContentAlignment.MiddleCenter;
+            lblSubtitle.ForeColor = Color.FromArgb(100, 116, 139);
 
-            // Username label and textbox
+            lblUsername.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             lblUsername.ForeColor = Color.FromArgb(51, 65, 85);
-            lblUsername.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            txtUsername.Font = new Font("Segoe UI", 11F);
+            txtUsername.Font = new Font("Segoe UI", 10F);
             txtUsername.BorderStyle = BorderStyle.FixedSingle;
             txtUsername.BackColor = Color.White;
             txtUsername.ForeColor = Color.FromArgb(51, 65, 85);
+            txtUsername.PlaceholderText = "Enter your username";
 
-            // Password label and textbox
+            lblPassword.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             lblPassword.ForeColor = Color.FromArgb(51, 65, 85);
-            lblPassword.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            txtPassword.Font = new Font("Segoe UI", 11F);
+            txtPassword.Font = new Font("Segoe UI", 10F);
             txtPassword.BorderStyle = BorderStyle.FixedSingle;
             txtPassword.BackColor = Color.White;
             txtPassword.ForeColor = Color.FromArgb(51, 65, 85);
+            txtPassword.PlaceholderText = "Enter your password";
 
-            // Login button
-            btnLogin.BackColor = Color.FromArgb(59, 130, 246);
+            btnLogin.BackColor = Color.FromArgb(37, 99, 235);
             btnLogin.ForeColor = Color.White;
             btnLogin.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             btnLogin.FlatStyle = FlatStyle.Flat;
             btnLogin.FlatAppearance.BorderSize = 0;
             btnLogin.Cursor = Cursors.Hand;
+            btnLogin.FlatAppearance.MouseOverBackColor = Color.FromArgb(29, 78, 216);
+            btnLogin.FlatAppearance.MouseDownBackColor = Color.FromArgb(30, 64, 175);
+            UIStyleHelper.ApplyRoundedButton(btnLogin, 14);
 
-            // Error label
             lblError.ForeColor = Color.FromArgb(239, 68, 68);
             lblError.Font = new Font("Segoe UI", 9F);
-            lblError.TextAlign = ContentAlignment.MiddleCenter;
+            lblError.TextAlign = ContentAlignment.MiddleLeft;
             lblError.Visible = false;
         }
 

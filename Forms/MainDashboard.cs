@@ -16,7 +16,7 @@ namespace StudentReportInitial.Forms
     public partial class MainDashboard : Form
     {
         private User currentUser;
-    private Panel? mainContentPanel;
+        private Panel? mainContentPanel;
 
         public MainDashboard(User user)
         {
@@ -28,48 +28,71 @@ namespace StudentReportInitial.Forms
 
         private void ApplyModernStyling()
         {
-            this.BackColor = Color.FromArgb(248, 250, 252);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.Size = new Size(1280, 720);
-            this.Text = $"Student Report System - Welcome {currentUser.FirstName} {currentUser.LastName}";
-            this.WindowState = FormWindowState.Maximized;
+            BackColor = Color.FromArgb(248, 250, 252);
+            StartPosition = FormStartPosition.CenterScreen;
+            Size = new Size(1280, 720);
+            Text = $"Student Report System - Welcome {currentUser.FirstName} {currentUser.LastName}";
+            WindowState = FormWindowState.Maximized;
 
             // Header panel
-            pnlHeader.BackColor = Color.FromArgb(59, 130, 246);
-            pnlHeader.Dock = DockStyle.Top;
-            pnlHeader.Height = 60;
+            pnlHeader.BackColor = Color.White;
+            pnlHeader.Padding = new Padding(32, 0, 32, 0);
+            pnlHeader.Height = 80;
+
+            lblAppTitle.Font = new Font("Segoe UI", 16F, FontStyle.Bold);
+            lblAppTitle.ForeColor = Color.FromArgb(30, 41, 59);
+            lblAppTitle.Text = "Student Report System";
 
             // User info label
-            lblUserInfo.ForeColor = Color.White;
-            lblUserInfo.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-            lblUserInfo.Text = $"{currentUser.FirstName} {currentUser.LastName} ({currentUser.Role})";
-            lblUserInfo.Dock = DockStyle.Right;
+            lblUserInfo.ForeColor = Color.FromArgb(30, 64, 175);
+            lblUserInfo.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             lblUserInfo.TextAlign = ContentAlignment.MiddleRight;
-            lblUserInfo.Padding = new Padding(0, 0, 15, 0);
+            lblUserInfo.AutoSize = false;
+            lblUserInfo.MaximumSize = new Size(240, 0);
+            lblUserInfo.UseMnemonic = false;
+            lblUserInfo.Text = FormatUserInfo();
 
             // Logout button
             btnLogout.BackColor = Color.FromArgb(239, 68, 68);
             btnLogout.ForeColor = Color.White;
-            btnLogout.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            btnLogout.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             btnLogout.FlatStyle = FlatStyle.Flat;
             btnLogout.FlatAppearance.BorderSize = 0;
             btnLogout.Cursor = Cursors.Hand;
-            btnLogout.Dock = DockStyle.Right;
-            btnLogout.Width = 80;
-            btnLogout.Text = "Logout";
+            btnLogout.Width = 100;
+            btnLogout.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 38, 38);
+            btnLogout.FlatAppearance.MouseDownBackColor = Color.FromArgb(185, 28, 28);
+            UIStyleHelper.ApplyRoundedButton(btnLogout, 12);
 
-            // Sidebar panel - Moved to bottom for 720p
-            pnlSidebar.BackColor = Color.FromArgb(255, 255, 255);
-            pnlSidebar.Dock = DockStyle.Bottom;
-            pnlSidebar.Height = 60;
-            pnlSidebar.BorderStyle = BorderStyle.FixedSingle;
+            // Sidebar panel
+            pnlSidebar.BackColor = Color.White;
+            pnlSidebar.Width = 260;
+            pnlSidebar.Padding = new Padding(0, 0, 0, 24);
+            pnlSidebar.BorderStyle = BorderStyle.None;
+
+            pnlSidebarHeader.BackColor = Color.White;
+            lblSidebarTitle.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            lblSidebarTitle.ForeColor = Color.FromArgb(51, 65, 85);
+            lblSidebarTitle.Text = $"{GetRoleDisplayName(currentUser.Role)} Dashboard";
+
+            flpSidebarButtons.BackColor = Color.White;
+            flpSidebarButtons.FlowDirection = FlowDirection.TopDown;
+            flpSidebarButtons.WrapContents = false;
+            flpSidebarButtons.AutoScroll = true;
+            flpSidebarButtons.Padding = new Padding(20, 10, 20, 10);
+            flpSidebarButtons.SizeChanged += (_, _) => UpdateSidebarButtonWidths();
 
             // Main content panel
-            mainContentPanel = new Panel();
-            mainContentPanel.Dock = DockStyle.Fill;
-            mainContentPanel.BackColor = Color.FromArgb(248, 250, 252);
-            mainContentPanel.Padding = new Padding(15);
-            this.Controls.Add(mainContentPanel);
+            mainContentPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(248, 250, 252),
+                Padding = new Padding(24)
+            };
+
+            Controls.Add(mainContentPanel);
+            Controls.SetChildIndex(mainContentPanel, Controls.Count - 1);
+            mainContentPanel.BringToFront();
         }
 
         private void LoadUserInterface()
@@ -91,8 +114,7 @@ namespace StudentReportInitial.Forms
 
         private void LoadAdminInterface()
         {
-            // Clear existing sidebar buttons
-            pnlSidebar.Controls.Clear();
+            ClearSidebarButtons();
 
             // Admin sidebar buttons
             var btnManageUsers = CreateSidebarButton("Manage Users", 0);
@@ -109,14 +131,12 @@ namespace StudentReportInitial.Forms
 
             // Load default panel
             LoadAdminPanel("users");
-
-            // Bring the sidebar panel to front to ensure buttons are clickable
-            pnlSidebar.BringToFront();
         }
 
         private void LoadProfessorInterface()
         {
             // Professor sidebar buttons
+            ClearSidebarButtons();
             var btnMySubjects = CreateSidebarButton("My Subjects", 0);
             var btnAttendance = CreateSidebarButton("Record Attendance", 1);
             var btnGrades = CreateSidebarButton("Record Grades", 2);
@@ -134,6 +154,7 @@ namespace StudentReportInitial.Forms
         private void LoadViewerInterface()
         {
             // Guardian/Student sidebar buttons
+            ClearSidebarButtons();
             var btnGrades = CreateSidebarButton("View Grades", 0);
             var btnAttendance = CreateSidebarButton("View Attendance", 1);
             var btnProfile = CreateSidebarButton("Profile", 2);
@@ -151,23 +172,27 @@ namespace StudentReportInitial.Forms
             var button = new Button
             {
                 Text = text,
-                Dock = DockStyle.Left,
-                Width = 120,
-                BackColor = Color.White,
+                AutoSize = false,
+                Width = flpSidebarButtons.ClientSize.Width - flpSidebarButtons.Padding.Horizontal,
+                Height = 48,
+                BackColor = Color.FromArgb(249, 250, 251),
                 ForeColor = Color.FromArgb(51, 65, 85),
-                Font = new Font("Segoe UI", 9),
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Padding = new Padding(5, 0, 5, 0)
+                Margin = new Padding(0, index == 0 ? 0 : 8, 0, 0)
             };
             button.FlatAppearance.BorderSize = 0;
+            button.FlatAppearance.MouseOverBackColor = Color.FromArgb(219, 234, 254);
+            button.FlatAppearance.MouseDownBackColor = Color.FromArgb(191, 219, 254);
 
-            button.MouseEnter += (s, e) => button.BackColor = Color.FromArgb(240, 244, 248);
-            button.MouseLeave += (s, e) => button.BackColor = Color.White;
+            button.MouseEnter += (s, e) => button.BackColor = Color.FromArgb(219, 234, 254);
+            button.MouseLeave += (s, e) => button.BackColor = Color.FromArgb(249, 250, 251);
 
-            pnlSidebar.Controls.Add(button);
-            button.BringToFront();
+            flpSidebarButtons.Controls.Add(button);
+            UpdateSidebarButtonWidths();
+            UIStyleHelper.ApplyRoundedButton(button, 12);
 
             return button;
         }
@@ -543,8 +568,30 @@ namespace StudentReportInitial.Forms
                 mainContentPanel.Controls.Add(label);
         }
 
+        private void ClearSidebarButtons()
+        {
+            flpSidebarButtons.Controls.Clear();
+        }
+
+        private void UpdateSidebarButtonWidths()
+        {
+            var targetWidth = Math.Max(120, flpSidebarButtons.ClientSize.Width - flpSidebarButtons.Padding.Horizontal);
+            foreach (Control control in flpSidebarButtons.Controls)
+            {
+                control.Width = targetWidth;
+            }
+        }
+
         private void btnLogout_Click(object sender, EventArgs e)
         {
+            var confirmation = MessageBox.Show("Are you sure you want to log out?", "Confirm Logout",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            if (confirmation != DialogResult.Yes)
+            {
+                return;
+            }
+
             // Hide the dashboard and show the login form again
             this.Hide();
             using (var loginForm = new LoginForm())
@@ -556,10 +603,11 @@ namespace StudentReportInitial.Forms
                     
                     // Clear the sidebar and content panels
                     mainContentPanel?.Controls.Clear();
-                    pnlSidebar.Controls.Clear();
-                    
+                    ClearSidebarButtons();
+
                     // Update user info and reload interface for new user
-                    lblUserInfo.Text = $"{currentUser.FirstName} {currentUser.LastName} ({currentUser.Role})";
+                    lblUserInfo.Text = FormatUserInfo();
+                    lblSidebarTitle.Text = $"{GetRoleDisplayName(currentUser.Role)} Dashboard";
                     LoadUserInterface();
                     this.Show();
                 }
@@ -569,6 +617,24 @@ namespace StudentReportInitial.Forms
                     this.Close();
                 }
             }
+        }
+
+        private string FormatUserInfo()
+        {
+            var roleDisplay = GetRoleDisplayName(currentUser.Role);
+            return $"{currentUser.FirstName} {currentUser.LastName}\n({roleDisplay})";
+        }
+
+        private static string GetRoleDisplayName(UserRole role)
+        {
+            return role switch
+            {
+                UserRole.Admin => "Administrator",
+                UserRole.Professor => "Professor",
+                UserRole.Guardian => "Guardian",
+                UserRole.Student => "Student",
+                _ => role.ToString()
+            };
         }
     }
 }
