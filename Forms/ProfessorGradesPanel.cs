@@ -483,6 +483,11 @@ namespace StudentReportInitial.Forms
                 VALUES (@studentId, @professorId, @subject, @assignmentType, @assignmentName, 
                         @score, @maxScore, @percentage, @comments, @dateRecorded, @dueDate)";
 
+            // Get professor name
+            string professorName = $"{currentProfessor.FirstName} {currentProfessor.LastName}";
+            var subjectName = gradeRecords.First().Subject;
+            var assignmentType = gradeRecords.First().AssignmentType;
+
             foreach (var grade in gradeRecords)
             {
                 using var command = new SqlCommand(insertQuery, connection);
@@ -499,6 +504,55 @@ namespace StudentReportInitial.Forms
                 command.Parameters.AddWithValue("@dueDate", grade.DueDate);
 
                 await command.ExecuteNonQueryAsync();
+
+                // Send SMS notification to student/guardian
+                try
+                {
+                    // Get student information including phone number
+                    var studentQuery = @"
+                        SELECT s.FirstName, s.LastName, s.Phone, 
+                               u.Phone as GuardianPhone
+                        FROM Students s
+                        LEFT JOIN Users u ON s.GuardianId = u.Id
+                        WHERE s.Id = @studentId";
+
+                    using var studentCommand = new SqlCommand(studentQuery, connection);
+                    studentCommand.Parameters.AddWithValue("@studentId", grade.StudentId);
+
+                    using var studentReader = await studentCommand.ExecuteReaderAsync();
+                    if (await studentReader.ReadAsync())
+                    {
+                        string studentName = $"{studentReader.GetString("FirstName")} {studentReader.GetString("LastName")}";
+                        string phoneNumber = studentReader.IsDBNull("GuardianPhone") 
+                            ? (studentReader.IsDBNull("Phone") ? "" : studentReader.GetString("Phone"))
+                            : studentReader.GetString("GuardianPhone");
+
+                        // Use student phone if guardian phone is not available
+                        if (string.IsNullOrEmpty(phoneNumber) && !studentReader.IsDBNull("Phone"))
+                        {
+                            phoneNumber = studentReader.GetString("Phone");
+                        }
+
+                        if (!string.IsNullOrEmpty(phoneNumber) && PhoneValidator.IsValidPhilippinesMobile(phoneNumber))
+                        {
+                            await SmsService.SendGradeNotificationAsync(
+                                phoneNumber,
+                                studentName,
+                                subjectName,
+                                assignmentType,
+                                grade.Score,
+                                grade.MaxScore,
+                                professorName
+                            );
+                        }
+                    }
+                    studentReader.Close();
+                }
+                catch (Exception smsEx)
+                {
+                    // Log SMS error but don't fail the grade save
+                    System.Diagnostics.Debug.WriteLine($"SMS notification failed: {smsEx.Message}");
+                }
             }
         }
     }

@@ -296,17 +296,328 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private void LoadSystemReportsPanel()
+        private async void LoadSystemReportsPanel()
         {
-            var label = new Label
+            if (mainContentPanel == null) return;
+
+            mainContentPanel.Controls.Clear();
+            mainContentPanel.BackColor = Color.FromArgb(248, 250, 252);
+            mainContentPanel.Padding = new Padding(24);
+
+            // Title
+            var lblTitle = new Label
             {
-                Text = "System Reports Panel",
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                ForeColor = Color.FromArgb(51, 65, 85),
-                AutoSize = true
+                Text = "System Reports & Statistics",
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                AutoSize = true,
+                Location = new Point(24, 24)
             };
-            if (mainContentPanel != null)
-                mainContentPanel.Controls.Add(label);
+            mainContentPanel.Controls.Add(lblTitle);
+
+            // Loading indicator
+            var lblLoading = new Label
+            {
+                Text = "Loading statistics...",
+                Font = new Font("Segoe UI", 10),
+                ForeColor = Color.FromArgb(107, 114, 128),
+                AutoSize = true,
+                Location = new Point(24, 60)
+            };
+            mainContentPanel.Controls.Add(lblLoading);
+
+            // Refresh the panel to show loading
+            mainContentPanel.Refresh();
+
+            // Load statistics asynchronously
+            var stats = await StatisticsHelper.GetSystemStatisticsAsync();
+
+            // Remove loading label
+            mainContentPanel.Controls.Remove(lblLoading);
+
+            // Create statistics cards
+            int cardWidth = 280;
+            int cardHeight = 140;
+            int spacing = 20;
+            int startX = 24;
+            int startY = 80;
+            int cardsPerRow = 3;
+
+            // Statistics cards with colors
+            var cards = new[]
+            {
+                new { Title = "Total Students", Value = stats.TotalStudents, Color = Color.FromArgb(59, 130, 246), Icon = "👥" },
+                new { Title = "Total Professors", Value = stats.TotalProfessors, Color = Color.FromArgb(34, 197, 94), Icon = "👨‍🏫" },
+                new { Title = "Total Users", Value = stats.TotalUsers, Color = Color.FromArgb(168, 85, 247), Icon = "👤" },
+                new { Title = "Total Subjects", Value = stats.TotalSubjects, Color = Color.FromArgb(236, 72, 153), Icon = "📚" },
+                new { Title = "Total Grades", Value = stats.TotalGrades, Color = Color.FromArgb(251, 146, 60), Icon = "📊" },
+                new { Title = "Attendance Records", Value = stats.TotalAttendanceRecords, Color = Color.FromArgb(14, 165, 233), Icon = "✅" }
+            };
+
+            for (int i = 0; i < cards.Length; i++)
+            {
+                int row = i / cardsPerRow;
+                int col = i % cardsPerRow;
+                int x = startX + col * (cardWidth + spacing);
+                int y = startY + row * (cardHeight + spacing);
+
+                var card = CreateStatisticsCard(cards[i].Title, cards[i].Value, cards[i].Color, cards[i].Icon, x, y, cardWidth, cardHeight);
+                mainContentPanel.Controls.Add(card);
+            }
+
+            // Create charts section
+            int chartY = startY + 2 * (cardHeight + spacing) + 20;
+            var lblChartsTitle = new Label
+            {
+                Text = "Visual Statistics",
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                AutoSize = true,
+                Location = new Point(24, chartY)
+            };
+            mainContentPanel.Controls.Add(lblChartsTitle);
+
+            // Create bar chart panel
+            int chartPanelY = chartY + 40;
+            var chartPanel = new Panel
+            {
+                Location = new Point(24, chartPanelY),
+                Size = new Size(mainContentPanel.Width - 48, 300),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.None
+            };
+            UIStyleHelper.ApplyRoundedCorners(chartPanel, 12, drawBorder: true);
+            mainContentPanel.Controls.Add(chartPanel);
+
+            // Draw bar chart
+            DrawBarChart(chartPanel, stats);
+
+            // Add refresh button
+            var btnRefresh = new Button
+            {
+                Text = "🔄 Refresh Statistics",
+                Location = new Point(mainContentPanel.Width - 200, 24),
+                Size = new Size(170, 36),
+                BackColor = Color.FromArgb(59, 130, 246),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnRefresh.FlatAppearance.BorderSize = 0;
+            btnRefresh.Click += async (s, e) => LoadSystemReportsPanel();
+            UIStyleHelper.ApplyRoundedButton(btnRefresh, 10);
+            mainContentPanel.Controls.Add(btnRefresh);
+        }
+
+        private Panel CreateStatisticsCard(string title, int value, Color accentColor, string icon, int x, int y, int width, int height)
+        {
+            var card = new Panel
+            {
+                Location = new Point(x, y),
+                Size = new Size(width, height),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.None
+            };
+            UIStyleHelper.ApplyRoundedCorners(card, 12, drawBorder: true);
+
+            // Accent line at top (add first so it's behind other elements)
+            var accentLine = new Panel
+            {
+                Location = new Point(0, 0),
+                Size = new Size(width, 4),
+                BackColor = accentColor
+            };
+            card.Controls.Add(accentLine);
+
+            // Icon label - positioned at top right, no background
+            var lblIcon = new Label
+            {
+                Text = icon,
+                Font = new Font("Segoe UI", 24),
+                Location = new Point(width - 50, 15),
+                Size = new Size(40, 40),
+                TextAlign = ContentAlignment.MiddleCenter,
+                BackColor = Color.Transparent,
+                ForeColor = accentColor
+            };
+            card.Controls.Add(lblIcon);
+
+            // Value label - positioned below accent line
+            var lblValue = new Label
+            {
+                Text = value.ToString("N0"),
+                Font = new Font("Segoe UI", 32, FontStyle.Bold),
+                ForeColor = accentColor,
+                Location = new Point(20, 20),
+                AutoSize = true,
+                BackColor = Color.Transparent
+            };
+            card.Controls.Add(lblValue);
+
+            // Title label - positioned at bottom
+            var lblTitle = new Label
+            {
+                Text = title,
+                Font = new Font("Segoe UI", 10),
+                ForeColor = Color.FromArgb(107, 114, 128),
+                Location = new Point(20, height - 35),
+                Size = new Size(width - 40, 20),
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            card.Controls.Add(lblTitle);
+
+            return card;
+        }
+
+        private void DrawBarChart(Panel panel, SystemStatistics stats)
+        {
+            panel.Paint += (sender, e) =>
+            {
+                // Validate panel dimensions
+                if (panel.Width <= 0 || panel.Height <= 0)
+                {
+                    return; // Panel not sized yet, skip drawing
+                }
+
+                var g = e.Graphics;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+                int padding = 40;
+                int chartWidth = Math.Max(0, panel.Width - 2 * padding);
+                int chartHeight = Math.Max(0, panel.Height - 2 * padding);
+                
+                // Ensure minimum chart dimensions
+                if (chartWidth < 100 || chartHeight < 100)
+                {
+                    return; // Panel too small to draw chart
+                }
+
+                int barWidth = 80;
+                int spacing = 30;
+                int startX = padding + 20;
+                int baseY = panel.Height - padding;
+
+                // Find max value for scaling
+                int maxValue = Math.Max(stats.TotalStudents, Math.Max(stats.TotalProfessors, 
+                    Math.Max(stats.TotalUsers, Math.Max(stats.TotalSubjects, 
+                    Math.Max(stats.TotalGrades, stats.TotalAttendanceRecords)))));
+
+                if (maxValue == 0) maxValue = 1; // Avoid division by zero
+
+                var chartData = new[]
+                {
+                    new { Label = "Students", Value = stats.TotalStudents, Color = Color.FromArgb(59, 130, 246) },
+                    new { Label = "Professors", Value = stats.TotalProfessors, Color = Color.FromArgb(34, 197, 94) },
+                    new { Label = "Users", Value = stats.TotalUsers, Color = Color.FromArgb(168, 85, 247) },
+                    new { Label = "Subjects", Value = stats.TotalSubjects, Color = Color.FromArgb(236, 72, 153) },
+                    new { Label = "Grades", Value = stats.TotalGrades, Color = Color.FromArgb(251, 146, 60) },
+                    new { Label = "Attendance", Value = stats.TotalAttendanceRecords, Color = Color.FromArgb(14, 165, 233) }
+                };
+
+                // Draw bars
+                for (int i = 0; i < chartData.Length; i++)
+                {
+                    int x = startX + i * (barWidth + spacing);
+                    int barHeight = Math.Max(0, (int)((double)chartData[i].Value / maxValue * chartHeight));
+                    int barY = baseY - barHeight;
+
+                    // Validate bar dimensions
+                    if (barWidth <= 0 || barHeight <= 0 || x < 0 || barY < 0 || x + barWidth > panel.Width)
+                    {
+                        continue; // Skip invalid bars
+                    }
+
+                    // Draw bar with rounded corners
+                    using (var brush = new SolidBrush(chartData[i].Color))
+                    {
+                        // For very small bars, just draw a rectangle
+                        if (barHeight < 16)
+                        {
+                            g.FillRectangle(brush, x, barY, barWidth, barHeight);
+                        }
+                        else
+                        {
+                            using (var path = new System.Drawing.Drawing2D.GraphicsPath())
+                            {
+                                int radius = 8;
+                                int diameter = Math.Min(radius * 2, Math.Min(barWidth, barHeight));
+                                
+                                if (diameter > 0)
+                                {
+                                    var arc = new Rectangle(x, barY, diameter, diameter);
+                                    if (arc.Width > 0 && arc.Height > 0)
+                                    {
+                                        path.AddArc(arc, 180, 90); // Top left
+                                    }
+                                    
+                                    arc.X = x + barWidth - diameter;
+                                    if (arc.X >= 0 && arc.Width > 0 && arc.Height > 0)
+                                    {
+                                        path.AddArc(arc, 270, 90); // Top right
+                                    }
+                                    
+                                    arc.Y = barY + barHeight - diameter;
+                                    if (arc.Y >= 0 && arc.Width > 0 && arc.Height > 0)
+                                    {
+                                        path.AddArc(arc, 0, 90); // Bottom right
+                                    }
+                                    
+                                    arc.X = x;
+                                    if (arc.X >= 0 && arc.Width > 0 && arc.Height > 0)
+                                    {
+                                        path.AddArc(arc, 90, 90); // Bottom left
+                                    }
+                                    
+                                    path.CloseFigure();
+                                    if (path.PointCount > 0)
+                                    {
+                                        g.FillPath(brush, path);
+                                    }
+                                }
+                                else
+                                {
+                                    // Fallback to rectangle if diameter is invalid
+                                    g.FillRectangle(brush, x, barY, barWidth, barHeight);
+                                }
+                            }
+                        }
+                    }
+
+                    // Draw value on top of bar
+                    if (chartData[i].Value > 0)
+                    {
+                        var valueText = chartData[i].Value.ToString("N0");
+                        var textSize = g.MeasureString(valueText, new Font("Segoe UI", 9, FontStyle.Bold));
+                        g.DrawString(valueText, new Font("Segoe UI", 9, FontStyle.Bold), 
+                            new SolidBrush(Color.FromArgb(30, 41, 59)), 
+                            x + (barWidth - textSize.Width) / 2, barY - 20);
+                    }
+
+                    // Draw label below bar
+                    var labelSize = g.MeasureString(chartData[i].Label, new Font("Segoe UI", 8));
+                    g.DrawString(chartData[i].Label, new Font("Segoe UI", 8), 
+                        new SolidBrush(Color.FromArgb(107, 114, 128)), 
+                        x + (barWidth - labelSize.Width) / 2, baseY + 10);
+                }
+
+                // Draw grid lines
+                if (chartHeight > 0 && chartWidth > 0)
+                {
+                    using (var pen = new Pen(Color.FromArgb(229, 231, 235), 1))
+                    {
+                        for (int i = 0; i <= 5; i++)
+                        {
+                            int y = baseY - (int)(chartHeight * i / 5);
+                            if (y >= 0 && y <= panel.Height)
+                            {
+                                g.DrawLine(pen, padding, y, Math.Min(panel.Width - padding, panel.Width), y);
+                            }
+                        }
+                    }
+                }
+            };
         }
 
         private void LoadProfessorSubjectsPanel()

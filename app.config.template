@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<configuration>
+  <appSettings>
+    <!-- Twilio SMS API Configuration -->
+    <!-- Get these from your Twilio Console: https://console.twilio.com -->
+    <!-- Account SID and Auth Token are found in your Twilio Console dashboard -->
+    <add key="TwilioAccountSid" value="YOUR_ACCOUNT_SID_HERE" />
+    <add key="TwilioAuthToken" value="YOUR_AUTH_TOKEN_HERE" />
+    <!-- Your Twilio phone number (E.164 format, e.g., +14155552671) -->
+    <!-- Get a phone number from: https://console.twilio.com/us1/develop/phone-numbers/manage/incoming -->
+    <add key="TwilioPhoneNumber" value="YOUR_TWILIO_PHONE_NUMBER_HERE" />
+  </appSettings>
+</configuration>
+

@@ -356,9 +356,57 @@ namespace StudentReportInitial.Forms
             yPos += spacing;
 
             // Phone
-            var lblPhone = new Label { Text = "Phone:", Location = new Point(20, yPos), AutoSize = true };
-            var txtPhone = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25) };
-            yPos += spacing;
+            var lblPhone = new Label { Text = "Phone (International format):", Location = new Point(20, yPos), AutoSize = true };
+            var txtPhone = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), PlaceholderText="+1234567890 or 0XXXXXXXXX" };
+            var lblPhoneError = new Label 
+            { 
+                Text = "", 
+                Location = new Point(20, yPos + 48), 
+                AutoSize = true,
+                ForeColor = Color.FromArgb(239, 68, 68),
+                Font = new Font("Segoe UI", 8F),
+                Visible = false
+            };
+            
+            // Phone validation on leave
+            txtPhone.Leave += (s, e) =>
+            {
+                string phone = txtPhone.Text.Trim();
+                if (!string.IsNullOrEmpty(phone))
+                {
+                    string errorMsg = PhoneValidator.GetValidationMessage(phone);
+                    if (!string.IsNullOrEmpty(errorMsg))
+                    {
+                        lblPhoneError.Text = errorMsg;
+                        lblPhoneError.Visible = true;
+                        txtPhone.BackColor = Color.FromArgb(254, 242, 242);
+                    }
+                    else
+                    {
+                        lblPhoneError.Visible = false;
+                        txtPhone.BackColor = Color.White;
+                        // Auto-format valid number
+                        txtPhone.Text = PhoneValidator.FormatPhoneNumber(phone);
+                    }
+                }
+                else
+                {
+                    lblPhoneError.Visible = false;
+                    txtPhone.BackColor = Color.White;
+                }
+            };
+
+            txtPhone.TextChanged += (s, e) =>
+            {
+                // Clear error when user starts typing
+                if (lblPhoneError.Visible)
+                {
+                    lblPhoneError.Visible = false;
+                    txtPhone.BackColor = Color.White;
+                }
+            };
+            
+            yPos += spacing + 25;
 
             // Role
             var lblRole = new Label { Text = "Role:", Location = new Point(20, yPos), AutoSize = true };
@@ -399,6 +447,45 @@ namespace StudentReportInitial.Forms
             {
                 try
                 {
+                    // Validate phone number
+                    string phone = txtPhone.Text.Trim();
+                    if (!string.IsNullOrEmpty(phone))
+                    {
+                        string phoneError = PhoneValidator.GetValidationMessage(phone);
+                        if (!string.IsNullOrEmpty(phoneError))
+                        {
+                            lblPhoneError.Text = phoneError;
+                            lblPhoneError.Visible = true;
+                            txtPhone.BackColor = Color.FromArgb(254, 242, 242);
+                            txtPhone.Focus();
+                            return;
+                        }
+                        // Format phone number before saving
+                        phone = PhoneValidator.FormatPhoneNumber(phone);
+
+                        // For new users, verify phone number with OTP
+                        if (!isEditMode)
+                        {
+                            string otpCode = SmsService.GenerateOtp();
+                            bool otpSent = await SmsService.SendOtpAsync(phone, otpCode);
+
+                            if (!otpSent)
+                            {
+                                MessageBox.Show("Failed to send verification code. Please check the phone number and try again.",
+                                    "Verification Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                return;
+                            }
+
+                            using var otpForm = new OtpVerificationForm(phone, otpCode);
+                            if (otpForm.ShowDialog() != DialogResult.OK || !otpForm.IsVerified)
+                            {
+                                MessageBox.Show("Phone number verification is required to continue.",
+                                    "Verification Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                        }
+                    }
+
                     var user = new User
                     {
                         Username = txtUsername.Text,
@@ -406,7 +493,7 @@ namespace StudentReportInitial.Forms
                         FirstName = txtFirstName.Text,
                         LastName = txtLastName.Text,
                         Email = txtEmail.Text,
-                        Phone = txtPhone.Text,
+                        Phone = phone,
                         Role = (UserRole)(cmbRole.SelectedIndex + 1),
                         IsActive = true
                     };
@@ -438,7 +525,7 @@ namespace StudentReportInitial.Forms
             pnlUserForm.Controls.AddRange(new Control[] {
                 lblTitle, lblUsername, txtUsername, lblPassword, txtPassword,
                 lblFirstName, txtFirstName, lblLastName, txtLastName,
-                lblEmail, txtEmail, lblPhone, txtPhone, lblRole, cmbRole,
+                lblEmail, txtEmail, lblPhone, txtPhone, lblPhoneError, lblRole, cmbRole,
                 btnSave, btnCancel
             });
 

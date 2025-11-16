@@ -22,6 +22,9 @@
     <Compile Update="Forms\MainDashboard.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="Forms\OtpVerificationForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="Forms\ProfessorAttendancePanel.cs">
       <SubType>UserControl</SubType>
     </Compile>
