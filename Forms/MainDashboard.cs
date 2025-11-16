@@ -31,7 +31,7 @@ namespace StudentReportInitial.Forms
             BackColor = Color.FromArgb(248, 250, 252);
             StartPosition = FormStartPosition.CenterScreen;
             Size = new Size(1280, 720);
-            Text = $"Student Report System - Welcome {currentUser.FirstName} {currentUser.LastName}";
+            Text = $"STI College Baliuag - AimONE - Welcome {currentUser.FirstName} {currentUser.LastName}";
             WindowState = FormWindowState.Maximized;
 
             // Header panel
@@ -41,7 +41,7 @@ namespace StudentReportInitial.Forms
 
             lblAppTitle.Font = new Font("Segoe UI", 16F, FontStyle.Bold);
             lblAppTitle.ForeColor = Color.FromArgb(30, 41, 59);
-            lblAppTitle.Text = "Student Report System";
+            lblAppTitle.Text = "STI College Baliuag - AimONE";
 
             // User info label
             lblUserInfo.ForeColor = Color.FromArgb(30, 64, 175);

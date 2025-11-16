@@ -62,7 +62,7 @@ namespace StudentReportInitial.Forms
             // 
             // pnlHero
             // 
-            pnlHero.BackColor = Color.FromArgb(37, 99, 235);
+            pnlHero.BackColor = Color.Transparent; // Transparent for custom paint overlay
             pnlHero.Controls.Add(lblHeroSubtitle);
             pnlHero.Controls.Add(lblTitle);
             pnlHero.Dock = DockStyle.Left;
@@ -85,7 +85,7 @@ namespace StudentReportInitial.Forms
             // 
             // pnlLogin
             // 
-            pnlLogin.BackColor = Color.FromArgb(245, 247, 250);
+            pnlLogin.BackColor = Color.Transparent; // Transparent to show background image
             pnlLogin.Controls.Add(pnlLoginCard);
             pnlLogin.Dock = DockStyle.Fill;
             pnlLogin.Location = new Point(260, 0);

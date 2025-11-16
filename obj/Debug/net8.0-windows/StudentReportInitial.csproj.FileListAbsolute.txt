@@ -116,3 +116,4 @@ C:\Users\JamesWindell\Documents\StudentReportInitial\bin\Debug\net8.0-windows\Mi
 C:\Users\JamesWindell\Documents\StudentReportInitial\bin\Debug\net8.0-windows\Microsoft.IdentityModel.Tokens.dll
 C:\Users\JamesWindell\Documents\StudentReportInitial\bin\Debug\net8.0-windows\System.IdentityModel.Tokens.Jwt.dll
 C:\Users\JamesWindell\Documents\StudentReportInitial\bin\Debug\net8.0-windows\Twilio.dll
+C:\Users\JamesWindell\Documents\StudentReportInitial\bin\Debug\net8.0-windows\Images\sti_baliuag_building.jpg
