@@ -2,6 +2,7 @@ using StudentReportInitial.Models;
 using StudentReportInitial.Data;
 using System.Data.SqlClient;
 using System.Data;
+using System.Text.RegularExpressions;
 
 namespace StudentReportInitial.Forms
 {
@@ -337,7 +338,22 @@ namespace StudentReportInitial.Forms
 
             // Password
             var lblPassword = new Label { Text = "Password:", Location = new Point(20, yPos), AutoSize = true };
-            var txtPassword = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), UseSystemPasswordChar = true };
+            var txtPassword = new TextBox
+            {
+                Location = new Point(20, yPos + 20),
+                Size = new Size(250, 25),
+                UseSystemPasswordChar = true
+            };
+            yPos += spacing;
+
+            // Confirm Password
+            var lblConfirmPassword = new Label { Text = "Confirm Password:", Location = new Point(20, yPos), AutoSize = true };
+            var txtConfirmPassword = new TextBox
+            {
+                Location = new Point(20, yPos + 20),
+                Size = new Size(250, 25),
+                UseSystemPasswordChar = true
+            };
             yPos += spacing;
 
             // First Name
@@ -443,46 +459,99 @@ namespace StudentReportInitial.Forms
                 pnlUserForm.Visible = false;
                 dgvUsers.Visible = true;
             };
+
             btnSave.Click += async (s, e) =>
             {
                 try
                 {
-                    // Validate phone number
-                    string phone = txtPhone.Text.Trim();
-                    if (!string.IsNullOrEmpty(phone))
+                    bool requiresPasswordValidation = !isEditMode ||
+                        !string.IsNullOrWhiteSpace(txtPassword.Text) ||
+                        !string.IsNullOrWhiteSpace(txtConfirmPassword.Text);
+
+                    if (requiresPasswordValidation)
                     {
-                        string phoneError = PhoneValidator.GetValidationMessage(phone);
-                        if (!string.IsNullOrEmpty(phoneError))
+                        if (string.IsNullOrWhiteSpace(txtPassword.Text))
                         {
-                            lblPhoneError.Text = phoneError;
-                            lblPhoneError.Visible = true;
-                            txtPhone.BackColor = Color.FromArgb(254, 242, 242);
-                            txtPhone.Focus();
+                            MessageBox.Show("Password is required.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            txtPassword.Focus();
                             return;
                         }
-                        // Format phone number before saving
-                        phone = PhoneValidator.FormatPhoneNumber(phone);
 
-                        // For new users, verify phone number with OTP
-                        if (!isEditMode)
+                        if (string.IsNullOrWhiteSpace(txtConfirmPassword.Text))
                         {
-                            string otpCode = SmsService.GenerateOtp();
-                            bool otpSent = await SmsService.SendOtpAsync(phone, otpCode);
+                            MessageBox.Show("Please confirm the password.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            txtConfirmPassword.Focus();
+                            return;
+                        }
 
-                            if (!otpSent)
-                            {
-                                MessageBox.Show("Failed to send verification code. Please check the phone number and try again.",
-                                    "Verification Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                return;
-                            }
+                        if (txtPassword.Text != txtConfirmPassword.Text)
+                        {
+                            MessageBox.Show("Passwords do not match.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            txtConfirmPassword.Focus();
+                            return;
+                        }
+                    }
 
-                            using var otpForm = new OtpVerificationForm(phone, otpCode);
-                            if (otpForm.ShowDialog() != DialogResult.OK || !otpForm.IsVerified)
-                            {
-                                MessageBox.Show("Phone number verification is required to continue.",
-                                    "Verification Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                                return;
-                            }
+                    // Validate email
+                    string email = txtEmail.Text.Trim();
+                    if (string.IsNullOrWhiteSpace(email) || !IsValidEmail(email))
+                    {
+                        MessageBox.Show("Please enter a valid email address.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        txtEmail.Focus();
+                        return;
+                    }
+
+                    // Validate phone number
+                    string phone = txtPhone.Text.Trim();
+                    if (string.IsNullOrEmpty(phone))
+                    {
+                        lblPhoneError.Text = "Phone number is required.";
+                        lblPhoneError.Visible = true;
+                        txtPhone.BackColor = Color.FromArgb(254, 242, 242);
+                        txtPhone.Focus();
+                        return;
+                    }
+
+                    string phoneError = PhoneValidator.GetValidationMessage(phone);
+                    if (!string.IsNullOrEmpty(phoneError))
+                    {
+                        lblPhoneError.Text = phoneError;
+                        lblPhoneError.Visible = true;
+                        txtPhone.BackColor = Color.FromArgb(254, 242, 242);
+                        txtPhone.Focus();
+                        return;
+                    }
+
+                    // Format phone number before saving
+                    phone = PhoneValidator.FormatPhoneNumber(phone);
+                    if (string.IsNullOrEmpty(phone))
+                    {
+                        lblPhoneError.Text = "Invalid phone number format.";
+                        lblPhoneError.Visible = true;
+                        txtPhone.BackColor = Color.FromArgb(254, 242, 242);
+                        txtPhone.Focus();
+                        return;
+                    }
+
+                    // For new users, verify phone number with OTP
+                    if (!isEditMode)
+                    {
+                        string otpCode = SmsService.GenerateOtp();
+                        bool otpSent = await SmsService.SendOtpAsync(phone, otpCode);
+
+                        if (!otpSent)
+                        {
+                            MessageBox.Show("Failed to send verification code. Please check the phone number and try again.",
+                                "Verification Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+
+                        using var otpForm = new OtpVerificationForm(phone, otpCode);
+                        if (otpForm.ShowDialog() != DialogResult.OK || !otpForm.IsVerified)
+                        {
+                            MessageBox.Show("Phone number verification is required to continue.",
+                                "Verification Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
                         }
                     }
 
@@ -492,10 +561,10 @@ namespace StudentReportInitial.Forms
                         Password = txtPassword.Text,
                         FirstName = txtFirstName.Text,
                         LastName = txtLastName.Text,
-                        Email = txtEmail.Text,
+                        Email = email,
                         Phone = phone,
                         Role = (UserRole)(cmbRole.SelectedIndex + 1),
-                        IsActive = true
+                        IsActive = true,
                     };
 
                     if (isEditMode)
@@ -514,7 +583,7 @@ namespace StudentReportInitial.Forms
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error saving user: {ex.Message}", "Error", 
+                    MessageBox.Show($"Error saving user: {ex.Message}", "Error",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             };
@@ -524,6 +593,7 @@ namespace StudentReportInitial.Forms
 
             pnlUserForm.Controls.AddRange(new Control[] {
                 lblTitle, lblUsername, txtUsername, lblPassword, txtPassword,
+                lblConfirmPassword, txtConfirmPassword,
                 lblFirstName, txtFirstName, lblLastName, txtLastName,
                 lblEmail, txtEmail, lblPhone, txtPhone, lblPhoneError, lblRole, cmbRole,
                 btnSave, btnCancel
@@ -532,7 +602,7 @@ namespace StudentReportInitial.Forms
             // Load user data if editing
             if (isEditMode)
             {
-                LoadUserData(selectedUserId, txtUsername, txtPassword, txtFirstName, txtLastName, txtEmail, txtPhone, cmbRole);
+                LoadUserData(selectedUserId, txtUsername, txtPassword, txtConfirmPassword, txtFirstName, txtLastName, txtEmail, txtPhone, cmbRole);
             }
             }
             catch (Exception ex)
@@ -542,8 +612,8 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private async void LoadUserData(int userId, TextBox txtUsername, TextBox txtPassword, TextBox txtFirstName, 
-            TextBox txtLastName, TextBox txtEmail, TextBox txtPhone, ComboBox cmbRole)
+        private async void LoadUserData(int userId, TextBox txtUsername, TextBox txtPassword, TextBox txtConfirmPassword,
+            TextBox txtFirstName, TextBox txtLastName, TextBox txtEmail, TextBox txtPhone, ComboBox cmbRole)
         {
             try
             {
@@ -558,7 +628,9 @@ namespace StudentReportInitial.Forms
                 if (await reader.ReadAsync())
                 {
                     txtUsername.Text = reader.GetString("Username");
-                    txtPassword.Text = reader.GetString("Password");
+                    // Clear password fields in edit mode
+                    txtPassword.Text = "";
+                    txtConfirmPassword.Text = "";
                     txtFirstName.Text = reader.GetString("FirstName");
                     txtLastName.Text = reader.GetString("LastName");
                     txtEmail.Text = reader.GetString("Email");
@@ -578,12 +650,12 @@ namespace StudentReportInitial.Forms
             using var connection = DatabaseHelper.GetConnection();
             await connection.OpenAsync();
 
-            // Hash the password
+            // Hash the password (declared only ONCE)
             PasswordHasher.CreatePasswordHash(user.Password, out string passwordHash, out string passwordSalt);
 
             var query = @"
-                INSERT INTO Users (Username, PasswordHash, PasswordSalt, FirstName, LastName, Email, Phone, Role, CreatedDate, IsActive)
-                VALUES (@username, @passwordHash, @passwordSalt, @firstName, @lastName, @email, @phone, @role, @createdDate, @isActive)";
+        INSERT INTO Users (Username, PasswordHash, PasswordSalt, FirstName, LastName, Email, Phone, Role, CreatedDate, IsActive)
+        VALUES (@username, @passwordHash, @passwordSalt, @firstName, @lastName, @email, @phone, @role, @createdDate, @isActive)";
 
             using var command = new SqlCommand(query, connection);
             command.Parameters.AddWithValue("@username", user.Username);
@@ -633,6 +705,16 @@ namespace StudentReportInitial.Forms
             command.Parameters.AddWithValue("@id", userId);
 
             await command.ExecuteNonQueryAsync();
+        }
+
+        private bool IsValidEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return false;
+            }
+
+            return Regex.IsMatch(email.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.IgnoreCase);
         }
     }
 }

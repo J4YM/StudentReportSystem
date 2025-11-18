@@ -61,7 +61,7 @@ namespace StudentReportInitial.Data
                 if (!cleanPhone.StartsWith("+"))
                 {
                     // If number starts with 0, assume it's a local number and needs country code
-                    // For Philippines: 0XXXXXXXXX -> +63XXXXXXXXX
+                    // Philippines: 0XXXXXXXXX -> +63XXXXXXXXX
                     // For other countries, user should provide country code
                     if (cleanPhone.StartsWith("0"))
                     {

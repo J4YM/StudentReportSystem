@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace StudentReportInitial.Data
@@ -16,16 +17,8 @@ namespace StudentReportInitial.Data
         /// <returns>True if valid, false otherwise</returns>
         public static bool IsValidPhilippinesMobile(string phoneNumber)
         {
-            if (string.IsNullOrWhiteSpace(phoneNumber))
-            {
-                return false;
-            }
-
-            // Remove any spaces, dashes, or other formatting
-            string cleaned = phoneNumber.Replace(" ", "").Replace("-", "").Replace("(", "").Replace(")", "").Trim();
-
-            // Check if it matches the international phone pattern
-            return InternationalPhonePattern.IsMatch(cleaned);
+            var normalized = NormalizePhoneNumberInternal(phoneNumber);
+            return !string.IsNullOrEmpty(normalized) && InternationalPhonePattern.IsMatch(normalized);
         }
 
         /// <summary>
@@ -35,21 +28,8 @@ namespace StudentReportInitial.Data
         /// <returns>Formatted phone number in E.164 format</returns>
         public static string FormatPhoneNumber(string phoneNumber)
         {
-            if (string.IsNullOrWhiteSpace(phoneNumber))
-            {
-                return string.Empty;
-            }
-
-            // Remove any spaces, dashes, or other formatting
-            string cleaned = phoneNumber.Replace(" ", "").Replace("-", "").Replace("(", "").Replace(")", "").Trim();
-
-            // Ensure it starts with + for E.164 format
-            if (!cleaned.StartsWith("+"))
-            {
-                cleaned = "+" + cleaned;
-            }
-
-            return cleaned;
+            var normalized = NormalizePhoneNumberInternal(phoneNumber);
+            return normalized ?? string.Empty;
         }
 
         /// <summary>
@@ -64,15 +44,68 @@ namespace StudentReportInitial.Data
                 return "Phone number is required.";
             }
 
-            string cleaned = phoneNumber.Replace(" ", "").Replace("-", "").Replace("(", "").Replace(")", "").Trim();
+            var normalized = NormalizePhoneNumberInternal(phoneNumber);
 
-            // Check if it's a valid international format
-            if (!InternationalPhonePattern.IsMatch(cleaned))
+            if (string.IsNullOrEmpty(normalized))
             {
-                return "Invalid phone number format. Please use international format (e.g., +1234567890 or with country code).";
+                return "Invalid phone number format. Please use international format (e.g., +1234567890 or use 0XXXXXXXXXX for Philippines numbers).";
+            }
+
+            if (!InternationalPhonePattern.IsMatch(normalized))
+            {
+                return "Invalid phone number format. Please use international format (e.g., +1234567890).";
             }
 
             return string.Empty;
+        }
+
+        /// <summary>
+        /// Normalizes phone numbers into E.164 format, auto-converting Philippines local numbers.
+        /// </summary>
+        private static string? NormalizePhoneNumberInternal(string phoneNumber)
+        {
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+            {
+                return null;
+            }
+
+            string trimmed = phoneNumber.Trim();
+            bool startsWithPlus = trimmed.StartsWith("+");
+            bool startsWithZero = trimmed.StartsWith("0");
+
+            string digitsOnly = new string(trimmed.Where(char.IsDigit).ToArray());
+            if (string.IsNullOrEmpty(digitsOnly))
+            {
+                return null;
+            }
+
+            string normalized;
+
+            if (startsWithPlus)
+            {
+                normalized = "+" + digitsOnly;
+            }
+            else if (startsWithZero)
+            {
+                if (digitsOnly.Length < 10)
+                {
+                    return null; // Not enough digits for a valid PH number
+                }
+
+                normalized = "+63" + digitsOnly.Substring(1);
+            }
+            else
+            {
+                normalized = "+" + digitsOnly;
+            }
+
+            // Basic length check before final regex validation
+            if (normalized.Length < 8 || normalized.Length > 16)
+            {
+                return null;
+            }
+
+            return normalized;
         }
     }
 }
