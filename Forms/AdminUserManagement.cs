@@ -427,7 +427,7 @@ namespace StudentReportInitial.Forms
             // Role
             var lblRole = new Label { Text = "Role:", Location = new Point(20, yPos), AutoSize = true };
             var cmbRole = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), DropDownStyle = ComboBoxStyle.DropDownList };
-            cmbRole.Items.AddRange(new[] { "Admin", "Professor", "Guardian" });
+            cmbRole.Items.AddRange(new[] { "Admin", "Professor", "Guardian", "Student" });
             yPos += spacing;
 
             // Buttons

@@ -34,6 +34,9 @@
     <Compile Update="Forms\StudentSubjectEnrollment.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Update="Forms\UserProfilePanel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Update="Forms\ViewerAttendancePanel.cs">
       <SubType>UserControl</SubType>
     </Compile>

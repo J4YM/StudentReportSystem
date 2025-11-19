@@ -1,7 +1,8 @@
-using StudentReportInitial.Models;
 using StudentReportInitial.Data;
+using StudentReportInitial.Models;
 using System.Data.SqlClient;
 using System.Data;
+using System.Threading.Tasks;
 
 namespace StudentReportInitial.Forms
 {
@@ -14,14 +15,48 @@ namespace StudentReportInitial.Forms
         private Button btnRefresh;
         private Label lblOverallAverage;
         private Panel pnlSummary;
+        private Student? linkedStudent;
+        private bool studentContextResolved;
 
         public ViewerGradesPanel(User user)
         {
             currentUser = user;
             InitializeComponent();
             ApplyModernStyling();
-            LoadSubjects();
-            LoadGrades();
+            _ = InitializeAsync();
+        }
+
+        private async Task InitializeAsync()
+        {
+            if (!await EnsureStudentContextAsync())
+            {
+                HandleMissingStudentContext();
+                return;
+            }
+
+            await LoadSubjectsAsync();
+            await LoadGradesAsync();
+        }
+
+        private async Task<bool> EnsureStudentContextAsync()
+        {
+            if (studentContextResolved)
+            {
+                return linkedStudent != null;
+            }
+
+            studentContextResolved = true;
+            linkedStudent = await UserContextHelper.GetLinkedStudentAsync(currentUser);
+            return linkedStudent != null;
+        }
+
+        private void HandleMissingStudentContext()
+        {
+            lblOverallAverage.Text = "Overall Average: No linked student record";
+            cmbSubject.Enabled = false;
+            cmbAssignmentType.Enabled = false;
+            btnRefresh.Enabled = false;
+            dgvGrades.DataSource = null;
         }
 
         private void InitializeComponent()
@@ -169,27 +204,40 @@ namespace StudentReportInitial.Forms
             dgvGrades.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
         }
 
-        private async void LoadSubjects()
+        private async Task LoadSubjectsAsync()
         {
             try
             {
+                if (!await EnsureStudentContextAsync())
+                {
+                    HandleMissingStudentContext();
+                    return;
+                }
+
+                cmbSubject.Items.Clear();
+                cmbSubject.Items.Add("All Subjects");
+
                 using var connection = DatabaseHelper.GetConnection();
                 await connection.OpenAsync();
 
                 var query = @"
                     SELECT DISTINCT g.Subject
                     FROM Grades g
-                    INNER JOIN Students s ON g.StudentId = s.Id
-                    WHERE s.Username = @username
+                    WHERE g.StudentId = @studentId
                     ORDER BY g.Subject";
 
                 using var command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@username", currentUser.Username);
+                command.Parameters.AddWithValue("@studentId", linkedStudent!.Id);
 
                 using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
                     cmbSubject.Items.Add(reader.GetString("Subject"));
+                }
+
+                if (cmbSubject.Items.Count > 0)
+                {
+                    cmbSubject.SelectedIndex = 0;
                 }
             }
             catch (Exception ex)
@@ -199,10 +247,16 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private async void LoadGrades()
+        private async Task LoadGradesAsync()
         {
             try
             {
+                if (!await EnsureStudentContextAsync())
+                {
+                    HandleMissingStudentContext();
+                    return;
+                }
+
                 using var connection = DatabaseHelper.GetConnection();
                 await connection.OpenAsync();
 
@@ -211,13 +265,12 @@ namespace StudentReportInitial.Forms
                            g.Percentage, g.Comments, g.DateRecorded, g.DueDate,
                            u.FirstName + ' ' + u.LastName as ProfessorName
                     FROM Grades g
-                    INNER JOIN Students s ON g.StudentId = s.Id
                     INNER JOIN Users u ON g.ProfessorId = u.Id
-                    WHERE s.Username = @username";
+                    WHERE g.StudentId = @studentId";
 
                 var parameters = new List<SqlParameter>
                 {
-                    new SqlParameter("@username", currentUser.Username)
+                    new SqlParameter("@studentId", linkedStudent!.Id)
                 };
 
                 if (cmbSubject.SelectedIndex > 0)
@@ -324,19 +377,19 @@ namespace StudentReportInitial.Forms
             };
         }
 
-        private void CmbSubject_SelectedIndexChanged(object sender, EventArgs e)
+        private async void CmbSubject_SelectedIndexChanged(object sender, EventArgs e)
         {
-            LoadGrades();
+            await LoadGradesAsync();
         }
 
-        private void CmbAssignmentType_SelectedIndexChanged(object sender, EventArgs e)
+        private async void CmbAssignmentType_SelectedIndexChanged(object sender, EventArgs e)
         {
-            LoadGrades();
+            await LoadGradesAsync();
         }
 
-        private void BtnRefresh_Click(object sender, EventArgs e)
+        private async void BtnRefresh_Click(object sender, EventArgs e)
         {
-            LoadGrades();
+            await LoadGradesAsync();
         }
     }
 }

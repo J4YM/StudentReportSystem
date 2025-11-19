@@ -10,6 +10,7 @@ namespace StudentReportInitial.Forms
     public partial class LoginForm : Form
     {
         public User? CurrentUser { get; private set; }
+        private bool passwordVisible = false;
 
         public LoginForm()
         {
@@ -113,6 +114,13 @@ namespace StudentReportInitial.Forms
             txtPassword.BackColor = Color.White;
             txtPassword.ForeColor = Color.FromArgb(51, 65, 85);
             txtPassword.PlaceholderText = "Enter your password";
+            txtPassword.UseSystemPasswordChar = true;
+
+            btnTogglePassword.FlatStyle = FlatStyle.Flat;
+            btnTogglePassword.FlatAppearance.BorderSize = 0;
+            btnTogglePassword.BackColor = Color.Transparent;
+            btnTogglePassword.ForeColor = Color.FromArgb(37, 99, 235);
+            btnTogglePassword.Cursor = Cursors.Hand;
 
             btnLogin.BackColor = Color.FromArgb(37, 99, 235);
             btnLogin.ForeColor = Color.White;
@@ -224,6 +232,22 @@ namespace StudentReportInitial.Forms
             if (e.KeyChar == (char)Keys.Enter)
             {
                 btnLogin_Click(sender, e);
+            }
+        }
+
+        private void btnTogglePassword_Click(object sender, EventArgs e)
+        {
+            passwordVisible = !passwordVisible;
+            txtPassword.UseSystemPasswordChar = !passwordVisible;
+            if (passwordVisible)
+            {
+                txtPassword.PasswordChar = '\0';
+                btnTogglePassword.Text = "Hide";
+            }
+            else
+            {
+                txtPassword.PasswordChar = '*';
+                btnTogglePassword.Text = "Show";
             }
         }
     }

@@ -868,15 +868,28 @@ namespace StudentReportInitial.Forms
 
         private void LoadProfilePanel()
         {
-            var label = new Label
+            if (mainContentPanel == null)
             {
-                Text = "Profile Panel",
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                ForeColor = Color.FromArgb(51, 65, 85),
-                AutoSize = true
+                return;
+            }
+
+            mainContentPanel.Controls.Clear();
+            var profilePanel = new UserProfilePanel(currentUser)
+            {
+                Dock = DockStyle.Fill
             };
-            if (mainContentPanel != null)
-                mainContentPanel.Controls.Add(label);
+            profilePanel.ProfileUpdated += OnProfileUpdated;
+            mainContentPanel.Controls.Add(profilePanel);
+        }
+
+        private void OnProfileUpdated(User updatedUser)
+        {
+            currentUser.FirstName = updatedUser.FirstName;
+            currentUser.LastName = updatedUser.LastName;
+            currentUser.Email = updatedUser.Email;
+            currentUser.Phone = updatedUser.Phone;
+            lblUserInfo.Text = FormatUserInfo();
+            lblSidebarTitle.Text = $"{GetRoleDisplayName(currentUser.Role)} Dashboard";
         }
 
         private void ClearSidebarButtons()

@@ -236,11 +236,31 @@ namespace StudentReportInitial.Data
             string statusText = status.ToUpper() == "PRESENT" ? "Present" : 
                                status.ToUpper() == "ABSENT" ? "Absent" :
                                status.ToUpper() == "LATE" ? "Late" : "Excused";
+
+            // Convert attendance timestamp to the local timezone of the machine sending the SMS
+            var localTimeZone = TimeZoneInfo.Local;
+            DateTime localDateTime;
+            if (date.Kind == DateTimeKind.Utc)
+            {
+                localDateTime = TimeZoneInfo.ConvertTimeFromUtc(date, localTimeZone);
+            }
+            else if (date.Kind == DateTimeKind.Unspecified)
+            {
+                localDateTime = TimeZoneInfo.ConvertTime(date, localTimeZone);
+            }
+            else
+            {
+                localDateTime = date.ToLocalTime();
+            }
+
+            var tzName = localTimeZone.IsDaylightSavingTime(localDateTime)
+                ? localTimeZone.DaylightName
+                : localTimeZone.StandardName;
             
             string message = $"Attendance Update - {studentName}\n" +
                            $"Subject: {subjectName}\n" +
                            $"Status: {statusText}\n" +
-                           $"Date: {date:MMM dd, yyyy hh:mm tt}\n" +
+                           $"Date: {localDateTime:MMM dd, yyyy hh:mm tt} ({tzName})\n" +
                            $"Total Attendance Count: {attendanceCount}\n" +
                            $"Instructor: {professorName}\n" +
                            $"STI BALIUAG";
