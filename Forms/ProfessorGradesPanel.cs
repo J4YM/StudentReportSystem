@@ -10,7 +10,8 @@ namespace StudentReportInitial.Forms
         private User currentProfessor;
         private DataGridView dgvGrades;
         private ComboBox cmbSubject;
-        private ComboBox cmbAssignmentType;
+        private ComboBox cmbQuarter;
+        private ComboBox cmbComponentType;
         private TextBox txtAssignmentName;
         private DateTimePicker dtpDueDate;
         private NumericUpDown nudMaxScore;
@@ -40,7 +41,7 @@ namespace StudentReportInitial.Forms
             var pnlHeader = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 100,
+                Height = 120,
                 BackColor = Color.White,
                 Padding = new Padding(20)
             };
@@ -70,33 +71,49 @@ namespace StudentReportInitial.Forms
             };
             cmbSubject.SelectedIndexChanged += CmbSubject_SelectedIndexChanged;
 
-            // Assignment type
-            var lblAssignmentType = new Label
+            // Quarter selection
+            var lblQuarter = new Label
             {
-                Text = "Type:",
+                Text = "Quarter:",
                 Location = new Point(300, 50),
                 AutoSize = true
             };
 
-            cmbAssignmentType = new ComboBox
+            cmbQuarter = new ComboBox
             {
-                Location = new Point(340, 48),
-                Size = new Size(120, 25),
+                Location = new Point(360, 48),
+                Size = new Size(100, 25),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
-            cmbAssignmentType.Items.AddRange(new[] { "Quiz", "Exam", "Project", "Assignment", "Participation", "Other" });
+            cmbQuarter.Items.AddRange(new[] { "Prelim", "Midterm", "PreFinal", "Final" });
+
+            // Component type
+            var lblComponentType = new Label
+            {
+                Text = "Component:",
+                Location = new Point(480, 50),
+                AutoSize = true
+            };
+
+            cmbComponentType = new ComboBox
+            {
+                Location = new Point(560, 48),
+                Size = new Size(150, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            cmbComponentType.Items.AddRange(new[] { "Quizzes/Activities", "Performance Task", "Exam" });
 
             // Assignment name
             var lblAssignmentName = new Label
             {
                 Text = "Assignment:",
-                Location = new Point(480, 50),
+                Location = new Point(730, 50),
                 AutoSize = true
             };
 
             txtAssignmentName = new TextBox
             {
-                Location = new Point(560, 48),
+                Location = new Point(810, 48),
                 Size = new Size(150, 25)
             };
 
@@ -159,9 +176,9 @@ namespace StudentReportInitial.Forms
             btnRefresh.Click += BtnRefresh_Click;
 
             pnlHeader.Controls.AddRange(new Control[] { 
-                lblTitle, lblSubject, cmbSubject, lblAssignmentType, cmbAssignmentType,
-                lblAssignmentName, txtAssignmentName, lblDueDate, dtpDueDate,
-                lblMaxScore, nudMaxScore, btnAddGrade, btnRefresh
+                lblTitle, lblSubject, cmbSubject, lblQuarter, cmbQuarter,
+                lblComponentType, cmbComponentType, lblAssignmentName, txtAssignmentName, 
+                lblDueDate, dtpDueDate, lblMaxScore, nudMaxScore, btnAddGrade, btnRefresh
             });
 
             // Grades grid
@@ -381,9 +398,16 @@ namespace StudentReportInitial.Forms
                 return;
             }
 
-            if (cmbAssignmentType.SelectedIndex == -1)
+            if (cmbQuarter.SelectedIndex == -1)
             {
-                MessageBox.Show("Please select an assignment type.", "Warning", 
+                MessageBox.Show("Please select a quarter.", "Warning", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (cmbComponentType.SelectedIndex == -1)
+            {
+                MessageBox.Show("Please select a component type.", "Warning", 
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -412,6 +436,20 @@ namespace StudentReportInitial.Forms
                 return;
             }
 
+            if (cmbQuarter.SelectedIndex == -1)
+            {
+                MessageBox.Show("Please select a quarter.", "Warning", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (cmbComponentType.SelectedIndex == -1)
+            {
+                MessageBox.Show("Please select a component type.", "Warning", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             try
             {
                 var selectedSubject = cmbSubject.SelectedItem.ToString();
@@ -433,7 +471,9 @@ namespace StudentReportInitial.Forms
                                 StudentId = Convert.ToInt32(row.Cells["Id"].Value),
                                 ProfessorId = currentProfessor.Id,
                                 Subject = subjectName,
-                                AssignmentType = cmbAssignmentType.SelectedItem.ToString(),
+                                Quarter = cmbQuarter.SelectedItem.ToString() ?? "Prelim",
+                                ComponentType = cmbComponentType.SelectedItem.ToString() ?? "QuizzesActivities",
+                                AssignmentType = cmbComponentType.SelectedItem.ToString() ?? "QuizzesActivities", // Legacy field
                                 AssignmentName = txtAssignmentName.Text,
                                 Score = score,
                                 MaxScore = maxScore,
@@ -460,7 +500,8 @@ namespace StudentReportInitial.Forms
 
                 // Clear form
                 txtAssignmentName.Clear();
-                cmbAssignmentType.SelectedIndex = -1;
+                cmbQuarter.SelectedIndex = -1;
+                cmbComponentType.SelectedIndex = -1;
                 nudMaxScore.Value = 100;
                 dtpDueDate.Value = DateTime.Today;
                 dgvGrades.DataSource = null;
@@ -478,15 +519,15 @@ namespace StudentReportInitial.Forms
             await connection.OpenAsync();
 
             var insertQuery = @"
-                INSERT INTO Grades (StudentId, ProfessorId, Subject, AssignmentType, AssignmentName, 
+                INSERT INTO Grades (StudentId, ProfessorId, Subject, Quarter, ComponentType, AssignmentType, AssignmentName, 
                                   Score, MaxScore, Percentage, Comments, DateRecorded, DueDate)
-                VALUES (@studentId, @professorId, @subject, @assignmentType, @assignmentName, 
+                VALUES (@studentId, @professorId, @subject, @quarter, @componentType, @assignmentType, @assignmentName, 
                         @score, @maxScore, @percentage, @comments, @dateRecorded, @dueDate)";
 
             // Get professor name
             string professorName = $"{currentProfessor.FirstName} {currentProfessor.LastName}";
             var subjectName = gradeRecords.First().Subject;
-            var assignmentType = gradeRecords.First().AssignmentType;
+            var assignmentType = gradeRecords.First().ComponentType;
 
             foreach (var grade in gradeRecords)
             {
@@ -494,6 +535,8 @@ namespace StudentReportInitial.Forms
                 command.Parameters.AddWithValue("@studentId", grade.StudentId);
                 command.Parameters.AddWithValue("@professorId", grade.ProfessorId);
                 command.Parameters.AddWithValue("@subject", grade.Subject);
+                command.Parameters.AddWithValue("@quarter", grade.Quarter);
+                command.Parameters.AddWithValue("@componentType", grade.ComponentType);
                 command.Parameters.AddWithValue("@assignmentType", grade.AssignmentType);
                 command.Parameters.AddWithValue("@assignmentName", grade.AssignmentName);
                 command.Parameters.AddWithValue("@score", grade.Score);

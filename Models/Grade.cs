@@ -6,7 +6,9 @@ namespace StudentReportInitial.Models
         public int StudentId { get; set; }
         public int ProfessorId { get; set; }
         public string Subject { get; set; } = string.Empty;
-        public string AssignmentType { get; set; } = string.Empty; // Quiz, Exam, Project, etc.
+        public string Quarter { get; set; } = string.Empty; // Prelim, Midterm, PreFinal, Final
+        public string ComponentType { get; set; } = string.Empty; // QuizzesActivities, PerformanceTask, Exam
+        public string AssignmentType { get; set; } = string.Empty; // Legacy field for backward compatibility
         public string AssignmentName { get; set; } = string.Empty;
         public decimal Score { get; set; }
         public decimal MaxScore { get; set; }
