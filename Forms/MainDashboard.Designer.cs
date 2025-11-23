@@ -60,7 +60,7 @@ namespace StudentReportInitial.Forms
             lblAppTitle.Name = "lblAppTitle";
             lblAppTitle.Size = new Size(133, 15);
             lblAppTitle.TabIndex = 2;
-            lblAppTitle.Text = "Student Report System";
+            lblAppTitle.Text = "STI College Baliuag - AimONE";
             // 
             // lblUserInfo
             // 

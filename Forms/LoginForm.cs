@@ -3,12 +3,14 @@ using StudentReportInitial.Data;
 using System.Data.SqlClient;
 using System.Windows.Forms;
 using System.Drawing;
+using System.IO;
 
 namespace StudentReportInitial.Forms
 {
     public partial class LoginForm : Form
     {
         public User? CurrentUser { get; private set; }
+        private bool passwordVisible = false;
 
         public LoginForm()
         {
@@ -18,27 +20,76 @@ namespace StudentReportInitial.Forms
 
         private void ApplyModernStyling()
         {
-            BackColor = Color.FromArgb(245, 247, 250);
             StartPosition = FormStartPosition.CenterScreen;
             ClientSize = new Size(700, 420);
             MinimumSize = new Size(700, 420);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             MinimizeBox = false;
-            Text = "Student Report System - Login";
+            Text = "STI College Baliuag - AimONE - Login";
             AcceptButton = btnLogin;
 
-            // Hero panel styling
+            // Set background image - try multiple formats
+            try
+            {
+                string imagesFolder = Path.Combine(Application.StartupPath, "Images");
+                string[] imageExtensions = { ".jpg", ".jpeg", ".png", ".bmp" };
+                string imageName = "sti_baliuag_building";
+                string? imagePath = null;
+
+                // Try to find the image with any supported extension
+                foreach (var ext in imageExtensions)
+                {
+                    string testPath = Path.Combine(imagesFolder, imageName + ext);
+                    if (File.Exists(testPath))
+                    {
+                        imagePath = testPath;
+                        break;
+                    }
+                }
+
+                if (imagePath != null && File.Exists(imagePath))
+                {
+                    BackgroundImage = Image.FromFile(imagePath);
+                    BackgroundImageLayout = ImageLayout.Stretch;
+                    BackColor = Color.FromArgb(245, 247, 250); // Fallback color
+                }
+                else
+                {
+                    // If image not found, use solid color
+                    BackColor = Color.FromArgb(245, 247, 250);
+                }
+            }
+            catch
+            {
+                // If image loading fails, use solid color
+                BackColor = Color.FromArgb(245, 247, 250);
+            }
+
+            // Hero panel styling with semi-transparent overlay for better text visibility
             pnlHero.Padding = new Padding(32, 56, 32, 32);
+            // Use custom paint for semi-transparent overlay
+            pnlHero.Paint += (s, e) =>
+            {
+                using (var brush = new SolidBrush(Color.FromArgb(200, 37, 99, 235)))
+                {
+                    e.Graphics.FillRectangle(brush, pnlHero.ClientRectangle);
+                }
+            };
+            pnlHero.BackColor = Color.Transparent; // Make panel transparent so custom paint shows
             lblTitle.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
             lblTitle.AutoSize = true;
             lblTitle.MaximumSize = new Size(200, 0);
             lblTitle.TextAlign = ContentAlignment.TopLeft;
+            lblTitle.ForeColor = Color.White;
+            lblTitle.BackColor = Color.Transparent;
             lblHeroSubtitle.Font = new Font("Segoe UI", 10F);
             lblHeroSubtitle.MaximumSize = new Size(200, 0);
+            lblHeroSubtitle.ForeColor = Color.White;
+            lblHeroSubtitle.BackColor = Color.Transparent;
 
-            // Login card styling
-            pnlLogin.BackColor = Color.FromArgb(245, 247, 250);
+            // Login card styling - make it semi-transparent to show background
+            pnlLogin.BackColor = Color.Transparent;
             pnlLoginCard.BackColor = Color.White;
             pnlLoginCard.BorderStyle = BorderStyle.None;
             UIStyleHelper.ApplyRoundedCorners(pnlLoginCard, 18, drawBorder: true);
@@ -63,6 +114,13 @@ namespace StudentReportInitial.Forms
             txtPassword.BackColor = Color.White;
             txtPassword.ForeColor = Color.FromArgb(51, 65, 85);
             txtPassword.PlaceholderText = "Enter your password";
+            txtPassword.UseSystemPasswordChar = true;
+
+            btnTogglePassword.FlatStyle = FlatStyle.Flat;
+            btnTogglePassword.FlatAppearance.BorderSize = 0;
+            btnTogglePassword.BackColor = Color.Transparent;
+            btnTogglePassword.ForeColor = Color.FromArgb(37, 99, 235);
+            btnTogglePassword.Cursor = Cursors.Hand;
 
             btnLogin.BackColor = Color.FromArgb(37, 99, 235);
             btnLogin.ForeColor = Color.White;
@@ -174,6 +232,22 @@ namespace StudentReportInitial.Forms
             if (e.KeyChar == (char)Keys.Enter)
             {
                 btnLogin_Click(sender, e);
+            }
+        }
+
+        private void btnTogglePassword_Click(object sender, EventArgs e)
+        {
+            passwordVisible = !passwordVisible;
+            txtPassword.UseSystemPasswordChar = !passwordVisible;
+            if (passwordVisible)
+            {
+                txtPassword.PasswordChar = '\0';
+                btnTogglePassword.Text = "Hide";
+            }
+            else
+            {
+                txtPassword.PasswordChar = '*';
+                btnTogglePassword.Text = "Show";
             }
         }
     }

@@ -476,6 +476,10 @@ namespace StudentReportInitial.Forms
                 INSERT INTO Attendance (StudentId, ProfessorId, Subject, Date, Status, Notes, RecordedDate)
                 VALUES (@studentId, @professorId, @subject, @date, @status, @notes, @recordedDate)";
 
+            string professorName = $"{currentProfessor.FirstName} {currentProfessor.LastName}";
+            var subjectName = attendanceRecords.First().Subject;
+            var attendanceDate = dtpDate.Value;
+
             foreach (var attendance in attendanceRecords)
             {
                 using var insertCommand = new SqlCommand(insertQuery, connection);
@@ -488,6 +492,81 @@ namespace StudentReportInitial.Forms
                 insertCommand.Parameters.AddWithValue("@recordedDate", attendance.RecordedDate);
 
                 await insertCommand.ExecuteNonQueryAsync();
+
+                // Send SMS notification to guardian (using student phone for now)
+                try
+                {
+                    var studentQuery = @"
+                        SELECT s.FirstName, s.LastName, s.Phone, 
+                               u.Phone as GuardianPhone
+                        FROM Students s
+                        LEFT JOIN Users u ON s.GuardianId = u.Id
+                        WHERE s.Id = @studentId";
+
+                    using var studentCommand = new SqlCommand(studentQuery, connection);
+                    studentCommand.Parameters.AddWithValue("@studentId", attendance.StudentId);
+
+                    using var studentReader = await studentCommand.ExecuteReaderAsync();
+                    if (await studentReader.ReadAsync())
+                    {
+                        string studentName = $"{studentReader.GetString("FirstName")} {studentReader.GetString("LastName")}";
+                        string phoneNumber = studentReader.IsDBNull("GuardianPhone") 
+                            ? (studentReader.IsDBNull("Phone") ? "" : studentReader.GetString("Phone"))
+                            : studentReader.GetString("GuardianPhone");
+
+                        // Use student phone if guardian phone is not available
+                        if (string.IsNullOrEmpty(phoneNumber) && !studentReader.IsDBNull("Phone"))
+                        {
+                            phoneNumber = studentReader.GetString("Phone");
+                        }
+
+                        if (!string.IsNullOrEmpty(phoneNumber) && PhoneValidator.IsValidPhilippinesMobile(phoneNumber))
+                        {
+                            // Get total attendance count for this student
+                            int attendanceCount = await GetStudentAttendanceCountAsync(connection, attendance.StudentId);
+                            
+                            await SmsService.SendAttendanceNotificationAsync(
+                                phoneNumber,
+                                studentName,
+                                subjectName,
+                                attendance.Status.ToString(),
+                                attendanceDate,
+                                professorName,
+                                attendanceCount
+                            );
+                        }
+                    }
+                    studentReader.Close();
+                }
+                catch (Exception smsEx)
+                {
+                    // Log SMS error but don't fail the attendance save
+                    System.Diagnostics.Debug.WriteLine($"SMS notification failed: {smsEx.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the total attendance count for a student
+        /// </summary>
+        private async Task<int> GetStudentAttendanceCountAsync(SqlConnection connection, int studentId)
+        {
+            try
+            {
+                var countQuery = @"
+                    SELECT COUNT(*) 
+                    FROM Attendance 
+                    WHERE StudentId = @studentId AND Status = 1"; // Status 1 = Present
+
+                using var countCommand = new SqlCommand(countQuery, connection);
+                countCommand.Parameters.AddWithValue("@studentId", studentId);
+                
+                var result = await countCommand.ExecuteScalarAsync();
+                return result != null ? Convert.ToInt32(result) : 0;
+            }
+            catch
+            {
+                return 0;
             }
         }
     }

@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+    <PackageReference Include="Twilio" Version="6.3.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.9.0" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
@@ -30,6 +31,15 @@
   <ItemGroup>
     <Using Include="System.Windows.Forms" />
     <Using Include="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="app.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Images\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

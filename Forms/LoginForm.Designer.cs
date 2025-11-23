@@ -38,6 +38,7 @@ namespace StudentReportInitial.Forms
             btnLogin = new Button();
             txtPassword = new TextBox();
             lblPassword = new Label();
+            btnTogglePassword = new Button();
             txtUsername = new TextBox();
             lblUsername = new Label();
             lblSubtitle = new Label();
@@ -62,7 +63,7 @@ namespace StudentReportInitial.Forms
             // 
             // pnlHero
             // 
-            pnlHero.BackColor = Color.FromArgb(37, 99, 235);
+            pnlHero.BackColor = Color.Transparent; // Transparent for custom paint overlay
             pnlHero.Controls.Add(lblHeroSubtitle);
             pnlHero.Controls.Add(lblTitle);
             pnlHero.Dock = DockStyle.Left;
@@ -85,7 +86,7 @@ namespace StudentReportInitial.Forms
             // 
             // pnlLogin
             // 
-            pnlLogin.BackColor = Color.FromArgb(245, 247, 250);
+            pnlLogin.BackColor = Color.Transparent; // Transparent to show background image
             pnlLogin.Controls.Add(pnlLoginCard);
             pnlLogin.Dock = DockStyle.Fill;
             pnlLogin.Location = new Point(260, 0);
@@ -98,6 +99,7 @@ namespace StudentReportInitial.Forms
             // 
             pnlLoginCard.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             pnlLoginCard.BackColor = Color.White;
+            pnlLoginCard.Controls.Add(btnTogglePassword);
             pnlLoginCard.Controls.Add(lblError);
             pnlLoginCard.Controls.Add(btnLogin);
             pnlLoginCard.Controls.Add(txtPassword);
@@ -141,9 +143,19 @@ namespace StudentReportInitial.Forms
             txtPassword.Location = new Point(28, 178);
             txtPassword.Name = "txtPassword";
             txtPassword.PasswordChar = '*';
-            txtPassword.Size = new Size(304, 23);
+            txtPassword.Size = new Size(240, 23);
             txtPassword.TabIndex = 5;
             txtPassword.KeyPress += txtPassword_KeyPress;
+            // btnTogglePassword
+            // 
+            btnTogglePassword.Location = new Point(274, 178);
+            btnTogglePassword.Name = "btnTogglePassword";
+            btnTogglePassword.Size = new Size(58, 23);
+            btnTogglePassword.TabIndex = 8;
+            btnTogglePassword.Text = "Show";
+            btnTogglePassword.UseVisualStyleBackColor = true;
+            btnTogglePassword.Click += btnTogglePassword_Click;
+            // 
             // 
             // lblPassword
             // 
@@ -228,5 +240,6 @@ namespace StudentReportInitial.Forms
         private System.Windows.Forms.Panel pnlLoginCard;
         private System.Windows.Forms.Label lblLoginHeading;
         private System.Windows.Forms.Label lblHeroSubtitle;
+        private System.Windows.Forms.Button btnTogglePassword;
     }
 }
