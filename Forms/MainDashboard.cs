@@ -140,11 +140,13 @@ namespace StudentReportInitial.Forms
             var btnMySubjects = CreateSidebarButton("My Subjects", 0);
             var btnAttendance = CreateSidebarButton("Record Attendance", 1);
             var btnGrades = CreateSidebarButton("Record Grades", 2);
-            var btnProfile = CreateSidebarButton("My Profile", 3);
+            var btnPastRecords = CreateSidebarButton("Past Records", 3);
+            var btnProfile = CreateSidebarButton("My Profile", 4);
 
             btnMySubjects.Click += (s, e) => LoadProfessorPanel("subjects");
             btnAttendance.Click += (s, e) => LoadProfessorPanel("attendance");
             btnGrades.Click += (s, e) => LoadProfessorPanel("grades");
+            btnPastRecords.Click += (s, e) => LoadProfessorPanel("pastrecords");
             btnProfile.Click += (s, e) => LoadProfessorPanel("profile");
 
             // Load default panel
@@ -237,6 +239,9 @@ namespace StudentReportInitial.Forms
                     break;
                 case "grades":
                     LoadGradesPanel();
+                    break;
+                case "pastrecords":
+                    LoadPastRecordsPanel();
                     break;
                 case "profile":
                     LoadProfilePanel();
@@ -821,6 +826,16 @@ namespace StudentReportInitial.Forms
             gradesPanel.Dock = DockStyle.Fill;
             if (mainContentPanel != null)
                 mainContentPanel.Controls.Add(gradesPanel);
+        }
+
+        private void LoadPastRecordsPanel()
+        {
+            if (mainContentPanel != null)
+                mainContentPanel.Controls.Clear();
+            var pastRecordsPanel = new ProfessorPastRecordsPanel(currentUser);
+            pastRecordsPanel.Dock = DockStyle.Fill;
+            if (mainContentPanel != null)
+                mainContentPanel.Controls.Add(pastRecordsPanel);
         }
 
         private void LoadProfessorReportsPanel()

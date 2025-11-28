@@ -3,6 +3,7 @@ using StudentReportInitial.Models;
 using System.Data.SqlClient;
 using System.Data;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace StudentReportInitial.Forms
 {
@@ -129,12 +130,12 @@ namespace StudentReportInitial.Forms
                 BackColor = Color.FromArgb(59, 130, 246),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                
+
                 Cursor = Cursors.Hand
             };
             btnRefresh.Click += BtnRefresh_Click;
 
-            pnlHeader.Controls.AddRange(new Control[] { 
+            pnlHeader.Controls.AddRange(new Control[] {
                 lblTitle, lblSubject, cmbSubject, lblAssignmentType, cmbAssignmentType, btnRefresh
             });
 
@@ -242,7 +243,7 @@ namespace StudentReportInitial.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading subjects: {ex.Message}", "Error", 
+                MessageBox.Show($"Error loading subjects: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -261,7 +262,7 @@ namespace StudentReportInitial.Forms
                 await connection.OpenAsync();
 
                 var query = @"
-                    SELECT g.Subject, g.AssignmentType, g.AssignmentName, g.Score, g.MaxScore, 
+                    SELECT g.Subject, g.Quarter, g.ComponentType, g.AssignmentType, g.AssignmentName, g.Score, g.MaxScore, 
                            g.Percentage, g.Comments, g.DateRecorded, g.DueDate,
                            u.FirstName + ' ' + u.LastName as ProfessorName
                     FROM Grades g
@@ -300,6 +301,8 @@ namespace StudentReportInitial.Forms
                 if (dgvGrades.Columns.Count > 0)
                 {
                     dgvGrades.Columns["Subject"].HeaderText = "Subject";
+                    dgvGrades.Columns["Quarter"].HeaderText = "Quarter";
+                    dgvGrades.Columns["ComponentType"].HeaderText = "Component";
                     dgvGrades.Columns["AssignmentType"].HeaderText = "Type";
                     dgvGrades.Columns["AssignmentName"].HeaderText = "Assignment";
                     dgvGrades.Columns["Score"].HeaderText = "Score";
@@ -312,20 +315,20 @@ namespace StudentReportInitial.Forms
 
                     dgvGrades.Columns["DateRecorded"].DefaultCellStyle.Format = "MM/dd/yyyy";
                     dgvGrades.Columns["DueDate"].DefaultCellStyle.Format = "MM/dd/yyyy";
-                    dgvGrades.Columns["Percentage"].DefaultCellStyle.Format = "0.0%";
+                    dgvGrades.Columns["Percentage"].DefaultCellStyle.Format = "0.0'%'";
                 }
 
-                // Calculate overall average
-                CalculateOverallAverage(dataTable);
+                // Calculate overall average using STI grading system
+                CalculateOverallAverageSTI(dataTable);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading grades: {ex.Message}", "Error", 
+                MessageBox.Show($"Error loading grades: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void CalculateOverallAverage(DataTable dataTable)
+        private void CalculateOverallAverageSTI(DataTable dataTable)
         {
             if (dataTable.Rows.Count == 0)
             {
@@ -333,48 +336,133 @@ namespace StudentReportInitial.Forms
                 return;
             }
 
-            decimal totalPercentage = 0;
-            int count = 0;
 
-            foreach (DataRow row in dataTable.Rows)
+            try
             {
-                if (row["Percentage"] != DBNull.Value)
+                // Group grades by subject and quarter
+                var subjectGroups = dataTable.AsEnumerable()
+                    .GroupBy(row => row.Field<string>("Subject") ?? "");
+
+                var overallGrades = new List<double>();
+
+                foreach (var subjectGroup in subjectGroups)
                 {
-                    totalPercentage += Convert.ToDecimal(row["Percentage"]);
-                    count++;
+                    var subjectName = subjectGroup.Key;
+                    if (string.IsNullOrEmpty(subjectName)) continue;
+
+                    // Group by quarter
+                    var quarterGroups = subjectGroup.GroupBy(row => row.Field<string>("Quarter") ?? "");
+
+                    var prelimGrade = new GradeCalculator.QuarterGrade();
+                    var midtermGrade = new GradeCalculator.QuarterGrade();
+                    var preFinalGrade = new GradeCalculator.QuarterGrade();
+                    var finalGrade = new GradeCalculator.QuarterGrade();
+
+                    bool hasPrelim = false, hasMidterm = false, hasPreFinal = false, hasFinal = false;
+
+                    foreach (var quarterGroup in quarterGroups)
+                    {
+                        var quarter = quarterGroup.Key;
+                        if (string.IsNullOrEmpty(quarter)) continue;
+
+                        // Group by component type
+                        var componentGroups = quarterGroup.GroupBy(row => row.Field<string>("ComponentType") ?? "");
+
+                        double quizzesAvg = 0, performanceAvg = 0, examAvg = 0;
+                        int quizzesCount = 0, performanceCount = 0, examCount = 0;
+
+                        foreach (var componentGroup in componentGroups)
+                        {
+                            var componentType = componentGroup.Key;
+                            if (string.IsNullOrEmpty(componentType)) continue;
+
+                            double totalPercentage = 0;
+                            int count = 0;
+
+                            foreach (var row in componentGroup)
+                            {
+                                if (row["Percentage"] != DBNull.Value)
+                                {
+                                    totalPercentage += Convert.ToDouble(row["Percentage"]);
+                                    count++;
+                                }
+                            }
+
+                            if (count > 0)
+                            {
+                                var avg = totalPercentage / count;
+                                if (componentType == "QuizzesActivities")
+                                {
+                                    quizzesAvg = avg;
+                                    quizzesCount = count;
+                                }
+                                else if (componentType == "PerformanceTask")
+                                {
+                                    performanceAvg = avg;
+                                    performanceCount = count;
+                                }
+                                else if (componentType == "Exam")
+                                {
+                                    examAvg = avg;
+                                    examCount = count;
+                                }
+                            }
+                        }
+
+                        // Set quarter grade components (values already in 0-100 range from database)
+                        var quarterGrade = new GradeCalculator.QuarterGrade
+                        {
+                            QuizzesActivities = quizzesAvg,
+                            PerformanceTask = performanceAvg,
+                            Exam = examAvg
+                        };
+
+                        if (quarter == "Prelim" && (quizzesCount > 0 || performanceCount > 0 || examCount > 0))
+                        {
+                            prelimGrade = quarterGrade;
+                            hasPrelim = true;
+                        }
+                        else if (quarter == "Midterm" && (quizzesCount > 0 || performanceCount > 0 || examCount > 0))
+                        {
+                            midtermGrade = quarterGrade;
+                            hasMidterm = true;
+                        }
+                        else if (quarter == "PreFinal" && (quizzesCount > 0 || performanceCount > 0 || examCount > 0))
+                        {
+                            preFinalGrade = quarterGrade;
+                            hasPreFinal = true;
+                        }
+                        else if (quarter == "Final" && (quizzesCount > 0 || performanceCount > 0 || examCount > 0))
+                        {
+                            finalGrade = quarterGrade;
+                            hasFinal = true;
+                        }
+                    }
+
+                    // Calculate overall grade for this subject if we have at least one quarter
+                    if (hasPrelim || hasMidterm || hasPreFinal || hasFinal)
+                    {
+                        // Use default values (0) for missing quarters
+                        var overall = GradeCalculator.CalculateOverallGrade(prelimGrade, midtermGrade, preFinalGrade, finalGrade);
+                        overallGrades.Add(overall);
+                    }
+                }
+
+                if (overallGrades.Count > 0)
+                {
+                    var overallAverage = overallGrades.Average();
+                    var letterGrade = GradeCalculator.GetLetterGrade(overallAverage);
+                    lblOverallAverage.Text = $"Overall Average: {overallAverage:F2}% ({letterGrade})";
+                }
+                else
+                {
+                    lblOverallAverage.Text = "Overall Average: No valid grades (STI format required)";
                 }
             }
-
-            if (count > 0)
+            catch (Exception ex)
             {
-                var average = totalPercentage / count;
-                var grade = GetLetterGrade(average);
-                lblOverallAverage.Text = $"Overall Average: {average:F1}% ({grade})";
+                lblOverallAverage.Text = $"Error calculating average: {ex.Message}";
             }
-            else
-            {
-                lblOverallAverage.Text = "Overall Average: No valid grades";
-            }
-        }
-
-        private string GetLetterGrade(decimal percentage)
-        {
-            return percentage switch
-            {
-                >= 97 => "A+",
-                >= 93 => "A",
-                >= 90 => "A-",
-                >= 87 => "B+",
-                >= 83 => "B",
-                >= 80 => "B-",
-                >= 77 => "C+",
-                >= 73 => "C",
-                >= 70 => "C-",
-                >= 67 => "D+",
-                >= 63 => "D",
-                >= 60 => "D-",
-                _ => "F"
-            };
         }
 
         private async void CmbSubject_SelectedIndexChanged(object sender, EventArgs e)

@@ -494,7 +494,31 @@ namespace StudentReportInitial.Forms
             var txtAddress = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25) };
             yPos += spacing;
 
-            // Guardian info removed - will be created automatically
+            // Guardian assignment
+            var lblGuardian = new Label { Text = "Guardian:", Location = new Point(20, yPos), AutoSize = true };
+            var cmbGuardian = new ComboBox 
+            { 
+                Location = new Point(20, yPos + 20), 
+                Size = new Size(250, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            var btnNewGuardian = new Button
+            {
+                Text = "New Guardian",
+                Location = new Point(280, yPos + 20),
+                Size = new Size(100, 25),
+                BackColor = Color.FromArgb(59, 130, 246),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8),
+                Cursor = Cursors.Hand
+            };
+            LoadGuardiansForComboBox(cmbGuardian);
+            if (cmbGuardian.Items.Count > 0 && !isEditMode)
+            {
+                cmbGuardian.SelectedIndex = 0;
+            }
+            yPos += spacing;
 
             // Buttons
             var btnSave = new Button
@@ -568,6 +592,16 @@ namespace StudentReportInitial.Forms
                         }
                     }
 
+                    int selectedGuardianId = 0;
+                    if (cmbGuardian.SelectedValue != null && cmbGuardian.SelectedValue is DataRowView rowView)
+                    {
+                        selectedGuardianId = Convert.ToInt32(rowView.Row["Id"]);
+                    }
+                    else if (cmbGuardian.SelectedValue != null)
+                    {
+                        selectedGuardianId = Convert.ToInt32(cmbGuardian.SelectedValue);
+                    }
+
                     var student = new Student
                     {
                         StudentId = txtStudentId.Text,
@@ -580,7 +614,7 @@ namespace StudentReportInitial.Forms
                         Email = txtEmail.Text,
                         Phone = phone,
                         Address = txtAddress.Text,
-                        GuardianId = 0, // Will be set when creating guardian
+                        GuardianId = selectedGuardianId, // Use selected guardian or 0 to create new
                         IsActive = true
                     };
 
@@ -610,7 +644,7 @@ namespace StudentReportInitial.Forms
                 lblTitle, lblStudentId, txtStudentId, lblFirstName, txtFirstName, lblLastName, txtLastName,
 				lblDateOfBirth, dtpDateOfBirth, lblGender, cmbGender, lblGradeLevel, cmbGradeLevel,
 				lblCourse, cmbCourse, lblSection, cmbSectionCode, lblEmail, txtEmail, lblPhone, txtPhone, lblPhoneError, lblAddress, txtAddress,
-                btnSave, btnCancel
+                lblGuardian, cmbGuardian, btnNewGuardian, btnSave, btnCancel
             });
 
             // Add the scrollable panel to the main form panel
@@ -620,7 +654,7 @@ namespace StudentReportInitial.Forms
             if (isEditMode)
             {
 				LoadStudentData(selectedStudentId, txtStudentId, txtFirstName, txtLastName, dtpDateOfBirth, 
-					cmbGender, cmbGradeLevel, cmbSectionCode, txtEmail, txtPhone, txtAddress);
+					cmbGender, cmbGradeLevel, cmbSectionCode, txtEmail, txtPhone, txtAddress, cmbGuardian);
             }
         }
 
@@ -650,7 +684,7 @@ namespace StudentReportInitial.Forms
 
 		private async void LoadStudentData(int studentId, TextBox txtStudentId, TextBox txtFirstName, 
 			TextBox txtLastName, DateTimePicker dtpDateOfBirth, ComboBox cmbGender, ComboBox cmbGradeLevel,
-			ComboBox cmbSectionCode, TextBox txtEmail, TextBox txtPhone, TextBox txtAddress)
+			ComboBox cmbSectionCode, TextBox txtEmail, TextBox txtPhone, TextBox txtAddress, ComboBox cmbGuardian)
         {
             try
             {
@@ -687,6 +721,20 @@ namespace StudentReportInitial.Forms
                     txtEmail.Text = reader.IsDBNull("Email") ? "" : reader.GetString("Email");
                     txtPhone.Text = reader.IsDBNull("Phone") ? "" : reader.GetString("Phone");
                     txtAddress.Text = reader.IsDBNull("Address") ? "" : reader.GetString("Address");
+                    
+                    // Set guardian selection
+                    if (!reader.IsDBNull("GuardianId"))
+                    {
+                        int guardianId = reader.GetInt32("GuardianId");
+                        for (int i = 0; i < cmbGuardian.Items.Count; i++)
+                        {
+                            if (cmbGuardian.Items[i] is DataRowView rowView && Convert.ToInt32(rowView.Row["Id"]) == guardianId)
+                            {
+                                cmbGuardian.SelectedIndex = i;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -712,10 +760,26 @@ namespace StudentReportInitial.Forms
                 // First, create the student account in the Users table
                 var studentUserId = await AccountHelper.CreateStudentAccountAsync(connection, transaction, student);
 
-                // Then create the guardian account automatically
-                var guardianId = await CreateGuardianAccountAsync(connection, transaction, student);
-                var guardianUsername = GenerateGuardianUsername(student);
-                var guardianPassword = GenerateGuardianPassword(student);
+                // Create guardian account only if no guardian was selected (GuardianId is 0)
+                int guardianId = student.GuardianId;
+                string guardianUsername = "";
+                string guardianPassword = "";
+                
+                if (guardianId == 0)
+                {
+                    guardianId = await CreateGuardianAccountAsync(connection, transaction, student);
+                    guardianUsername = GenerateGuardianUsername(student);
+                    guardianPassword = GenerateGuardianPassword(student);
+                }
+                else
+                {
+                    // Get existing guardian info for display
+                    var guardianQuery = "SELECT Username FROM Users WHERE Id = @id";
+                    using var guardianCommand = new SqlCommand(guardianQuery, connection, transaction);
+                    guardianCommand.Parameters.AddWithValue("@id", guardianId);
+                    var result = await guardianCommand.ExecuteScalarAsync();
+                    guardianUsername = result?.ToString() ?? "N/A";
+                }
 
                 // Finally, create the student record in the Students table
                 var query = @"
@@ -748,16 +812,25 @@ namespace StudentReportInitial.Forms
 
                 transaction.Commit();
 
-                // Show success message with both sets of credentials
-                MessageBox.Show($"Student added successfully!\n\n" +
+                // Show success message
+                string message = $"Student added successfully!\n\n" +
                     $"Student account created:\n" +
                     $"Username: {studentUsername}\n" +
-                    $"Password: {studentPassword}\n\n" +
-                    $"Guardian account created:\n" +
-                    $"Username: {guardianUsername}\n" +
-                    $"Password: {guardianPassword}\n\n" +
-                    "Please provide these credentials to both the student and guardian.", 
-                    "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    $"Password: {studentPassword}\n\n";
+                
+                if (student.GuardianId == 0)
+                {
+                    message += $"Guardian account created:\n" +
+                        $"Username: {guardianUsername}\n" +
+                        $"Password: {guardianPassword}\n\n" +
+                        "Please provide these credentials to both the student and guardian.";
+                }
+                else
+                {
+                    message += $"Assigned to existing guardian: {guardianUsername}";
+                }
+                
+                MessageBox.Show(message, "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {

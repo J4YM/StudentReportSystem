@@ -1,20 +1,24 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\JamesWindell\\Documents\\StudentReportInitial\\StudentReportInitial.csproj": {}
+    "C:\\Users\\bryan\\source\\repos\\StudentReportSystem\\StudentReportInitial.csproj": {}
   },
   "projects": {
-    "C:\\Users\\JamesWindell\\Documents\\StudentReportInitial\\StudentReportInitial.csproj": {
+    "C:\\Users\\bryan\\source\\repos\\StudentReportSystem\\StudentReportInitial.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\JamesWindell\\Documents\\StudentReportInitial\\StudentReportInitial.csproj",
+        "projectUniqueName": "C:\\Users\\bryan\\source\\repos\\StudentReportSystem\\StudentReportInitial.csproj",
         "projectName": "StudentReportInitial",
-        "projectPath": "C:\\Users\\JamesWindell\\Documents\\StudentReportInitial\\StudentReportInitial.csproj",
-        "packagesPath": "C:\\Users\\JamesWindell\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\JamesWindell\\Documents\\StudentReportInitial\\obj\\",
+        "projectPath": "C:\\Users\\bryan\\source\\repos\\StudentReportSystem\\StudentReportInitial.csproj",
+        "packagesPath": "C:\\Users\\bryan\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\bryan\\source\\repos\\StudentReportSystem\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "C:\\Users\\JamesWindell\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\bryan\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -40,7 +44,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
         "net8.0-windows7.0": {
@@ -85,7 +89,7 @@
               "privateAssets": "none"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.306/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.100/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
