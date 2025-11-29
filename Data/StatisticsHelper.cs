@@ -24,22 +24,22 @@ namespace StudentReportInitial.Data
                 using var connection = DatabaseHelper.GetConnection();
                 await connection.OpenAsync();
 
-                // Get total students
-                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Students", connection))
+                // Get total students (exclude deleted/inactive)
+                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Students WHERE IsActive = 1", connection))
                 {
                     var result = await cmd.ExecuteScalarAsync();
                     stats.TotalStudents = result != null ? Convert.ToInt32(result) : 0;
                 }
 
-                // Get total professors (users with Role = 2)
-                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Users WHERE Role = 2", connection))
+                // Get total professors (users with Role = 2, exclude deleted/inactive)
+                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Users WHERE Role = 2 AND IsActive = 1", connection))
                 {
                     var result = await cmd.ExecuteScalarAsync();
                     stats.TotalProfessors = result != null ? Convert.ToInt32(result) : 0;
                 }
 
-                // Get total users
-                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Users", connection))
+                // Get total users (exclude deleted/inactive)
+                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Users WHERE IsActive = 1", connection))
                 {
                     var result = await cmd.ExecuteScalarAsync();
                     stats.TotalUsers = result != null ? Convert.ToInt32(result) : 0;
@@ -66,8 +66,8 @@ namespace StudentReportInitial.Data
                     stats.TotalAttendanceRecords = result != null ? Convert.ToInt32(result) : 0;
                 }
 
-                // Get active guardians (users with Role = 3)
-                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Users WHERE Role = 3", connection))
+                // Get active guardians (users with Role = 3, exclude deleted/inactive)
+                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Users WHERE Role = 3 AND IsActive = 1", connection))
                 {
                     var result = await cmd.ExecuteScalarAsync();
                     stats.ActiveGuardians = result != null ? Convert.ToInt32(result) : 0;

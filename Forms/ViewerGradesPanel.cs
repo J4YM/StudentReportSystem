@@ -502,6 +502,7 @@ namespace StudentReportInitial.Forms
         private async void CmbQuarter_SelectedIndexChanged(object sender, EventArgs e)
         {
             await LoadGradesAsync();
+            await CalculateGWAAsync();
         }
 
         private async void BtnRefresh_Click(object sender, EventArgs e)
@@ -539,23 +540,28 @@ namespace StudentReportInitial.Forms
                 // Calculate Cumulative GWA (all quarters, all subjects)
                 var cumulativeGWA = CalculateGWAFromDataTable(allGradesTable);
                 
-                // Get current quarter grades (most recent quarter with data)
-                var currentQuarter = GetCurrentQuarter();
-                var currentGradesQuery = @"
-                    SELECT g.Subject, g.Quarter, g.ComponentType, g.Percentage
-                    FROM Grades g
-                    WHERE g.StudentId = @studentId AND g.Quarter = @quarter";
+                // Get selected quarter grades (or all quarters if "All Quarters" is selected)
+                string selectedQuarter = cmbQuarter.SelectedIndex > 0 ? cmbQuarter.SelectedItem.ToString()! : "All Quarters";
+                double? selectedQuarterGWA = null;
+                
+                if (selectedQuarter != "All Quarters")
+                {
+                    var selectedQuarterQuery = @"
+                        SELECT g.Subject, g.Quarter, g.ComponentType, g.Percentage
+                        FROM Grades g
+                        WHERE g.StudentId = @studentId AND g.Quarter = @quarter";
 
-                using var currentGradesCommand = new SqlCommand(currentGradesQuery, connection);
-                currentGradesCommand.Parameters.AddWithValue("@studentId", linkedStudent!.Id);
-                currentGradesCommand.Parameters.AddWithValue("@quarter", currentQuarter);
+                    using var selectedQuarterCommand = new SqlCommand(selectedQuarterQuery, connection);
+                    selectedQuarterCommand.Parameters.AddWithValue("@studentId", linkedStudent!.Id);
+                    selectedQuarterCommand.Parameters.AddWithValue("@quarter", selectedQuarter);
 
-                using var currentGradesAdapter = new SqlDataAdapter(currentGradesCommand);
-                var currentGradesTable = new DataTable();
-                currentGradesAdapter.Fill(currentGradesTable);
+                    using var selectedQuarterAdapter = new SqlDataAdapter(selectedQuarterCommand);
+                    var selectedQuarterTable = new DataTable();
+                    selectedQuarterAdapter.Fill(selectedQuarterTable);
 
-                // Calculate Current GWA (current quarter only)
-                var currentGWA = CalculateGWAFromDataTable(currentGradesTable);
+                    // Calculate GWA for selected quarter
+                    selectedQuarterGWA = CalculateGWAFromDataTable(selectedQuarterTable);
+                }
 
                 // Update labels
                 if (cumulativeGWA.HasValue)
@@ -569,15 +575,17 @@ namespace StudentReportInitial.Forms
                     lblCumulativeGWA.Text = "Cumulative GWA: No grades available";
                 }
 
-                if (currentGWA.HasValue)
+                if (selectedQuarterGWA.HasValue)
                 {
-                    var currentNumeric = GradeCalculator.GetGWANumericGrade(currentGWA.Value);
-                    var currentLetter = GradeCalculator.GetGWALetterGrade(currentGWA.Value);
-                    lblCurrentGWA.Text = $"Current GWA ({currentQuarter}): {currentNumeric:F2} ({currentLetter})";
+                    var selectedNumeric = GradeCalculator.GetGWANumericGrade(selectedQuarterGWA.Value);
+                    var selectedLetter = GradeCalculator.GetGWALetterGrade(selectedQuarterGWA.Value);
+                    lblCurrentGWA.Text = $"{selectedQuarter} GWA: {selectedNumeric:F2} ({selectedLetter})";
                 }
                 else
                 {
-                    lblCurrentGWA.Text = $"Current GWA ({currentQuarter}): No grades available";
+                    lblCurrentGWA.Text = selectedQuarter != "All Quarters" 
+                        ? $"{selectedQuarter} GWA: No grades available"
+                        : "Select a quarter to view GWA";
                 }
             }
             catch (Exception ex)
@@ -718,22 +726,5 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private string GetCurrentQuarter()
-        {
-            // Determine current quarter based on date
-            var now = DateTime.Now;
-            var month = now.Month;
-
-            // Assuming academic year starts in June/July
-            // Adjust these ranges based on your academic calendar
-            if (month >= 8 || month <= 10) // August - October
-                return "Prelim";
-            else if (month >= 11 || month <= 1) // November - January
-                return "Midterm";
-            else if (month >= 2 && month <= 4) // February - April
-                return "PreFinal";
-            else // May - July
-                return "Final";
-        }
     }
 }

@@ -101,7 +101,7 @@ namespace StudentReportInitial.Forms
                 Size = new Size(150, 25),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
-            cmbComponentType.Items.AddRange(new[] { "Quizzes/Activities", "Performance Task", "Exam" });
+            cmbComponentType.Items.AddRange(new[] { "Quizzes", "PT/Activities", "Exam" });
 
             // Assignment name
             var lblAssignmentName = new Label
@@ -467,7 +467,7 @@ namespace StudentReportInitial.Forms
                         if (score > 0) // Only save non-zero scores
                         {
                             // Map display text to ComponentType value
-                            string componentTypeValue = MapComponentType(cmbComponentType.SelectedItem?.ToString() ?? "Quizzes/Activities");
+                            string componentTypeValue = MapComponentType(cmbComponentType.SelectedItem?.ToString() ?? "Quizzes");
                             
                             var grade = new Grade
                             {
@@ -476,7 +476,7 @@ namespace StudentReportInitial.Forms
                                 Subject = subjectName,
                                 Quarter = cmbQuarter.SelectedItem.ToString() ?? "Prelim",
                                 ComponentType = componentTypeValue,
-                                AssignmentType = cmbComponentType.SelectedItem.ToString() ?? "Quizzes/Activities", // Legacy field
+                                AssignmentType = cmbComponentType.SelectedItem.ToString() ?? "Quizzes", // Legacy field
                                 AssignmentName = txtAssignmentName.Text,
                                 Score = score,
                                 MaxScore = maxScore,
@@ -530,8 +530,10 @@ namespace StudentReportInitial.Forms
         {
             return displayText switch
             {
-                "Quizzes/Activities" => "QuizzesActivities",
-                "Performance Task" => "PerformanceTask",
+                "Quizzes" => "QuizzesActivities",
+                "PT/Activities" => "PerformanceTask",
+                "Performance Task" => "PerformanceTask", // Legacy support
+                "Quizzes/Activities" => "QuizzesActivities", // Legacy support
                 "Exam" => "Exam",
                 _ => "QuizzesActivities"
             };

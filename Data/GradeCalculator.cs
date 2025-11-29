@@ -51,30 +51,30 @@ namespace StudentReportInitial.Data
 
         public static string GetLetterGrade(double grade)
         {
-            if (grade >= 97.5) return "1.00 (Excellent)";
-            if (grade >= 94.5) return "1.25";
-            if (grade >= 91.5) return "1.50";
-            if (grade >= 88.5) return "1.75";
-            if (grade >= 85.5) return "2.00 (Very Good)";
-            if (grade >= 82.5) return "2.25";
-            if (grade >= 79.5) return "2.50";
-            if (grade >= 76.5) return "2.75";
-            if (grade >= 74.5) return "3.00 (Passed)";
+            if (grade >= 97.50) return "1.00 (Excellent)";
+            if (grade >= 94.50) return "1.25";
+            if (grade >= 91.50) return "1.50";
+            if (grade >= 86.50) return "1.75";
+            if (grade >= 81.50) return "2.00 (Very Good)";
+            if (grade >= 76.00) return "2.25";
+            if (grade >= 70.50) return "2.50";
+            if (grade >= 65.00) return "2.75";
+            if (grade >= 59.50) return "3.00 (Passed)";
             return "5.00 (Failed)";
         }
 
         public static double GetNumericGrade(double grade)
         {
-            if (grade >= 97.5) return 1.00;
-            if (grade >= 94.5) return 1.25;
-            if (grade >= 91.5) return 1.50;
-            if (grade >= 88.5) return 1.75;
-            if (grade >= 85.5) return 2.00;
-            if (grade >= 82.5) return 2.25;
-            if (grade >= 79.5) return 2.50;
-            if (grade >= 76.5) return 2.75;
-            if (grade >= 74.5) return 3.00;
-            return 5.00;
+            if (grade >= 97.50) return 1.00;  // Excellent
+            if (grade >= 94.50) return 1.25;   // Very Good
+            if (grade >= 91.50) return 1.50;   // Very Good
+            if (grade >= 86.50) return 1.75;   // Very Good
+            if (grade >= 81.50) return 2.00;   // Satisfactory
+            if (grade >= 76.00) return 2.25;   // Satisfactory
+            if (grade >= 70.50) return 2.50;   // Satisfactory
+            if (grade >= 65.00) return 2.75;   // Fair
+            if (grade >= 59.50) return 3.00;   // Fair
+            return 5.00;                        // Failed
         }
 
         // GWA (General Weighted Average) calculation based on new ranges
