@@ -12,9 +12,11 @@ namespace StudentReportInitial.Forms
         private User currentUser;
         private DataGridView dgvGrades;
         private ComboBox cmbSubject;
-        private ComboBox cmbAssignmentType;
+        private ComboBox cmbQuarter;
         private Button btnRefresh;
         private Label lblOverallAverage;
+        private Label lblCurrentGWA;
+        private Label lblCumulativeGWA;
         private Panel pnlSummary;
         private Student? linkedStudent;
         private bool studentContextResolved;
@@ -37,6 +39,7 @@ namespace StudentReportInitial.Forms
 
             await LoadSubjectsAsync();
             await LoadGradesAsync();
+            await CalculateGWAAsync();
         }
 
         private async Task<bool> EnsureStudentContextAsync()
@@ -54,8 +57,10 @@ namespace StudentReportInitial.Forms
         private void HandleMissingStudentContext()
         {
             lblOverallAverage.Text = "Overall Average: No linked student record";
+            lblCurrentGWA.Text = "Current GWA: No linked student record";
+            lblCumulativeGWA.Text = "Cumulative GWA: No linked student record";
             cmbSubject.Enabled = false;
-            cmbAssignmentType.Enabled = false;
+            cmbQuarter.Enabled = false;
             btnRefresh.Enabled = false;
             dgvGrades.DataSource = null;
         }
@@ -104,23 +109,23 @@ namespace StudentReportInitial.Forms
             cmbSubject.SelectedIndex = 0;
             cmbSubject.SelectedIndexChanged += CmbSubject_SelectedIndexChanged;
 
-            // Assignment type filter
-            var lblAssignmentType = new Label
+            // Quarter filter
+            var lblQuarter = new Label
             {
-                Text = "Type:",
+                Text = "Quarter:",
                 Location = new Point(300, 50),
                 AutoSize = true
             };
 
-            cmbAssignmentType = new ComboBox
+            cmbQuarter = new ComboBox
             {
-                Location = new Point(340, 48),
+                Location = new Point(360, 48),
                 Size = new Size(120, 25),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
-            cmbAssignmentType.Items.AddRange(new[] { "All Types", "Quiz", "Exam", "Project", "Assignment", "Participation", "Other" });
-            cmbAssignmentType.SelectedIndex = 0;
-            cmbAssignmentType.SelectedIndexChanged += CmbAssignmentType_SelectedIndexChanged;
+            cmbQuarter.Items.AddRange(new[] { "All Quarters", "Prelim", "Midterm", "PreFinal", "Final" });
+            cmbQuarter.SelectedIndex = 0;
+            cmbQuarter.SelectedIndexChanged += CmbQuarter_SelectedIndexChanged;
 
             btnRefresh = new Button
             {
@@ -136,14 +141,14 @@ namespace StudentReportInitial.Forms
             btnRefresh.Click += BtnRefresh_Click;
 
             pnlHeader.Controls.AddRange(new Control[] {
-                lblTitle, lblSubject, cmbSubject, lblAssignmentType, cmbAssignmentType, btnRefresh
+                lblTitle, lblSubject, cmbSubject, lblQuarter, cmbQuarter, btnRefresh
             });
 
             // Summary panel
             pnlSummary = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 60,
+                Height = 100,
                 BackColor = Color.FromArgb(59, 130, 246),
                 Padding = new Padding(20)
             };
@@ -151,13 +156,33 @@ namespace StudentReportInitial.Forms
             lblOverallAverage = new Label
             {
                 Text = "Overall Average: --",
-                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 ForeColor = Color.White,
                 AutoSize = true,
-                Location = new Point(20, 15)
+                Location = new Point(20, 10)
+            };
+
+            lblCurrentGWA = new Label
+            {
+                Text = "Current GWA: --",
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = Color.White,
+                AutoSize = true,
+                Location = new Point(20, 35)
+            };
+
+            lblCumulativeGWA = new Label
+            {
+                Text = "Cumulative GWA: --",
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = Color.White,
+                AutoSize = true,
+                Location = new Point(20, 60)
             };
 
             pnlSummary.Controls.Add(lblOverallAverage);
+            pnlSummary.Controls.Add(lblCurrentGWA);
+            pnlSummary.Controls.Add(lblCumulativeGWA);
 
             // Grades grid
             dgvGrades = new DataGridView
@@ -280,10 +305,10 @@ namespace StudentReportInitial.Forms
                     parameters.Add(new SqlParameter("@subject", cmbSubject.SelectedItem.ToString()));
                 }
 
-                if (cmbAssignmentType.SelectedIndex > 0)
+                if (cmbQuarter.SelectedIndex > 0)
                 {
-                    query += " AND g.AssignmentType = @assignmentType";
-                    parameters.Add(new SqlParameter("@assignmentType", cmbAssignmentType.SelectedItem.ToString()));
+                    query += " AND g.Quarter = @quarter";
+                    parameters.Add(new SqlParameter("@quarter", cmbQuarter.SelectedItem.ToString()));
                 }
 
                 query += " ORDER BY g.DateRecorded DESC";
@@ -336,7 +361,6 @@ namespace StudentReportInitial.Forms
                 return;
             }
 
-
             try
             {
                 // Group grades by subject and quarter
@@ -353,12 +377,7 @@ namespace StudentReportInitial.Forms
                     // Group by quarter
                     var quarterGroups = subjectGroup.GroupBy(row => row.Field<string>("Quarter") ?? "");
 
-                    var prelimGrade = new GradeCalculator.QuarterGrade();
-                    var midtermGrade = new GradeCalculator.QuarterGrade();
-                    var preFinalGrade = new GradeCalculator.QuarterGrade();
-                    var finalGrade = new GradeCalculator.QuarterGrade();
-
-                    bool hasPrelim = false, hasMidterm = false, hasPreFinal = false, hasFinal = false;
+                    var quarterGradeList = new List<(string Quarter, GradeCalculator.QuarterGrade Grade, double QuarterAverage)>();
 
                     foreach (var quarterGroup in quarterGroups)
                     {
@@ -409,42 +428,52 @@ namespace StudentReportInitial.Forms
                             }
                         }
 
-                        // Set quarter grade components (values already in 0-100 range from database)
-                        var quarterGrade = new GradeCalculator.QuarterGrade
+                        // Only include quarters that have at least one component with data
+                        // Calculate quarter average only if we have valid data
+                        if (quizzesCount > 0 || performanceCount > 0 || examCount > 0)
                         {
-                            QuizzesActivities = quizzesAvg,
-                            PerformanceTask = performanceAvg,
-                            Exam = examAvg
-                        };
+                            var quarterGrade = new GradeCalculator.QuarterGrade
+                            {
+                                QuizzesActivities = quizzesAvg,
+                                PerformanceTask = performanceAvg,
+                                Exam = examAvg
+                            };
 
-                        if (quarter == "Prelim" && (quizzesCount > 0 || performanceCount > 0 || examCount > 0))
-                        {
-                            prelimGrade = quarterGrade;
-                            hasPrelim = true;
-                        }
-                        else if (quarter == "Midterm" && (quizzesCount > 0 || performanceCount > 0 || examCount > 0))
-                        {
-                            midtermGrade = quarterGrade;
-                            hasMidterm = true;
-                        }
-                        else if (quarter == "PreFinal" && (quizzesCount > 0 || performanceCount > 0 || examCount > 0))
-                        {
-                            preFinalGrade = quarterGrade;
-                            hasPreFinal = true;
-                        }
-                        else if (quarter == "Final" && (quizzesCount > 0 || performanceCount > 0 || examCount > 0))
-                        {
-                            finalGrade = quarterGrade;
-                            hasFinal = true;
+                            // Calculate the quarter average
+                            var quarterAverage = quarterGrade.CalculateQuarterGrade();
+                            quarterGradeList.Add((quarter, quarterGrade, quarterAverage));
                         }
                     }
 
-                    // Calculate overall grade for this subject if we have at least one quarter
-                    if (hasPrelim || hasMidterm || hasPreFinal || hasFinal)
+                    // Calculate overall grade for this subject using only quarters with data
+                    if (quarterGradeList.Count > 0)
                     {
-                        // Use default values (0) for missing quarters
-                        var overall = GradeCalculator.CalculateOverallGrade(prelimGrade, midtermGrade, preFinalGrade, finalGrade);
-                        overallGrades.Add(overall);
+                        // Calculate weighted average based on available quarters
+                        double totalWeight = 0;
+                        double weightedSum = 0;
+
+                        foreach (var (quarter, grade, quarterAvg) in quarterGradeList)
+                        {
+                            double weight = 0;
+                            if (quarter == "Prelim") weight = GradeCalculator.PRELIM_WEIGHT;
+                            else if (quarter == "Midterm") weight = GradeCalculator.MIDTERM_WEIGHT;
+                            else if (quarter == "PreFinal") weight = GradeCalculator.PREFINAL_WEIGHT;
+                            else if (quarter == "Final") weight = GradeCalculator.FINAL_WEIGHT;
+
+                            if (weight > 0)
+                            {
+                                weightedSum += quarterAvg * weight;
+                                totalWeight += weight;
+                            }
+                        }
+
+                        // If we have quarters with data, calculate the overall grade
+                        // Normalize by the total weight of available quarters
+                        if (totalWeight > 0)
+                        {
+                            var overall = weightedSum / totalWeight;
+                            overallGrades.Add(overall);
+                        }
                     }
                 }
 
@@ -470,7 +499,7 @@ namespace StudentReportInitial.Forms
             await LoadGradesAsync();
         }
 
-        private async void CmbAssignmentType_SelectedIndexChanged(object sender, EventArgs e)
+        private async void CmbQuarter_SelectedIndexChanged(object sender, EventArgs e)
         {
             await LoadGradesAsync();
         }
@@ -478,6 +507,233 @@ namespace StudentReportInitial.Forms
         private async void BtnRefresh_Click(object sender, EventArgs e)
         {
             await LoadGradesAsync();
+        }
+
+        private async Task CalculateGWAAsync()
+        {
+            try
+            {
+                if (!await EnsureStudentContextAsync())
+                {
+                    lblCurrentGWA.Text = "Current GWA: No linked student record";
+                    lblCumulativeGWA.Text = "Cumulative GWA: No linked student record";
+                    return;
+                }
+
+                using var connection = DatabaseHelper.GetConnection();
+                await connection.OpenAsync();
+
+                // Get all grades for cumulative GWA
+                var allGradesQuery = @"
+                    SELECT g.Subject, g.Quarter, g.ComponentType, g.Percentage
+                    FROM Grades g
+                    WHERE g.StudentId = @studentId";
+
+                using var allGradesCommand = new SqlCommand(allGradesQuery, connection);
+                allGradesCommand.Parameters.AddWithValue("@studentId", linkedStudent!.Id);
+
+                using var allGradesAdapter = new SqlDataAdapter(allGradesCommand);
+                var allGradesTable = new DataTable();
+                allGradesAdapter.Fill(allGradesTable);
+
+                // Calculate Cumulative GWA (all quarters, all subjects)
+                var cumulativeGWA = CalculateGWAFromDataTable(allGradesTable);
+                
+                // Get current quarter grades (most recent quarter with data)
+                var currentQuarter = GetCurrentQuarter();
+                var currentGradesQuery = @"
+                    SELECT g.Subject, g.Quarter, g.ComponentType, g.Percentage
+                    FROM Grades g
+                    WHERE g.StudentId = @studentId AND g.Quarter = @quarter";
+
+                using var currentGradesCommand = new SqlCommand(currentGradesQuery, connection);
+                currentGradesCommand.Parameters.AddWithValue("@studentId", linkedStudent!.Id);
+                currentGradesCommand.Parameters.AddWithValue("@quarter", currentQuarter);
+
+                using var currentGradesAdapter = new SqlDataAdapter(currentGradesCommand);
+                var currentGradesTable = new DataTable();
+                currentGradesAdapter.Fill(currentGradesTable);
+
+                // Calculate Current GWA (current quarter only)
+                var currentGWA = CalculateGWAFromDataTable(currentGradesTable);
+
+                // Update labels
+                if (cumulativeGWA.HasValue)
+                {
+                    var cumulativeNumeric = GradeCalculator.GetGWANumericGrade(cumulativeGWA.Value);
+                    var cumulativeLetter = GradeCalculator.GetGWALetterGrade(cumulativeGWA.Value);
+                    lblCumulativeGWA.Text = $"Cumulative GWA: {cumulativeNumeric:F2} ({cumulativeLetter})";
+                }
+                else
+                {
+                    lblCumulativeGWA.Text = "Cumulative GWA: No grades available";
+                }
+
+                if (currentGWA.HasValue)
+                {
+                    var currentNumeric = GradeCalculator.GetGWANumericGrade(currentGWA.Value);
+                    var currentLetter = GradeCalculator.GetGWALetterGrade(currentGWA.Value);
+                    lblCurrentGWA.Text = $"Current GWA ({currentQuarter}): {currentNumeric:F2} ({currentLetter})";
+                }
+                else
+                {
+                    lblCurrentGWA.Text = $"Current GWA ({currentQuarter}): No grades available";
+                }
+            }
+            catch (Exception ex)
+            {
+                lblCurrentGWA.Text = $"Current GWA: Error - {ex.Message}";
+                lblCumulativeGWA.Text = $"Cumulative GWA: Error - {ex.Message}";
+            }
+        }
+
+        private double? CalculateGWAFromDataTable(DataTable dataTable)
+        {
+            if (dataTable.Rows.Count == 0)
+            {
+                return null;
+            }
+
+            try
+            {
+                // Group grades by subject and quarter
+                var subjectGroups = dataTable.AsEnumerable()
+                    .GroupBy(row => row.Field<string>("Subject") ?? "");
+
+                var subjectFinalGrades = new List<double>();
+
+                foreach (var subjectGroup in subjectGroups)
+                {
+                    var subjectName = subjectGroup.Key;
+                    if (string.IsNullOrEmpty(subjectName)) continue;
+
+                    // Group by quarter
+                    var quarterGroups = subjectGroup.GroupBy(row => row.Field<string>("Quarter") ?? "");
+
+                    var quarterGradeList = new List<(string Quarter, GradeCalculator.QuarterGrade Grade, double QuarterAverage)>();
+
+                    foreach (var quarterGroup in quarterGroups)
+                    {
+                        var quarter = quarterGroup.Key;
+                        if (string.IsNullOrEmpty(quarter)) continue;
+
+                        // Group by component type
+                        var componentGroups = quarterGroup.GroupBy(row => row.Field<string>("ComponentType") ?? "");
+
+                        double quizzesAvg = 0, performanceAvg = 0, examAvg = 0;
+                        int quizzesCount = 0, performanceCount = 0, examCount = 0;
+
+                        foreach (var componentGroup in componentGroups)
+                        {
+                            var componentType = componentGroup.Key;
+                            if (string.IsNullOrEmpty(componentType)) continue;
+
+                            double totalPercentage = 0;
+                            int count = 0;
+
+                            foreach (var row in componentGroup)
+                            {
+                                if (row["Percentage"] != DBNull.Value)
+                                {
+                                    totalPercentage += Convert.ToDouble(row["Percentage"]);
+                                    count++;
+                                }
+                            }
+
+                            if (count > 0)
+                            {
+                                var avg = totalPercentage / count;
+                                if (componentType == "QuizzesActivities")
+                                {
+                                    quizzesAvg = avg;
+                                    quizzesCount = count;
+                                }
+                                else if (componentType == "PerformanceTask")
+                                {
+                                    performanceAvg = avg;
+                                    performanceCount = count;
+                                }
+                                else if (componentType == "Exam")
+                                {
+                                    examAvg = avg;
+                                    examCount = count;
+                                }
+                            }
+                        }
+
+                        // Only include quarters that have at least one component with data
+                        if (quizzesCount > 0 || performanceCount > 0 || examCount > 0)
+                        {
+                            var quarterGrade = new GradeCalculator.QuarterGrade
+                            {
+                                QuizzesActivities = quizzesAvg,
+                                PerformanceTask = performanceAvg,
+                                Exam = examAvg
+                            };
+
+                            var quarterAverage = quarterGrade.CalculateQuarterGrade();
+                            quarterGradeList.Add((quarter, quarterGrade, quarterAverage));
+                        }
+                    }
+
+                    // Calculate overall grade for this subject using only quarters with data
+                    if (quarterGradeList.Count > 0)
+                    {
+                        double totalWeight = 0;
+                        double weightedSum = 0;
+
+                        foreach (var (quarter, grade, quarterAvg) in quarterGradeList)
+                        {
+                            double weight = 0;
+                            if (quarter == "Prelim") weight = GradeCalculator.PRELIM_WEIGHT;
+                            else if (quarter == "Midterm") weight = GradeCalculator.MIDTERM_WEIGHT;
+                            else if (quarter == "PreFinal") weight = GradeCalculator.PREFINAL_WEIGHT;
+                            else if (quarter == "Final") weight = GradeCalculator.FINAL_WEIGHT;
+
+                            if (weight > 0)
+                            {
+                                weightedSum += quarterAvg * weight;
+                                totalWeight += weight;
+                            }
+                        }
+
+                        if (totalWeight > 0)
+                        {
+                            var subjectFinal = weightedSum / totalWeight;
+                            subjectFinalGrades.Add(subjectFinal);
+                        }
+                    }
+                }
+
+                if (subjectFinalGrades.Count > 0)
+                {
+                    return subjectFinalGrades.Average();
+                }
+
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private string GetCurrentQuarter()
+        {
+            // Determine current quarter based on date
+            var now = DateTime.Now;
+            var month = now.Month;
+
+            // Assuming academic year starts in June/July
+            // Adjust these ranges based on your academic calendar
+            if (month >= 8 || month <= 10) // August - October
+                return "Prelim";
+            else if (month >= 11 || month <= 1) // November - January
+                return "Midterm";
+            else if (month >= 2 && month <= 4) // February - April
+                return "PreFinal";
+            else // May - July
+                return "Final";
         }
     }
 }

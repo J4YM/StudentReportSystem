@@ -394,21 +394,25 @@ namespace StudentReportInitial.Forms
 
             foreach (DataRow row in dataTable.Rows)
             {
-                var status = row["Status"]?.ToString();
-                switch (status)
+                // Status is stored as integer (1=Present, 2=Absent, 3=Late, 4=Excused)
+                if (row["Status"] != DBNull.Value)
                 {
-                    case "Present":
-                        present++;
-                        break;
-                    case "Absent":
-                        absent++;
-                        break;
-                    case "Late":
-                        late++;
-                        break;
-                    case "Excused":
-                        excused++;
-                        break;
+                    var statusValue = Convert.ToInt32(row["Status"]);
+                    switch (statusValue)
+                    {
+                        case 1: // Present
+                            present++;
+                            break;
+                        case 2: // Absent
+                            absent++;
+                            break;
+                        case 3: // Late
+                            late++;
+                            break;
+                        case 4: // Excused
+                            excused++;
+                            break;
+                    }
                 }
             }
 
