@@ -466,14 +466,17 @@ namespace StudentReportInitial.Forms
                         var score = Convert.ToDecimal(row.Cells["Score"].Value);
                         if (score > 0) // Only save non-zero scores
                         {
+                            // Map display text to ComponentType value
+                            string componentTypeValue = MapComponentType(cmbComponentType.SelectedItem?.ToString() ?? "Quizzes/Activities");
+                            
                             var grade = new Grade
                             {
                                 StudentId = Convert.ToInt32(row.Cells["Id"].Value),
                                 ProfessorId = currentProfessor.Id,
                                 Subject = subjectName,
                                 Quarter = cmbQuarter.SelectedItem.ToString() ?? "Prelim",
-                                ComponentType = cmbComponentType.SelectedItem.ToString() ?? "QuizzesActivities",
-                                AssignmentType = cmbComponentType.SelectedItem.ToString() ?? "QuizzesActivities", // Legacy field
+                                ComponentType = componentTypeValue,
+                                AssignmentType = cmbComponentType.SelectedItem.ToString() ?? "Quizzes/Activities", // Legacy field
                                 AssignmentName = txtAssignmentName.Text,
                                 Score = score,
                                 MaxScore = maxScore,
@@ -494,9 +497,19 @@ namespace StudentReportInitial.Forms
                     return;
                 }
 
-                await SaveGradeRecordsAsync(gradeRecords);
-                MessageBox.Show($"Grades saved successfully for {gradeRecords.Count} students!", "Success", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                var result = await SaveGradeRecordsAsync(gradeRecords);
+                string message = $"Grades saved successfully for {result.SavedCount} student(s)!";
+                if (result.SkippedCount > 0)
+                {
+                    message += $"\n\n{result.SkippedCount} duplicate grade entry(ies) skipped:\n" + 
+                               string.Join("\n", result.SkippedGrades.Take(5));
+                    if (result.SkippedCount > 5)
+                    {
+                        message += $"\n... and {result.SkippedCount - 5} more";
+                    }
+                }
+                MessageBox.Show(message, "Save Complete", 
+                    MessageBoxButtons.OK, result.SkippedCount > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
 
                 // Clear form
                 txtAssignmentName.Clear();
@@ -513,10 +526,37 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private async Task SaveGradeRecordsAsync(List<Grade> gradeRecords)
+        private static string MapComponentType(string? displayText)
+        {
+            return displayText switch
+            {
+                "Quizzes/Activities" => "QuizzesActivities",
+                "Performance Task" => "PerformanceTask",
+                "Exam" => "Exam",
+                _ => "QuizzesActivities"
+            };
+        }
+
+        private class SaveGradeResult
+        {
+            public int SavedCount { get; set; }
+            public int SkippedCount { get; set; }
+            public List<string> SkippedGrades { get; set; } = new();
+        }
+
+        private async Task<SaveGradeResult> SaveGradeRecordsAsync(List<Grade> gradeRecords)
         {
             using var connection = DatabaseHelper.GetConnection();
             await connection.OpenAsync();
+
+            var checkDuplicateQuery = @"
+                SELECT COUNT(*) 
+                FROM Grades 
+                WHERE StudentId = @studentId 
+                  AND Subject = @subject 
+                  AND Quarter = @quarter 
+                  AND ComponentType = @componentType 
+                  AND AssignmentName = @assignmentName";
 
             var insertQuery = @"
                 INSERT INTO Grades (StudentId, ProfessorId, Subject, Quarter, ComponentType, AssignmentType, AssignmentName, 
@@ -529,8 +569,39 @@ namespace StudentReportInitial.Forms
             var subjectName = gradeRecords.First().Subject;
             var assignmentType = gradeRecords.First().ComponentType;
 
+            var skippedGrades = new List<string>();
+            var savedCount = 0;
+
             foreach (var grade in gradeRecords)
             {
+                // Check for duplicate grade entry
+                using var checkCommand = new SqlCommand(checkDuplicateQuery, connection);
+                checkCommand.Parameters.AddWithValue("@studentId", grade.StudentId);
+                checkCommand.Parameters.AddWithValue("@subject", grade.Subject);
+                checkCommand.Parameters.AddWithValue("@quarter", grade.Quarter);
+                checkCommand.Parameters.AddWithValue("@componentType", grade.ComponentType);
+                checkCommand.Parameters.AddWithValue("@assignmentName", grade.AssignmentName);
+
+                var duplicateCount = Convert.ToInt32(await checkCommand.ExecuteScalarAsync());
+                
+                if (duplicateCount > 0)
+                {
+                    // Get student name for error message
+                    var studentQuery = "SELECT FirstName, LastName FROM Students WHERE Id = @studentId";
+                    using var studentCommand = new SqlCommand(studentQuery, connection);
+                    studentCommand.Parameters.AddWithValue("@studentId", grade.StudentId);
+                    using var studentReader = await studentCommand.ExecuteReaderAsync();
+                    string studentName = "Unknown";
+                    if (await studentReader.ReadAsync())
+                    {
+                        studentName = $"{studentReader.GetString("FirstName")} {studentReader.GetString("LastName")}";
+                    }
+                    studentReader.Close();
+                    
+                    skippedGrades.Add($"{studentName} - {grade.AssignmentName} ({grade.ComponentType})");
+                    continue;
+                }
+
                 using var command = new SqlCommand(insertQuery, connection);
                 command.Parameters.AddWithValue("@studentId", grade.StudentId);
                 command.Parameters.AddWithValue("@professorId", grade.ProfessorId);
@@ -547,6 +618,7 @@ namespace StudentReportInitial.Forms
                 command.Parameters.AddWithValue("@dueDate", grade.DueDate);
 
                 await command.ExecuteNonQueryAsync();
+                savedCount++;
 
                 // Send SMS notification to student/guardian
                 try
@@ -597,6 +669,13 @@ namespace StudentReportInitial.Forms
                     System.Diagnostics.Debug.WriteLine($"SMS notification failed: {smsEx.Message}");
                 }
             }
+
+            return new SaveGradeResult
+            {
+                SavedCount = savedCount,
+                SkippedCount = skippedGrades.Count,
+                SkippedGrades = skippedGrades
+            };
         }
     }
 }

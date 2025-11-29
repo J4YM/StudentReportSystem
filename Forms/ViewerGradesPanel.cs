@@ -130,12 +130,12 @@ namespace StudentReportInitial.Forms
                 BackColor = Color.FromArgb(59, 130, 246),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                
+
                 Cursor = Cursors.Hand
             };
             btnRefresh.Click += BtnRefresh_Click;
 
-            pnlHeader.Controls.AddRange(new Control[] { 
+            pnlHeader.Controls.AddRange(new Control[] {
                 lblTitle, lblSubject, cmbSubject, lblAssignmentType, cmbAssignmentType, btnRefresh
             });
 
@@ -243,7 +243,7 @@ namespace StudentReportInitial.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading subjects: {ex.Message}", "Error", 
+                MessageBox.Show($"Error loading subjects: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -315,7 +315,7 @@ namespace StudentReportInitial.Forms
 
                     dgvGrades.Columns["DateRecorded"].DefaultCellStyle.Format = "MM/dd/yyyy";
                     dgvGrades.Columns["DueDate"].DefaultCellStyle.Format = "MM/dd/yyyy";
-                    dgvGrades.Columns["Percentage"].DefaultCellStyle.Format = "0.0%";
+                    dgvGrades.Columns["Percentage"].DefaultCellStyle.Format = "0.0'%'";
                 }
 
                 // Calculate overall average using STI grading system
@@ -323,7 +323,7 @@ namespace StudentReportInitial.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading grades: {ex.Message}", "Error", 
+                MessageBox.Show($"Error loading grades: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -335,6 +335,7 @@ namespace StudentReportInitial.Forms
                 lblOverallAverage.Text = "Overall Average: No grades available";
                 return;
             }
+
 
             try
             {
@@ -408,7 +409,7 @@ namespace StudentReportInitial.Forms
                             }
                         }
 
-                        // Set quarter grade components
+                        // Set quarter grade components (values already in 0-100 range from database)
                         var quarterGrade = new GradeCalculator.QuarterGrade
                         {
                             QuizzesActivities = quizzesAvg,

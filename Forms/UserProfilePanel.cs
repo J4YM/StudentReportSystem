@@ -21,6 +21,9 @@ namespace StudentReportInitial.Forms
         private TextBox txtLastName = null!;
         private TextBox txtEmail = null!;
         private TextBox txtPhone = null!;
+        private TextBox txtCurrentPassword = null!;
+        private TextBox txtNewPassword = null!;
+        private TextBox txtConfirmPassword = null!;
         private Label lblStatus = null!;
         private Panel pnlStudentCard = null!;
         private Label lblStudentNameValue = null!;
@@ -116,15 +119,44 @@ namespace StudentReportInitial.Forms
                 Padding = new Padding(24)
             };
 
-            txtFirstName = CreateTextBox(new Point(20, 60), "First Name");
-            txtLastName = CreateTextBox(new Point(320, 60), "Last Name");
-            txtEmail = CreateTextBox(new Point(20, 160), "Email");
-            txtPhone = CreateTextBox(new Point(320, 160), "Phone");
+            // Password change section
+            var lblChangePassword = new Label
+            {
+                Text = "Change Password",
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                Location = new Point(20, 30),
+                AutoSize = true
+            };
+
+            var lblCurrentPassword = CreateFieldLabel("Current Password", new Point(20, 60));
+            txtCurrentPassword = new TextBox
+            {
+                Location = new Point(20, 80),
+                Size = new Size(250, 28),
+                UseSystemPasswordChar = true
+            };
+
+            var lblNewPassword = CreateFieldLabel("New Password", new Point(320, 60));
+            txtNewPassword = new TextBox
+            {
+                Location = new Point(320, 80),
+                Size = new Size(250, 28),
+                UseSystemPasswordChar = true
+            };
+
+            var lblConfirmPassword = CreateFieldLabel("Confirm Password", new Point(20, 120));
+            txtConfirmPassword = new TextBox
+            {
+                Location = new Point(20, 140),
+                Size = new Size(250, 28),
+                UseSystemPasswordChar = true
+            };
 
             btnSaveChanges = new Button
             {
-                Text = "Save Changes",
-                Location = new Point(20, 260),
+                Text = "Change Password",
+                Location = new Point(20, 180),
                 Size = new Size(160, 40),
                 BackColor = Color.FromArgb(34, 197, 94),
                 ForeColor = Color.White,
@@ -133,15 +165,36 @@ namespace StudentReportInitial.Forms
             };
             btnSaveChanges.Click += BtnSaveChanges_Click;
 
-            infoCard.Controls.Add(CreateFieldLabel("First Name", new Point(20, 30)));
-            infoCard.Controls.Add(txtFirstName);
-            infoCard.Controls.Add(CreateFieldLabel("Last Name", new Point(320, 30)));
-            infoCard.Controls.Add(txtLastName);
-            infoCard.Controls.Add(CreateFieldLabel("Email", new Point(20, 130)));
-            infoCard.Controls.Add(txtEmail);
-            infoCard.Controls.Add(CreateFieldLabel("Phone", new Point(320, 130)));
-            infoCard.Controls.Add(txtPhone);
+            // Make profile fields read-only (display only)
+            txtFirstName = CreateTextBox(new Point(20, 240), "First Name");
+            txtFirstName.ReadOnly = true;
+            txtFirstName.BackColor = Color.FromArgb(248, 250, 252);
+            txtLastName = CreateTextBox(new Point(320, 240), "Last Name");
+            txtLastName.ReadOnly = true;
+            txtLastName.BackColor = Color.FromArgb(248, 250, 252);
+            txtEmail = CreateTextBox(new Point(20, 300), "Email");
+            txtEmail.ReadOnly = true;
+            txtEmail.BackColor = Color.FromArgb(248, 250, 252);
+            txtPhone = CreateTextBox(new Point(320, 300), "Phone");
+            txtPhone.ReadOnly = true;
+            txtPhone.BackColor = Color.FromArgb(248, 250, 252);
+
+            infoCard.Controls.Add(lblChangePassword);
+            infoCard.Controls.Add(lblCurrentPassword);
+            infoCard.Controls.Add(txtCurrentPassword);
+            infoCard.Controls.Add(lblNewPassword);
+            infoCard.Controls.Add(txtNewPassword);
+            infoCard.Controls.Add(lblConfirmPassword);
+            infoCard.Controls.Add(txtConfirmPassword);
             infoCard.Controls.Add(btnSaveChanges);
+            infoCard.Controls.Add(CreateFieldLabel("First Name (Read-only)", new Point(20, 220)));
+            infoCard.Controls.Add(txtFirstName);
+            infoCard.Controls.Add(CreateFieldLabel("Last Name (Read-only)", new Point(320, 220)));
+            infoCard.Controls.Add(txtLastName);
+            infoCard.Controls.Add(CreateFieldLabel("Email (Read-only)", new Point(20, 280)));
+            infoCard.Controls.Add(txtEmail);
+            infoCard.Controls.Add(CreateFieldLabel("Phone (Read-only)", new Point(320, 280)));
+            infoCard.Controls.Add(txtPhone);
 
             pnlStudentCard = new Panel
             {
@@ -269,48 +322,126 @@ namespace StudentReportInitial.Forms
 
         private async void BtnSaveChanges_Click(object? sender, EventArgs e)
         {
-            if (!ValidateInputs(out var firstName, out var lastName, out var email, out var phone))
+            var currentPassword = txtCurrentPassword.Text;
+            var newPassword = txtNewPassword.Text;
+            var confirmPassword = txtConfirmPassword.Text;
+
+            // Validate password inputs
+            if (string.IsNullOrWhiteSpace(currentPassword))
             {
+                MessageBox.Show("Please enter your current password.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtCurrentPassword.Focus();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
+            {
+                MessageBox.Show("New password must be at least 6 characters long.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtNewPassword.Focus();
+                return;
+            }
+
+            if (newPassword != confirmPassword)
+            {
+                MessageBox.Show("New password and confirm password do not match.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtConfirmPassword.Focus();
                 return;
             }
 
             try
             {
+                // Verify current password
                 using var connection = DatabaseHelper.GetConnection();
                 await connection.OpenAsync();
 
-                var query = @"
+                var verifyQuery = "SELECT PasswordHash, PasswordSalt FROM Users WHERE Id = @id";
+                using var verifyCommand = new SqlCommand(verifyQuery, connection);
+                verifyCommand.Parameters.AddWithValue("@id", currentUser.Id);
+
+                using var reader = await verifyCommand.ExecuteReaderAsync();
+                if (!await reader.ReadAsync())
+                {
+                    MessageBox.Show("User not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                var storedHash = reader.GetString(reader.GetOrdinal("PasswordHash"));
+                var storedSalt = reader.GetString(reader.GetOrdinal("PasswordSalt"));
+                reader.Close();
+
+                if (!PasswordHasher.VerifyPasswordHash(currentPassword, storedHash, storedSalt))
+                {
+                    MessageBox.Show("Current password is incorrect.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtCurrentPassword.Clear();
+                    txtCurrentPassword.Focus();
+                    return;
+                }
+
+                // Get user's phone number for OTP verification
+                var phoneQuery = "SELECT Phone FROM Users WHERE Id = @id";
+                using var phoneCommand = new SqlCommand(phoneQuery, connection);
+                phoneCommand.Parameters.AddWithValue("@id", currentUser.Id);
+                var phoneResult = await phoneCommand.ExecuteScalarAsync();
+                string? phoneNumber = phoneResult != DBNull.Value && phoneResult != null ? phoneResult.ToString() : null;
+
+                if (string.IsNullOrWhiteSpace(phoneNumber))
+                {
+                    MessageBox.Show("Phone number is required for password change verification. Please contact administrator.", 
+                        "Verification Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Send OTP for verification
+                string otpCode = SmsService.GenerateOtp();
+                bool otpSent = await SmsService.SendOtpAsync(phoneNumber, otpCode);
+
+                if (!otpSent)
+                {
+                    MessageBox.Show("Failed to send verification code. Please check your phone number and try again.",
+                        "Verification Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // Show OTP verification form
+                using var otpForm = new OtpVerificationForm(phoneNumber, otpCode);
+                if (otpForm.ShowDialog() != DialogResult.OK || !otpForm.IsVerified)
+                {
+                    MessageBox.Show("OTP verification is required to change password.",
+                        "Verification Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Update password
+                PasswordHasher.CreatePasswordHash(newPassword, out string newPasswordHash, out string newPasswordSalt);
+
+                var updateQuery = @"
                     UPDATE Users
-                    SET FirstName = @firstName,
-                        LastName = @lastName,
-                        Email = @email,
-                        Phone = @phone
+                    SET PasswordHash = @passwordHash,
+                        PasswordSalt = @passwordSalt
                     WHERE Id = @id";
 
-                using var command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@firstName", firstName);
-                command.Parameters.AddWithValue("@lastName", lastName);
-                command.Parameters.AddWithValue("@email", email);
-                command.Parameters.AddWithValue("@phone", string.IsNullOrWhiteSpace(phone) ? (object)DBNull.Value : phone);
-                command.Parameters.AddWithValue("@id", currentUser.Id);
+                using var updateCommand = new SqlCommand(updateQuery, connection);
+                updateCommand.Parameters.AddWithValue("@passwordHash", newPasswordHash);
+                updateCommand.Parameters.AddWithValue("@passwordSalt", newPasswordSalt);
+                updateCommand.Parameters.AddWithValue("@id", currentUser.Id);
 
-                await command.ExecuteNonQueryAsync();
+                await updateCommand.ExecuteNonQueryAsync();
 
-                currentUser.FirstName = firstName;
-                currentUser.LastName = lastName;
-                currentUser.Email = email;
-                currentUser.Phone = phone;
-
-                UpdateHeaderText();
-                ProfileUpdated?.Invoke(currentUser);
+                // Clear password fields
+                txtCurrentPassword.Clear();
+                txtNewPassword.Clear();
+                txtConfirmPassword.Clear();
 
                 lblStatus.ForeColor = Color.FromArgb(34, 197, 94);
-                lblStatus.Text = "Profile updated successfully.";
+                lblStatus.Text = "Password changed successfully.";
+                
+                MessageBox.Show("Password changed successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
                 lblStatus.ForeColor = Color.FromArgb(239, 68, 68);
-                lblStatus.Text = $"Failed to update profile: {ex.Message}";
+                lblStatus.Text = $"Failed to change password: {ex.Message}";
+                MessageBox.Show($"Error changing password: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -388,42 +519,7 @@ namespace StudentReportInitial.Forms
             resized.Save(destinationPath, ImageFormat.Png);
         }
 
-        private bool ValidateInputs(out string firstName, out string lastName, out string email, out string phone)
-        {
-            firstName = txtFirstName.Text.Trim();
-            lastName = txtLastName.Text.Trim();
-            email = txtEmail.Text.Trim();
-            phone = txtPhone.Text.Trim();
-
-            if (string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName))
-            {
-                MessageBox.Show("First name and last name are required.", "Validation",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return false;
-            }
-
-            if (!IsValidEmail(email))
-            {
-                MessageBox.Show("Please enter a valid email address.", "Validation",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return false;
-            }
-
-            if (!string.IsNullOrWhiteSpace(phone))
-            {
-                var errorMessage = PhoneValidator.GetValidationMessage(phone);
-                if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    MessageBox.Show(errorMessage, "Validation",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return false;
-                }
-
-                phone = PhoneValidator.FormatPhoneNumber(phone);
-            }
-
-            return true;
-        }
+        // ValidateInputs method removed - no longer needed as profile fields are read-only
 
         private void LoadProfilePhoto()
         {
