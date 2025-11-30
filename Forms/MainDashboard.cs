@@ -37,7 +37,7 @@ namespace StudentReportInitial.Forms
             BackColor = Color.FromArgb(248, 250, 252);
             StartPosition = FormStartPosition.CenterScreen;
             Size = new Size(1280, 720);
-            Text = $"STI College Baliuag - AimONE - Welcome {currentUser.FirstName} {currentUser.LastName}";
+            Text = "STI College";
             WindowState = FormWindowState.Maximized;
 
             // Header panel
@@ -47,7 +47,7 @@ namespace StudentReportInitial.Forms
 
             lblAppTitle.Font = new Font("Segoe UI", 16F, FontStyle.Bold);
             lblAppTitle.ForeColor = Color.FromArgb(30, 41, 59);
-            lblAppTitle.Text = "STI College Baliuag - AimONE";
+            // Title will be set in LoadUserInterface based on user role
 
             // User info label
             lblUserInfo.ForeColor = Color.FromArgb(30, 64, 175);
@@ -103,15 +103,34 @@ namespace StudentReportInitial.Forms
 
         private async void LoadUserInterface()
         {
-            // Only Super Admin can see and use branch selector
-            // Branch Admins (UserRole.Admin = 1) should NOT see the branch filter
+            // Set dashboard title based on user role
             var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
             if (isSuperAdmin)
             {
+                lblAppTitle.Text = "STI College - AimONE";
                 await InitializeBranchSelectorAsync();
             }
             else
             {
+                // For branch admins, show branch name in title
+                var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                if (branchId > 0)
+                {
+                    var branch = await BranchHelper.GetBranchByIdAsync(branchId);
+                    if (branch != null)
+                    {
+                        lblAppTitle.Text = $"STI College ({branch.Name}) - AimONE";
+                    }
+                    else
+                    {
+                        lblAppTitle.Text = "STI College - AimONE";
+                    }
+                }
+                else
+                {
+                    lblAppTitle.Text = "STI College - AimONE";
+                }
+                
                 // Ensure branch selector is hidden/removed for non-Super Admin users
                 if (lblBranchSelector != null)
                 {

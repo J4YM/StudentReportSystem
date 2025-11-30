@@ -2,6 +2,7 @@ using StudentReportInitial.Models;
 using StudentReportInitial.Data;
 using System.Data.SqlClient;
 using System.Data;
+using System.Collections.Generic;
 
 namespace StudentReportInitial.Forms
 {
@@ -322,7 +323,7 @@ namespace StudentReportInitial.Forms
             LoadSubjects();
         }
 
-        private void ShowSubjectForm(int subjectId = -1)
+        private async void ShowSubjectForm(int subjectId = -1)
         {
             pnlSubjectForm.Controls.Clear();
             pnlSubjectForm.Visible = true;
@@ -399,6 +400,30 @@ namespace StudentReportInitial.Forms
             // Load professors
             LoadProfessorsForComboBox(cmbProfessor);
 
+            // Branch selection (for Super Admin when managing all branches)
+            ComboBox? cmbBranch = null;
+            Label? lblBranch = null;
+            if (currentUser != null && !isEditMode)
+            {
+                var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                if (isSuperAdmin && !branchFilterId.HasValue) // Only show when managing all branches
+                {
+                    lblBranch = new Label { Text = "Branch (Required):", Location = new Point(20, yPos), AutoSize = true };
+                    cmbBranch = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(300, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+                    
+                    var branches = await BranchHelper.GetAllBranchesAsync();
+                    foreach (var branch in branches)
+                    {
+                        cmbBranch.Items.Add(branch);
+                    }
+                    if (cmbBranch.Items.Count > 0)
+                    {
+                        cmbBranch.SelectedIndex = 0;
+                    }
+                    yPos += spacing;
+                }
+            }
+
             // Buttons
             var btnSave = new Button
             {
@@ -439,11 +464,26 @@ namespace StudentReportInitial.Forms
                     if (currentUser != null)
                     {
                         var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
-                        if (isSuperAdmin && branchFilterId.HasValue)
+                        if (isSuperAdmin)
                         {
-                            assignedBranchId = branchFilterId.Value;
+                            // When managing all branches, use branch from form dropdown
+                            if (cmbBranch != null && cmbBranch.SelectedItem is Branch selectedBranch)
+                            {
+                                assignedBranchId = selectedBranch.Id;
+                            }
+                            // When specific branch is selected in filter, use that
+                            else if (branchFilterId.HasValue)
+                            {
+                                assignedBranchId = branchFilterId.Value;
+                            }
+                            else
+                            {
+                                MessageBox.Show("Please select a branch for this subject.", "Validation Error",
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
                         }
-                        else if (!isSuperAdmin)
+                        else
                         {
                             var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
                             if (branchId > 0)
@@ -451,6 +491,13 @@ namespace StudentReportInitial.Forms
                                 assignedBranchId = branchId;
                             }
                         }
+                    }
+                    
+                    if (assignedBranchId == 0)
+                    {
+                        MessageBox.Show("Unable to determine branch assignment. Please ensure a branch is selected.", "Validation Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
                     }
 
                     var subject = new Subject
@@ -485,11 +532,19 @@ namespace StudentReportInitial.Forms
                 }
             };
 
-			pnlSubjectForm.Controls.AddRange(new Control[] {
+			var controlsList = new List<Control> {
 				lblTitle, lblName, txtName, lblCode, txtCode, lblDescription, txtDescription,
 				lblGradeLevel, cmbGradeLevel, lblCourse, cmbCourse, lblSection, cmbSectionCode, lblProfessor, cmbProfessor,
 				btnSave, btnCancel
-			});
+			};
+			
+			if (lblBranch != null && cmbBranch != null)
+			{
+				controlsList.Add(lblBranch);
+				controlsList.Add(cmbBranch);
+			}
+			
+			pnlSubjectForm.Controls.AddRange(controlsList.ToArray());
 
             // Load subject data if editing
             if (isEditMode)

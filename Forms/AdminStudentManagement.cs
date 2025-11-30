@@ -13,11 +13,6 @@ namespace StudentReportInitial.Forms
         private Button btnAddStudent = null!;
         private Button btnEditStudent = null!;
         private Button btnDeleteStudent = null!;
-        private Button btnRefresh = null!;
-        private TextBox txtSearch = null!;
-        private ComboBox cmbGradeFilter = null!;
-        private ComboBox? cmbBranchFilter;
-        private Label? lblBranchFilter;
         private Panel pnlStudentForm = null!;
         private bool isEditMode = false;
         private int selectedStudentId = -1;
@@ -42,59 +37,7 @@ namespace StudentReportInitial.Forms
             this.Dock = DockStyle.Fill;
             this.BackColor = Color.FromArgb(248, 250, 252);
 
-            // Search and filter panel
-            var pnlSearch = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 60,
-                BackColor = Color.White,
-                Padding = new Padding(20)
-            };
-
-            txtSearch = new TextBox
-            {
-                PlaceholderText = "Search students...",
-                Size = new Size(200, 30),
-                Location = new Point(20, 15)
-            };
-            txtSearch.TextChanged += TxtSearch_TextChanged;
-
-			cmbGradeFilter = new ComboBox
-            {
-                Size = new Size(170, 30),
-                Location = new Point(240, 15),
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-			cmbGradeFilter.Items.AddRange(new[] { "All Grades", "1st Year", "2nd Year", "3rd Year", "4th Year" });
-            cmbGradeFilter.SelectedIndex = 0;
-            cmbGradeFilter.SelectedIndexChanged += CmbGradeFilter_SelectedIndexChanged;
-
-            // Branch filter (only for Super Admin)
-            if (currentUser != null)
-            {
-                InitializeBranchFilterAsync();
-            }
-
-            btnRefresh = new Button
-            {
-                Text = "Refresh",
-                Size = new Size(90, 32),
-                Location = new Point(420, 14),
-                BackColor = Color.FromArgb(59, 130, 246),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9),
-                Cursor = Cursors.Hand
-            };
-            btnRefresh.Click += BtnRefresh_Click;
-
-            var controlsList = new List<Control> { txtSearch, cmbGradeFilter, btnRefresh };
-            if (lblBranchFilter != null && cmbBranchFilter != null)
-            {
-                controlsList.Add(lblBranchFilter);
-                controlsList.Add(cmbBranchFilter);
-            }
-            pnlSearch.Controls.AddRange(controlsList.ToArray());
+            // Search panel removed
 
             // Action buttons panel
             var pnlActions = new Panel
@@ -174,9 +117,7 @@ namespace StudentReportInitial.Forms
             this.Controls.Add(dgvStudents);
             this.Controls.Add(pnlStudentForm);
             this.Controls.Add(pnlActions);
-            this.Controls.Add(pnlSearch);
 
-            UIStyleHelper.ApplyRoundedButton(btnRefresh, 10);
             UIStyleHelper.ApplyRoundedButton(btnAddStudent, 10);
             UIStyleHelper.ApplyRoundedButton(btnEditStudent, 10);
             UIStyleHelper.ApplyRoundedButton(btnDeleteStudent, 10);
@@ -184,87 +125,6 @@ namespace StudentReportInitial.Forms
             this.ResumeLayout(false);
         }
 
-        private async void InitializeBranchFilterAsync()
-        {
-            try
-            {
-                var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser!.Id);
-                if (!isSuperAdmin) return;
-
-                var branches = await BranchHelper.GetAllBranchesAsync();
-                
-                lblBranchFilter = new Label
-                {
-                    Text = "Branch:",
-                    Size = new Size(50, 30),
-                    Location = new Point(430, 15),
-                    AutoSize = true,
-                    Font = new Font("Segoe UI", 9),
-                    ForeColor = Color.FromArgb(51, 65, 85)
-                };
-
-                cmbBranchFilter = new ComboBox
-                {
-                    Size = new Size(200, 30),
-                    Location = new Point(485, 15),
-                    DropDownStyle = ComboBoxStyle.DropDownList,
-                    Font = new Font("Segoe UI", 9)
-                };
-
-                // Add "All Branches" and all branches
-                cmbBranchFilter.Items.Add("All Branches");
-                foreach (var branch in branches)
-                {
-                    cmbBranchFilter.Items.Add(branch);
-                }
-
-                // Set initial selection based on branchFilterId
-                if (branchFilterId.HasValue)
-                {
-                    var selectedBranch = branches.FirstOrDefault(b => b.Id == branchFilterId.Value);
-                    if (selectedBranch != null)
-                    {
-                        cmbBranchFilter.SelectedItem = selectedBranch;
-                    }
-                    else
-                    {
-                        cmbBranchFilter.SelectedIndex = 0;
-                    }
-                }
-                else
-                {
-                    cmbBranchFilter.SelectedIndex = 0; // "All Branches"
-                }
-
-                cmbBranchFilter.SelectedIndexChanged += async (s, e) =>
-                {
-                    if (cmbBranchFilter.SelectedIndex == 0)
-                    {
-                        branchFilterId = null; // All branches
-                    }
-                    else if (cmbBranchFilter.SelectedItem is Branch branch)
-                    {
-                        branchFilterId = branch.Id;
-                    }
-                    await LoadStudentsAsync();
-                };
-
-                // Update refresh button position
-                btnRefresh.Location = new Point(700, 14);
-                
-                // Add branch filter controls to search panel
-                var pnlSearch = btnRefresh.Parent;
-                if (pnlSearch != null)
-                {
-                    pnlSearch.Controls.Add(lblBranchFilter);
-                    pnlSearch.Controls.Add(cmbBranchFilter);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error initializing branch filter: {ex.Message}");
-            }
-        }
 
         private void ApplyModernStyling()
         {
@@ -435,28 +295,11 @@ namespace StudentReportInitial.Forms
                     filterParts.Add($"(FirstName LIKE '%{searchText}%' OR LastName LIKE '%{searchText}%' OR StudentId LIKE '%{searchText}%')");
                 }
                 
-                if (cmbGradeFilter.SelectedIndex > 0)
-                {
-                    var grade = cmbGradeFilter.SelectedItem?.ToString()?.Replace("'", "''");
-                    if (!string.IsNullOrEmpty(grade))
-                    {
-                        filterParts.Add($"GradeLevel = '{grade}'");
-                    }
-                }
 
                 dataTable.DefaultView.RowFilter = filterParts.Count > 0 ? string.Join(" AND ", filterParts) : "";
             }
         }
 
-        private void CmbGradeFilter_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            ApplyFilters();
-        }
-
-        private async void BtnRefresh_Click(object sender, EventArgs e)
-        {
-            await LoadStudentsAsync();
-        }
 
         private void DgvStudents_SelectionChanged(object sender, EventArgs e)
         {
@@ -697,30 +540,46 @@ namespace StudentReportInitial.Forms
 
             // Guardian assignment
             var lblGuardian = new Label { Text = "Guardian:", Location = new Point(20, yPos), AutoSize = true };
-            var cmbGuardian = new ComboBox 
-            { 
-                Location = new Point(20, yPos + 20), 
-                Size = new Size(250, 25),
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            var btnNewGuardian = new Button
+            yPos += 20;
+            
+            var btnSelectGuardian = new Button
             {
-                Text = "New Guardian",
-                Location = new Point(280, yPos + 20),
-                Size = new Size(100, 25),
+                Text = "Select Existing Guardian",
+                Location = new Point(20, yPos),
+                Size = new Size(180, 30),
                 BackColor = Color.FromArgb(59, 130, 246),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8),
+                Font = new Font("Segoe UI", 9),
                 Cursor = Cursors.Hand
             };
-            btnNewGuardian.Click += async (s, e) => await BtnNewGuardian_ClickAsync(cmbGuardian, txtFirstName, txtLastName, txtPhone);
-            LoadGuardiansForComboBox(cmbGuardian);
-            if (cmbGuardian.Items.Count > 0 && !isEditMode)
+            
+            int? selectedGuardianId = null;
+            string? selectedGuardianName = null;
+            var lblGuardianStatus = new Label
             {
-                cmbGuardian.SelectedIndex = 0;
-            }
-            yPos += spacing;
+                Text = "No guardian selected - new guardian will be created",
+                Location = new Point(210, yPos + 5),
+                Size = new Size(300, 20),
+                ForeColor = Color.FromArgb(107, 114, 128),
+                Font = new Font("Segoe UI", 9, FontStyle.Italic),
+                AutoSize = false
+            };
+            
+            btnSelectGuardian.Click += async (s, e) =>
+            {
+                using var guardianForm = new GuardianSelectionForm(currentUser, branchFilterId);
+                if (guardianForm.ShowDialog() == DialogResult.OK && guardianForm.SelectedGuardianId.HasValue)
+                {
+                    selectedGuardianId = guardianForm.SelectedGuardianId.Value;
+                    selectedGuardianName = guardianForm.SelectedGuardianName;
+                    lblGuardianStatus.Text = $"Selected: {selectedGuardianName}";
+                    lblGuardianStatus.ForeColor = Color.FromArgb(34, 197, 94);
+                    lblGuardianStatus.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+                }
+            };
+            
+            yPos += spacing + 10;
 
             // Buttons
             var btnSave = new Button
@@ -800,15 +659,7 @@ namespace StudentReportInitial.Forms
                         }
                     }
 
-                    int selectedGuardianId = 0;
-                    if (cmbGuardian.SelectedValue != null && cmbGuardian.SelectedValue is DataRowView rowView)
-                    {
-                        selectedGuardianId = Convert.ToInt32(rowView.Row["Id"]);
-                    }
-                    else if (cmbGuardian.SelectedValue != null)
-                    {
-                        selectedGuardianId = Convert.ToInt32(cmbGuardian.SelectedValue);
-                    }
+                    int selectedGuardianIdValue = selectedGuardianId ?? 0;
 
                     // Determine branch assignment
                     int assignedBranchId = 0;
@@ -863,7 +714,7 @@ namespace StudentReportInitial.Forms
                         Email = txtEmail.Text,
                         Phone = phone,
                         Address = txtAddress.Text,
-                        GuardianId = selectedGuardianId, // Use selected guardian or 0 to create new
+                        GuardianId = selectedGuardianIdValue, // Use selected guardian or 0 to create new
                         BranchId = assignedBranchId,
                         IsActive = true
                     };
@@ -894,7 +745,7 @@ namespace StudentReportInitial.Forms
                 lblTitle, lblStudentId, txtStudentId, lblFirstName, txtFirstName, lblLastName, txtLastName,
 				lblDateOfBirth, dtpDateOfBirth, lblGender, cmbGender, lblGradeLevel, cmbGradeLevel,
 				lblCourse, cmbCourse, lblSection, cmbSectionCode, lblEmail, txtEmail, lblPhone, txtPhone, lblPhoneError, lblAddress, txtAddress,
-                lblGuardian, cmbGuardian, btnNewGuardian, btnSave, btnCancel
+                lblGuardian, btnSelectGuardian, lblGuardianStatus, btnSave, btnCancel
             };
             
             // Add branch controls if they exist
@@ -912,83 +763,31 @@ namespace StudentReportInitial.Forms
             // Load student data if editing
             if (isEditMode)
             {
-				LoadStudentData(selectedStudentId, txtStudentId, txtFirstName, txtLastName, dtpDateOfBirth, 
-					cmbGender, cmbGradeLevel, cmbSectionCode, txtEmail, txtPhone, txtAddress, cmbGuardian);
+				var (guardianId, guardianName) = await LoadStudentDataAsync(selectedStudentId, txtStudentId, txtFirstName, txtLastName, dtpDateOfBirth, 
+					cmbGender, cmbGradeLevel, cmbSectionCode, txtEmail, txtPhone, txtAddress, lblGuardianStatus);
+                selectedGuardianId = guardianId;
+                selectedGuardianName = guardianName;
             }
         }
 
-        private async void LoadGuardiansForComboBox(ComboBox cmbGuardian)
-        {
-            try
-            {
-                using var connection = DatabaseHelper.GetConnection();
-                await connection.OpenAsync();
 
-                var query = "SELECT Id, FirstName + ' ' + LastName as FullName FROM Users WHERE Role = 3 AND IsActive = 1";
-                
-                // Add branch filter if not Super Admin
-                if (currentUser != null)
-                {
-                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
-                    if (!isSuperAdmin)
-                    {
-                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
-                        if (branchId > 0)
-                        {
-                            query += " AND BranchId = @branchId";
-                        }
-                    }
-                    else if (branchFilterId.HasValue)
-                    {
-                        query += " AND BranchId = @branchId";
-                    }
-                }
-
-                using var command = new SqlCommand(query, connection);
-                
-                // Add branch parameter if needed
-                if (currentUser != null)
-                {
-                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
-                    if (!isSuperAdmin)
-                    {
-                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
-                        if (branchId > 0)
-                        {
-                            command.Parameters.AddWithValue("@branchId", branchId);
-                        }
-                    }
-                    else if (branchFilterId.HasValue)
-                    {
-                        command.Parameters.AddWithValue("@branchId", branchFilterId.Value);
-                    }
-                }
-
-                using var adapter = new SqlDataAdapter(command);
-                var dataTable = new DataTable();
-                adapter.Fill(dataTable);
-
-                cmbGuardian.DataSource = dataTable;
-                cmbGuardian.DisplayMember = "FullName";
-                cmbGuardian.ValueMember = "Id";
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error loading guardians: {ex.Message}", "Error", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-		private async void LoadStudentData(int studentId, TextBox txtStudentId, TextBox txtFirstName, 
+		private async Task<(int? guardianId, string? guardianName)> LoadStudentDataAsync(int studentId, TextBox txtStudentId, TextBox txtFirstName, 
 			TextBox txtLastName, DateTimePicker dtpDateOfBirth, ComboBox cmbGender, ComboBox cmbGradeLevel,
-			ComboBox cmbSectionCode, TextBox txtEmail, TextBox txtPhone, TextBox txtAddress, ComboBox cmbGuardian)
+			ComboBox cmbSectionCode, TextBox txtEmail, TextBox txtPhone, TextBox txtAddress, Label lblGuardianStatus)
         {
+            int? guardianId = null;
+            string? guardianName = null;
+            
             try
             {
                 using var connection = DatabaseHelper.GetConnection();
                 await connection.OpenAsync();
 
-                var query = "SELECT * FROM Students WHERE Id = @id";
+                var query = @"
+                    SELECT s.*, u.FirstName + ' ' + u.LastName as GuardianName
+                    FROM Students s
+                    LEFT JOIN Users u ON s.GuardianId = u.Id
+                    WHERE s.Id = @id";
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@id", studentId);
 
@@ -1022,14 +821,13 @@ namespace StudentReportInitial.Forms
                     // Set guardian selection
                     if (!reader.IsDBNull("GuardianId"))
                     {
-                        int guardianId = reader.GetInt32("GuardianId");
-                        for (int i = 0; i < cmbGuardian.Items.Count; i++)
+                        guardianId = reader.GetInt32("GuardianId");
+                        guardianName = reader.IsDBNull("GuardianName") ? null : reader.GetString("GuardianName");
+                        if (guardianName != null)
                         {
-                            if (cmbGuardian.Items[i] is DataRowView rowView && Convert.ToInt32(rowView.Row["Id"]) == guardianId)
-                            {
-                                cmbGuardian.SelectedIndex = i;
-                                break;
-                            }
+                            lblGuardianStatus.Text = $"Selected: {guardianName}";
+                            lblGuardianStatus.ForeColor = Color.FromArgb(34, 197, 94);
+                            lblGuardianStatus.Font = new Font("Segoe UI", 9, FontStyle.Regular);
                         }
                     }
                 }
@@ -1039,6 +837,8 @@ namespace StudentReportInitial.Forms
                 MessageBox.Show($"Error loading student data: {ex.Message}", "Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            
+            return (guardianId, guardianName);
         }
 
         private async Task AddStudentAsync(Student student)
@@ -1099,6 +899,7 @@ namespace StudentReportInitial.Forms
                 command.Parameters.AddWithValue("@phone", student.Phone);
                 command.Parameters.AddWithValue("@address", student.Address);
                 command.Parameters.AddWithValue("@guardianId", guardianId);
+                command.Parameters.AddWithValue("@branchId", student.BranchId);
                 command.Parameters.AddWithValue("@isActive", student.IsActive);
                 command.Parameters.AddWithValue("@enrollmentDate", DateTime.Now);
                 command.Parameters.AddWithValue("@username", studentUsername);
@@ -1253,105 +1054,6 @@ namespace StudentReportInitial.Forms
             return Convert.ToInt32(result);
         }
 
-        private async Task BtnNewGuardian_ClickAsync(ComboBox cmbGuardian, TextBox txtFirstName, TextBox txtLastName, TextBox txtPhone)
-        {
-            try
-            {
-                // Validate required fields
-                if (string.IsNullOrWhiteSpace(txtFirstName.Text) || string.IsNullOrWhiteSpace(txtLastName.Text))
-                {
-                    MessageBox.Show("Please enter student's first and last name first to create a guardian account.",
-                        "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                if (string.IsNullOrWhiteSpace(txtPhone.Text))
-                {
-                    MessageBox.Show("Please enter a phone number first to create a guardian account.",
-                        "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                // Validate phone number
-                string phone = txtPhone.Text.Trim();
-                string phoneError = PhoneValidator.GetValidationMessage(phone);
-                if (!string.IsNullOrEmpty(phoneError))
-                {
-                    MessageBox.Show($"Invalid phone number: {phoneError}",
-                        "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                phone = PhoneValidator.FormatPhoneNumber(phone);
-
-                using var connection = DatabaseHelper.GetConnection();
-                await connection.OpenAsync();
-                using var transaction = connection.BeginTransaction();
-
-                try
-                {
-                    // Create a temporary student object for guardian generation
-                    var tempStudent = new Student
-                    {
-                        FirstName = txtFirstName.Text.Trim(),
-                        LastName = txtLastName.Text.Trim(),
-                        Phone = phone,
-                        StudentId = "TEMP" // Temporary ID for username generation
-                    };
-
-                    // Generate guardian credentials
-                    var guardianUsername = GenerateGuardianUsername(tempStudent);
-                    var guardianPassword = GenerateGuardianPassword(tempStudent);
-                    var guardianFirstName = $"Guardian of {tempStudent.FirstName}";
-                    var guardianLastName = tempStudent.LastName;
-                    var guardianEmail = $"guardian.{DateTime.Now.Ticks}@school.com";
-
-                    // Hash the password
-                    string passwordHash, passwordSalt;
-                    PasswordHasher.CreatePasswordHash(guardianPassword, out passwordHash, out passwordSalt);
-
-                    // Insert guardian account
-                    var query = @"
-                        INSERT INTO Users (Username, PasswordHash, PasswordSalt, FirstName, LastName, Email, Phone, Role, CreatedDate, IsActive)
-                        VALUES (@username, @passwordHash, @passwordSalt, @firstName, @lastName, @email, @phone, @role, @createdDate, @isActive);
-                        SELECT SCOPE_IDENTITY();";
-
-                    using var command = new SqlCommand(query, connection, transaction);
-                    command.Parameters.AddWithValue("@username", guardianUsername);
-                    command.Parameters.AddWithValue("@passwordHash", passwordHash);
-                    command.Parameters.AddWithValue("@passwordSalt", passwordSalt);
-                    command.Parameters.AddWithValue("@firstName", guardianFirstName);
-                    command.Parameters.AddWithValue("@lastName", guardianLastName);
-                    command.Parameters.AddWithValue("@email", guardianEmail);
-                    command.Parameters.AddWithValue("@phone", phone);
-                    command.Parameters.AddWithValue("@role", 3); // Guardian
-                    command.Parameters.AddWithValue("@createdDate", DateTime.Now);
-                    command.Parameters.AddWithValue("@isActive", true);
-
-                    var result = await command.ExecuteScalarAsync();
-                    int guardianId = Convert.ToInt32(result);
-
-                    transaction.Commit();
-
-                    // Reload guardians and select the newly created one
-                    LoadGuardiansForComboBox(cmbGuardian);
-                    cmbGuardian.SelectedValue = guardianId;
-
-                    MessageBox.Show($"Guardian account created successfully!\n\nUsername: {guardianUsername}\nPassword: {guardianPassword}\n\nPlease save these credentials.",
-                        "Guardian Created", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                catch
-                {
-                    transaction.Rollback();
-                    throw;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error creating guardian account: {ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
 
         private string GenerateGuardianUsername(Student student)
         {

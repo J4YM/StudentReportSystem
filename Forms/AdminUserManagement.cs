@@ -15,11 +15,7 @@ namespace StudentReportInitial.Forms
         private Button btnAddUser;
         private Button btnEditUser;
         private Button btnDeleteUser;
-        private Button btnRefresh;
-        private TextBox txtSearch;
         private ComboBox cmbRoleFilter;
-        private ComboBox? cmbBranchFilter;
-        private Label? lblBranchFilter;
         private Panel pnlUserForm;
         private bool isEditMode = false;
         private int selectedUserId = -1;
@@ -43,59 +39,7 @@ namespace StudentReportInitial.Forms
             this.Dock = DockStyle.Fill;
             this.BackColor = Color.FromArgb(248, 250, 252);
 
-            // Search and filter panel
-            var pnlSearch = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 60,
-                BackColor = Color.White,
-                Padding = new Padding(20)
-            };
-
-            txtSearch = new TextBox
-            {
-                PlaceholderText = "Search users...",
-                Size = new Size(200, 30),
-                Location = new Point(20, 15)
-            };
-            txtSearch.TextChanged += TxtSearch_TextChanged;
-
-            cmbRoleFilter = new ComboBox
-            {
-                Size = new Size(170, 30),
-                Location = new Point(240, 15),
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            cmbRoleFilter.Items.AddRange(new[] { "All Roles", "Admin", "Professor", "Guardian", "Student" });
-            cmbRoleFilter.SelectedIndex = 0;
-            cmbRoleFilter.SelectedIndexChanged += CmbRoleFilter_SelectedIndexChanged;
-
-            // Branch filter (only for Super Admin)
-            if (currentUser != null)
-            {
-                InitializeBranchFilterAsync();
-            }
-
-            btnRefresh = new Button
-            {
-                Text = "Refresh",
-                Size = new Size(90, 32),
-                Location = new Point(420, 14),
-                BackColor = Color.FromArgb(59, 130, 246),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9),
-                Cursor = Cursors.Hand
-            };
-            btnRefresh.Click += BtnRefresh_Click;
-
-            var controlsList = new List<Control> { txtSearch, cmbRoleFilter, btnRefresh };
-            if (lblBranchFilter != null && cmbBranchFilter != null)
-            {
-                controlsList.Add(lblBranchFilter);
-                controlsList.Add(cmbBranchFilter);
-            }
-            pnlSearch.Controls.AddRange(controlsList.ToArray());
+            // Search panel removed
 
             // Action buttons panel
             var pnlActions = new Panel
@@ -175,9 +119,7 @@ namespace StudentReportInitial.Forms
             this.Controls.Add(dgvUsers);
             this.Controls.Add(pnlUserForm);
             this.Controls.Add(pnlActions);
-            this.Controls.Add(pnlSearch);
 
-            UIStyleHelper.ApplyRoundedButton(btnRefresh, 10);
             UIStyleHelper.ApplyRoundedButton(btnAddUser, 10);
             UIStyleHelper.ApplyRoundedButton(btnEditUser, 10);
             UIStyleHelper.ApplyRoundedButton(btnDeleteUser, 10);
@@ -185,87 +127,6 @@ namespace StudentReportInitial.Forms
             this.ResumeLayout(false);
         }
 
-        private async void InitializeBranchFilterAsync()
-        {
-            try
-            {
-                var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser!.Id);
-                if (!isSuperAdmin) return;
-
-                var branches = await BranchHelper.GetAllBranchesAsync();
-                
-                lblBranchFilter = new Label
-                {
-                    Text = "Branch:",
-                    Size = new Size(50, 30),
-                    Location = new Point(430, 15),
-                    AutoSize = true,
-                    Font = new Font("Segoe UI", 9),
-                    ForeColor = Color.FromArgb(51, 65, 85)
-                };
-
-                cmbBranchFilter = new ComboBox
-                {
-                    Size = new Size(200, 30),
-                    Location = new Point(485, 15),
-                    DropDownStyle = ComboBoxStyle.DropDownList,
-                    Font = new Font("Segoe UI", 9)
-                };
-
-                // Add "All Branches" and all branches
-                cmbBranchFilter.Items.Add("All Branches");
-                foreach (var branch in branches)
-                {
-                    cmbBranchFilter.Items.Add(branch);
-                }
-
-                // Set initial selection based on branchFilterId
-                if (branchFilterId.HasValue)
-                {
-                    var selectedBranch = branches.FirstOrDefault(b => b.Id == branchFilterId.Value);
-                    if (selectedBranch != null)
-                    {
-                        cmbBranchFilter.SelectedItem = selectedBranch;
-                    }
-                    else
-                    {
-                        cmbBranchFilter.SelectedIndex = 0;
-                    }
-                }
-                else
-                {
-                    cmbBranchFilter.SelectedIndex = 0; // "All Branches"
-                }
-
-                cmbBranchFilter.SelectedIndexChanged += async (s, e) =>
-                {
-                    if (cmbBranchFilter.SelectedIndex == 0)
-                    {
-                        branchFilterId = null; // All branches
-                    }
-                    else if (cmbBranchFilter.SelectedItem is Branch branch)
-                    {
-                        branchFilterId = branch.Id;
-                    }
-                    await LoadUsersAsync();
-                };
-
-                // Update refresh button position
-                btnRefresh.Location = new Point(700, 14);
-                
-                // Add branch filter controls to search panel
-                var pnlSearch = btnRefresh.Parent;
-                if (pnlSearch != null)
-                {
-                    pnlSearch.Controls.Add(lblBranchFilter);
-                    pnlSearch.Controls.Add(cmbBranchFilter);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error initializing branch filter: {ex.Message}");
-            }
-        }
 
         private void ApplyModernStyling()
         {
@@ -383,18 +244,16 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private void TxtSearch_TextChanged(object sender, EventArgs e)
+        private void CmbRoleFilter_SelectedIndexChanged(object sender, EventArgs e)
         {
-            // Implement search functionality
+            ApplyFilters();
+        }
+
+        private void ApplyFilters()
+        {
             if (dgvUsers.DataSource is DataTable dataTable)
             {
-                var searchText = txtSearch.Text.Replace("'", "''");
                 var filterParts = new List<string>();
-                
-                if (!string.IsNullOrWhiteSpace(searchText))
-                {
-                    filterParts.Add($"(FirstName LIKE '%{searchText}%' OR LastName LIKE '%{searchText}%' OR Username LIKE '%{searchText}%' OR Email LIKE '%{searchText}%')");
-                }
                 
                 if (cmbRoleFilter.SelectedIndex > 0)
                 {
@@ -405,20 +264,6 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private void CmbRoleFilter_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            ApplyFilters();
-        }
-
-        private void ApplyFilters()
-        {
-            TxtSearch_TextChanged(null, null);
-        }
-
-        private async void BtnRefresh_Click(object sender, EventArgs e)
-        {
-            await LoadUsersAsync();
-        }
 
         private async void DgvUsers_SelectionChanged(object sender, EventArgs e)
         {
