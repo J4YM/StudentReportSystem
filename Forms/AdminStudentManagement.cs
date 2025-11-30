@@ -278,27 +278,7 @@ namespace StudentReportInitial.Forms
             }
         }
 
-		private void TxtSearch_TextChanged(object sender, EventArgs e)
-        {
-            ApplyFilters();
-        }
 
-        private void ApplyFilters()
-        {
-            if (dgvStudents.DataSource is DataTable dataTable)
-            {
-                var searchText = txtSearch.Text.Replace("'", "''");
-                var filterParts = new List<string>();
-                
-                if (!string.IsNullOrWhiteSpace(searchText))
-                {
-                    filterParts.Add($"(FirstName LIKE '%{searchText}%' OR LastName LIKE '%{searchText}%' OR StudentId LIKE '%{searchText}%')");
-                }
-                
-
-                dataTable.DefaultView.RowFilter = filterParts.Count > 0 ? string.Join(" AND ", filterParts) : "";
-            }
-        }
 
 
         private void DgvStudents_SelectionChanged(object sender, EventArgs e)
