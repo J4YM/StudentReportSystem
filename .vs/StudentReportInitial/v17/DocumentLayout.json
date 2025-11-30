@@ -39,7 +39,7 @@
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\adminusermanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\forms\\adminusermanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\forms\\adminusermanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\adminusermanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
     },
     {
@@ -180,8 +180,7 @@
               "RelativeToolTip": "Forms\\StudentSubjectEnrollment.cs",
               "ViewState": "AgIAADcAAAAAAAAAAAAowE8AAAAqAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-30T07:40:26.62Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T07:40:26.62Z"
             },
             {
               "$type": "Document",
@@ -230,8 +229,7 @@
               "RelativeToolTip": "Forms\\ProfessorAttendancePanel.cs",
               "ViewState": "AgIAABUDAAAAAAAAAAAAABUDAAAvAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-23T17:06:58.152Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-23T17:06:58.152Z"
             },
             {
               "$type": "Document",
@@ -242,8 +240,7 @@
               "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\ViewerGradesPanel.cs [Design]",
               "RelativeToolTip": "Forms\\ViewerGradesPanel.cs [Design]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-23T17:40:12.311Z",
-              "EditorCaption": " [Design]"
+              "WhenOpened": "2025-11-23T17:40:12.311Z"
             },
             {
               "$type": "Document",
@@ -268,8 +265,7 @@
               "RelativeToolTip": "Forms\\ViewerGradesPanel.cs",
               "ViewState": "AgIAAN4AAAAAAAAAAAAmwI4AAAA3AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-23T17:40:21.401Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-23T17:40:21.401Z"
             },
             {
               "$type": "Document",
@@ -343,8 +339,7 @@
               "RelativeToolTip": "Data\\AccountHelper.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAD0AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-19T14:32:26.521Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-19T14:32:26.521Z"
             },
             {
               "$type": "Document",
@@ -356,8 +351,7 @@
               "RelativeToolTip": "Data\\GradeCalculator.cs",
               "ViewState": "AgIAADgAAAAAAAAAAAAuwFEAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-29T15:15:23.326Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-29T15:15:23.326Z"
             },
             {
               "$type": "Document",

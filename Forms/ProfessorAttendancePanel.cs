@@ -529,6 +529,11 @@ namespace StudentReportInitial.Forms
                 command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
                 command.Parameters.AddWithValue("@subject", subjectName);
                 command.Parameters.AddWithValue("@date", dtpDate.Value.Date);
+                
+                if (professorBranchId > 0)
+                {
+                    command.Parameters.AddWithValue("@branchId", professorBranchId);
+                }
 
                 using var reader = await command.ExecuteReaderAsync();
                 var attendanceData = new Dictionary<int, (AttendanceStatus status, string notes)>();
@@ -836,6 +841,11 @@ namespace StudentReportInitial.Forms
                 command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
                 command.Parameters.AddWithValue("@subject", subjectName);
                 command.Parameters.AddWithValue("@date", dtpDate.Value.Date);
+                
+                if (professorBranchId > 0)
+                {
+                    command.Parameters.AddWithValue("@branchId", professorBranchId);
+                }
 
                 using var reader = await command.ExecuteReaderAsync();
                 if (await reader.ReadAsync())

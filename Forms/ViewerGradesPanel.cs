@@ -287,7 +287,7 @@ namespace StudentReportInitial.Forms
                 await connection.OpenAsync();
 
                 var query = @"
-                    SELECT g.Subject, g.Quarter, g.ComponentType, g.AssignmentType, g.AssignmentName, g.Score, g.MaxScore, 
+                    SELECT g.Subject, g.Quarter, g.ComponentType, g.AssignmentName, g.Score, g.MaxScore, 
                            g.Percentage, g.Comments, g.DateRecorded, g.DueDate,
                            u.FirstName + ' ' + u.LastName as ProfessorName
                     FROM Grades g
@@ -328,7 +328,6 @@ namespace StudentReportInitial.Forms
                     dgvGrades.Columns["Subject"].HeaderText = "Subject";
                     dgvGrades.Columns["Quarter"].HeaderText = "Quarter";
                     dgvGrades.Columns["ComponentType"].HeaderText = "Component";
-                    dgvGrades.Columns["AssignmentType"].HeaderText = "Type";
                     dgvGrades.Columns["AssignmentName"].HeaderText = "Assignment";
                     dgvGrades.Columns["Score"].HeaderText = "Score";
                     dgvGrades.Columns["MaxScore"].HeaderText = "Max Score";
