@@ -298,11 +298,24 @@ namespace StudentReportInitial.Forms
                 var query = @"
                     SELECT DISTINCT s.Name, s.GradeLevel, s.Section
                     FROM Subjects s
-                    WHERE s.ProfessorId = @professorId AND s.IsActive = 1
-                    ORDER BY s.Name";
+                    WHERE s.ProfessorId = @professorId AND s.IsActive = 1";
+
+                // Add branch filter based on professor's branch
+                var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+                if (professorBranchId > 0)
+                {
+                    query += " AND s.BranchId = @branchId";
+                }
+
+                query += " ORDER BY s.Name";
 
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
+                
+                if (professorBranchId > 0)
+                {
+                    command.Parameters.AddWithValue("@branchId", professorBranchId);
+                }
 
                 using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
@@ -338,12 +351,25 @@ namespace StudentReportInitial.Forms
                 var query = @"
                     SELECT s.Id, s.StudentId, s.FirstName, s.LastName, s.GradeLevel, s.Section
                     FROM Students s
-                    WHERE s.GradeLevel = @gradeLevel AND s.Section = @section AND s.IsActive = 1
-                    ORDER BY s.LastName, s.FirstName";
+                    WHERE s.GradeLevel = @gradeLevel AND s.Section = @section AND s.IsActive = 1";
+
+                // Add branch filter based on professor's branch
+                var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+                if (professorBranchId > 0)
+                {
+                    query += " AND s.BranchId = @branchId";
+                }
+
+                query += " ORDER BY s.LastName, s.FirstName";
 
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@gradeLevel", gradeLevel);
                 command.Parameters.AddWithValue("@section", section);
+                
+                if (professorBranchId > 0)
+                {
+                    command.Parameters.AddWithValue("@branchId", professorBranchId);
+                }
 
                 using var adapter = new SqlDataAdapter(command);
                 var dataTable = new DataTable();
@@ -854,9 +880,9 @@ namespace StudentReportInitial.Forms
 
             var insertQuery = @"
                 INSERT INTO Grades (StudentId, ProfessorId, Subject, Quarter, ComponentType, AssignmentType, AssignmentName, 
-                                  Score, MaxScore, Percentage, Comments, DateRecorded, DueDate)
+                                  Score, MaxScore, Percentage, Comments, DateRecorded, DueDate, BranchId)
                 VALUES (@studentId, @professorId, @subject, @quarter, @componentType, @assignmentType, @assignmentName, 
-                        @score, @maxScore, @percentage, @comments, @dateRecorded, @dueDate)";
+                        @score, @maxScore, @percentage, @comments, @dateRecorded, @dueDate, @branchId)";
 
             // Get professor name
             string professorName = $"{currentProfessor.FirstName} {currentProfessor.LastName}";
@@ -868,6 +894,17 @@ namespace StudentReportInitial.Forms
 
             foreach (var grade in gradeRecords)
             {
+                // Get student's branch ID for the grade record
+                var studentBranchQuery = "SELECT BranchId FROM Students WHERE Id = @studentId";
+                int branchId = 0;
+                using var studentBranchCommand = new SqlCommand(studentBranchQuery, connection);
+                studentBranchCommand.Parameters.AddWithValue("@studentId", grade.StudentId);
+                var branchResult = await studentBranchCommand.ExecuteScalarAsync();
+                if (branchResult != null && branchResult != DBNull.Value)
+                {
+                    branchId = Convert.ToInt32(branchResult);
+                }
+
                 // Check for duplicate grade entry
                 using var checkCommand = new SqlCommand(checkDuplicateQuery, connection);
                 checkCommand.Parameters.AddWithValue("@studentId", grade.StudentId);
@@ -910,6 +947,7 @@ namespace StudentReportInitial.Forms
                 command.Parameters.AddWithValue("@comments", grade.Comments ?? "");
                 command.Parameters.AddWithValue("@dateRecorded", grade.DateRecorded);
                 command.Parameters.AddWithValue("@dueDate", grade.DueDate);
+                command.Parameters.AddWithValue("@branchId", branchId);
 
                 await command.ExecuteNonQueryAsync();
                 savedCount++;

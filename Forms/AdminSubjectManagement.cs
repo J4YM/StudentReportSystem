@@ -17,9 +17,13 @@ namespace StudentReportInitial.Forms
         private int selectedSubjectId = -1;
 		private ComboBox? cmbSubjectsGradeFilter;
 		private ComboBox? cmbSubjectsSectionFilter;
+        private User? currentUser;
+        private int? branchFilterId = null;
 
-        public AdminSubjectManagement()
+        public AdminSubjectManagement(User? user = null, int? branchId = null)
         {
+            currentUser = user;
+            branchFilterId = branchId;
             InitializeComponent();
             ApplyModernStyling();
             LoadSubjects();
@@ -172,12 +176,54 @@ namespace StudentReportInitial.Forms
 
                 var query = @"
                     SELECT s.Id, s.Name, s.Code, s.Description, s.GradeLevel, s.Section, s.IsActive,
-                           u.FirstName + ' ' + u.LastName as ProfessorName
+                           COALESCE(u.FirstName + ' ' + u.LastName, 'Unassigned') as ProfessorName,
+                           b.Name as BranchName
                     FROM Subjects s
-                    INNER JOIN Users u ON s.ProfessorId = u.Id
-                    ORDER BY s.Name";
+                    LEFT JOIN Users u ON s.ProfessorId = u.Id
+                    LEFT JOIN Branches b ON s.BranchId = b.Id
+                    WHERE s.IsActive = 1";
+
+                // Add branch filter if not Super Admin
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (branchId > 0)
+                        {
+                            query += " AND s.BranchId = @branchId";
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        // Super Admin with branch filter selected
+                        query += " AND s.BranchId = @branchId";
+                    }
+                }
+
+                query += " ORDER BY s.Name";
 
                 using var command = new SqlCommand(query, connection);
+                
+                // Add branch parameter if needed
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (branchId > 0)
+                        {
+                            command.Parameters.AddWithValue("@branchId", branchId);
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        command.Parameters.AddWithValue("@branchId", branchFilterId.Value);
+                    }
+                }
+
                 using var adapter = new SqlDataAdapter(command);
                 var dataTable = new DataTable();
                 adapter.Fill(dataTable);
@@ -195,6 +241,10 @@ namespace StudentReportInitial.Forms
                     dgvSubjects.Columns["Section"].HeaderText = "Section";
                     dgvSubjects.Columns["ProfessorName"].HeaderText = "Professor";
                     dgvSubjects.Columns["IsActive"].HeaderText = "Active";
+                    if (dgvSubjects.Columns.Contains("BranchName"))
+                    {
+                        dgvSubjects.Columns["BranchName"].HeaderText = "Branch";
+                    }
                 }
             }
             catch (Exception ex)
@@ -384,6 +434,25 @@ namespace StudentReportInitial.Forms
 					{
 						composedSection = $"{cmbCourse.SelectedItem}-{cmbSectionCode.SelectedItem}";
 					}
+                    // Determine branch assignment
+                    int assignedBranchId = 0;
+                    if (currentUser != null)
+                    {
+                        var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                        if (isSuperAdmin && branchFilterId.HasValue)
+                        {
+                            assignedBranchId = branchFilterId.Value;
+                        }
+                        else if (!isSuperAdmin)
+                        {
+                            var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                            if (branchId > 0)
+                            {
+                                assignedBranchId = branchId;
+                            }
+                        }
+                    }
+
                     var subject = new Subject
                     {
                         Name = txtName.Text,
@@ -392,6 +461,7 @@ namespace StudentReportInitial.Forms
 						GradeLevel = cmbGradeLevel.SelectedItem?.ToString() ?? "",
 						Section = composedSection,
                         ProfessorId = Convert.ToInt32(cmbProfessor.SelectedValue),
+                        BranchId = assignedBranchId,
                         IsActive = true
                     };
 
@@ -528,8 +598,8 @@ namespace StudentReportInitial.Forms
             await connection.OpenAsync();
 
             var query = @"
-                INSERT INTO Subjects (Name, Code, Description, GradeLevel, Section, ProfessorId, IsActive)
-                VALUES (@name, @code, @description, @gradeLevel, @section, @professorId, @isActive)";
+                INSERT INTO Subjects (Name, Code, Description, GradeLevel, Section, ProfessorId, BranchId, IsActive)
+                VALUES (@name, @code, @description, @gradeLevel, @section, @professorId, @branchId, @isActive)";
 
             using var command = new SqlCommand(query, connection);
             command.Parameters.AddWithValue("@name", subject.Name);
@@ -538,6 +608,7 @@ namespace StudentReportInitial.Forms
             command.Parameters.AddWithValue("@gradeLevel", subject.GradeLevel);
             command.Parameters.AddWithValue("@section", subject.Section);
             command.Parameters.AddWithValue("@professorId", subject.ProfessorId);
+            command.Parameters.AddWithValue("@branchId", subject.BranchId);
             command.Parameters.AddWithValue("@isActive", subject.IsActive);
 
             await command.ExecuteNonQueryAsync();

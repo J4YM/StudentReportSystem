@@ -19,9 +19,13 @@ namespace StudentReportInitial.Forms
         private Panel pnlEnrolledSubjects = null!;
         private DataGridView dgvEnrolledSubjects = null!;
         private int selectedStudentId = -1;
+        private User? currentUser;
+        private int? branchFilterId = null;
 
-        public StudentSubjectEnrollment()
+        public StudentSubjectEnrollment(User? user = null, int? branchId = null)
         {
+            currentUser = user;
+            branchFilterId = branchId;
             InitializeComponent();
             LoadStudents();
         }
@@ -265,10 +269,49 @@ namespace StudentReportInitial.Forms
                 var query = @"
                     SELECT s.Id, s.StudentId, s.FirstName, s.LastName, s.GradeLevel, s.Section
                     FROM Students s
-                    WHERE s.IsActive = 1
-                    ORDER BY s.LastName, s.FirstName";
+                    WHERE s.IsActive = 1";
+
+                // Add branch filter if not Super Admin
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (branchId > 0)
+                        {
+                            query += " AND s.BranchId = @branchId";
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        // Super Admin with branch filter selected
+                        query += " AND s.BranchId = @branchId";
+                    }
+                }
+
+                query += " ORDER BY s.LastName, s.FirstName";
 
                 using var command = new SqlCommand(query, connection);
+                
+                // Add branch parameter if needed
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (branchId > 0)
+                        {
+                            command.Parameters.AddWithValue("@branchId", branchId);
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        command.Parameters.AddWithValue("@branchId", branchFilterId.Value);
+                    }
+                }
+
                 using var adapter = new SqlDataAdapter(command);
                 var dataTable = new DataTable();
                 adapter.Fill(dataTable);
@@ -317,6 +360,24 @@ namespace StudentReportInitial.Forms
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@gradeLevel", gradeLevel);
                 command.Parameters.AddWithValue("@studentId", selectedStudentId);
+                
+                // Add branch parameter if needed
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (branchId > 0)
+                        {
+                            command.Parameters.AddWithValue("@branchId", branchId);
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        command.Parameters.AddWithValue("@branchId", branchFilterId.Value);
+                    }
+                }
 
                 using var adapter = new SqlDataAdapter(command);
                 var dataTable = new DataTable();

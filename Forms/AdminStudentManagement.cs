@@ -3,6 +3,7 @@ using StudentReportInitial.Data;
 using System.Data.SqlClient;
 using System.Data;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace StudentReportInitial.Forms
 {
@@ -15,15 +16,21 @@ namespace StudentReportInitial.Forms
         private Button btnRefresh = null!;
         private TextBox txtSearch = null!;
         private ComboBox cmbGradeFilter = null!;
+        private ComboBox? cmbBranchFilter;
+        private Label? lblBranchFilter;
         private Panel pnlStudentForm = null!;
         private bool isEditMode = false;
         private int selectedStudentId = -1;
+        private User? currentUser;
+        private int? branchFilterId = null;
 
-        public AdminStudentManagement()
+        public AdminStudentManagement(User? user = null, int? branchId = null)
         {
+            currentUser = user;
+            branchFilterId = branchId;
             InitializeComponent();
             ApplyModernStyling();
-            LoadStudents();
+            LoadStudentsAsync();
             LoadGuardians();
         }
 
@@ -62,6 +69,12 @@ namespace StudentReportInitial.Forms
             cmbGradeFilter.SelectedIndex = 0;
             cmbGradeFilter.SelectedIndexChanged += CmbGradeFilter_SelectedIndexChanged;
 
+            // Branch filter (only for Super Admin)
+            if (currentUser != null)
+            {
+                InitializeBranchFilterAsync();
+            }
+
             btnRefresh = new Button
             {
                 Text = "Refresh",
@@ -75,7 +88,13 @@ namespace StudentReportInitial.Forms
             };
             btnRefresh.Click += BtnRefresh_Click;
 
-            pnlSearch.Controls.AddRange(new Control[] { txtSearch, cmbGradeFilter, btnRefresh });
+            var controlsList = new List<Control> { txtSearch, cmbGradeFilter, btnRefresh };
+            if (lblBranchFilter != null && cmbBranchFilter != null)
+            {
+                controlsList.Add(lblBranchFilter);
+                controlsList.Add(cmbBranchFilter);
+            }
+            pnlSearch.Controls.AddRange(controlsList.ToArray());
 
             // Action buttons panel
             var pnlActions = new Panel
@@ -165,6 +184,88 @@ namespace StudentReportInitial.Forms
             this.ResumeLayout(false);
         }
 
+        private async void InitializeBranchFilterAsync()
+        {
+            try
+            {
+                var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser!.Id);
+                if (!isSuperAdmin) return;
+
+                var branches = await BranchHelper.GetAllBranchesAsync();
+                
+                lblBranchFilter = new Label
+                {
+                    Text = "Branch:",
+                    Size = new Size(50, 30),
+                    Location = new Point(430, 15),
+                    AutoSize = true,
+                    Font = new Font("Segoe UI", 9),
+                    ForeColor = Color.FromArgb(51, 65, 85)
+                };
+
+                cmbBranchFilter = new ComboBox
+                {
+                    Size = new Size(200, 30),
+                    Location = new Point(485, 15),
+                    DropDownStyle = ComboBoxStyle.DropDownList,
+                    Font = new Font("Segoe UI", 9)
+                };
+
+                // Add "All Branches" and all branches
+                cmbBranchFilter.Items.Add("All Branches");
+                foreach (var branch in branches)
+                {
+                    cmbBranchFilter.Items.Add(branch);
+                }
+
+                // Set initial selection based on branchFilterId
+                if (branchFilterId.HasValue)
+                {
+                    var selectedBranch = branches.FirstOrDefault(b => b.Id == branchFilterId.Value);
+                    if (selectedBranch != null)
+                    {
+                        cmbBranchFilter.SelectedItem = selectedBranch;
+                    }
+                    else
+                    {
+                        cmbBranchFilter.SelectedIndex = 0;
+                    }
+                }
+                else
+                {
+                    cmbBranchFilter.SelectedIndex = 0; // "All Branches"
+                }
+
+                cmbBranchFilter.SelectedIndexChanged += async (s, e) =>
+                {
+                    if (cmbBranchFilter.SelectedIndex == 0)
+                    {
+                        branchFilterId = null; // All branches
+                    }
+                    else if (cmbBranchFilter.SelectedItem is Branch branch)
+                    {
+                        branchFilterId = branch.Id;
+                    }
+                    await LoadStudentsAsync();
+                };
+
+                // Update refresh button position
+                btnRefresh.Location = new Point(700, 14);
+                
+                // Add branch filter controls to search panel
+                var pnlSearch = btnRefresh.Parent;
+                if (pnlSearch != null)
+                {
+                    pnlSearch.Controls.Add(lblBranchFilter);
+                    pnlSearch.Controls.Add(cmbBranchFilter);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error initializing branch filter: {ex.Message}");
+            }
+        }
+
         private void ApplyModernStyling()
         {
             var font = new Font("Segoe UI", 9);
@@ -194,7 +295,7 @@ namespace StudentReportInitial.Forms
             dgvStudents.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
         }
 
-        private async void LoadStudents()
+        private async Task LoadStudentsAsync()
         {
             try
             {
@@ -204,13 +305,54 @@ namespace StudentReportInitial.Forms
                 var query = @"
                     SELECT s.Id, s.StudentId, s.FirstName, s.LastName, s.DateOfBirth, s.Gender, 
                            s.GradeLevel, s.Section, s.Email, s.Phone, s.EnrollmentDate, s.IsActive,
-                           u.FirstName + ' ' + u.LastName as GuardianName
+                           u.FirstName + ' ' + u.LastName as GuardianName,
+                           b.Name as BranchName
                     FROM Students s
                     INNER JOIN Users u ON s.GuardianId = u.Id
-                    WHERE s.IsActive = 1
-                    ORDER BY s.EnrollmentDate DESC";
+                    LEFT JOIN Branches b ON s.BranchId = b.Id
+                    WHERE s.IsActive = 1";
+
+                // Add branch filter if not Super Admin
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (branchId > 0)
+                        {
+                            query += " AND s.BranchId = @branchId";
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        // Super Admin with branch filter selected
+                        query += " AND s.BranchId = @branchId";
+                    }
+                }
+
+                query += " ORDER BY s.EnrollmentDate DESC";
 
                 using var command = new SqlCommand(query, connection);
+                
+                // Add branch parameter if needed
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (branchId > 0)
+                        {
+                            command.Parameters.AddWithValue("@branchId", branchId);
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        command.Parameters.AddWithValue("@branchId", branchFilterId.Value);
+                    }
+                }
+
                 using var adapter = new SqlDataAdapter(command);
                 var dataTable = new DataTable();
                 adapter.Fill(dataTable);
@@ -233,6 +375,10 @@ namespace StudentReportInitial.Forms
                     dgvStudents.Columns["EnrollmentDate"].HeaderText = "Enrollment Date";
                     dgvStudents.Columns["GuardianName"].HeaderText = "Guardian";
                     dgvStudents.Columns["IsActive"].HeaderText = "Active";
+                    if (dgvStudents.Columns.Contains("BranchName"))
+                    {
+                        dgvStudents.Columns["BranchName"].HeaderText = "Branch";
+                    }
 
                     dgvStudents.Columns["DateOfBirth"].DefaultCellStyle.Format = "MM/dd/yyyy";
                     dgvStudents.Columns["EnrollmentDate"].DefaultCellStyle.Format = "MM/dd/yyyy";
@@ -307,9 +453,9 @@ namespace StudentReportInitial.Forms
             ApplyFilters();
         }
 
-        private void BtnRefresh_Click(object sender, EventArgs e)
+        private async void BtnRefresh_Click(object sender, EventArgs e)
         {
-            LoadStudents();
+            await LoadStudentsAsync();
         }
 
         private void DgvStudents_SelectionChanged(object sender, EventArgs e)
@@ -358,7 +504,7 @@ namespace StudentReportInitial.Forms
                 try
                 {
                     await DeleteStudentAsync(studentId);
-                    LoadStudents();
+                    await LoadStudentsAsync();
                     MessageBox.Show("Student deleted successfully. Statistics will be updated when you refresh the System Reports panel.", 
                         "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
@@ -370,7 +516,7 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private void ShowStudentForm(int studentId = -1)
+        private async void ShowStudentForm(int studentId = -1)
         {
             pnlStudentForm.Controls.Clear();
             pnlStudentForm.Visible = true;
@@ -461,6 +607,30 @@ namespace StudentReportInitial.Forms
 			cmbGradeLevel.SelectedIndexChanged += (s, e) => PopulateSectionCodes();
 			if (cmbGradeLevel.Items.Count > 0) cmbGradeLevel.SelectedIndex = 0;
 			if (cmbCourse.Items.Count > 0) cmbCourse.SelectedIndex = 0;
+
+            // Branch selection (for Super Admin when managing all branches)
+            ComboBox? cmbBranch = null;
+            Label? lblBranch = null;
+            if (currentUser != null && !isEditMode)
+            {
+                var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                if (isSuperAdmin && !branchFilterId.HasValue) // Only show when managing all branches
+                {
+                    lblBranch = new Label { Text = "Branch (Required):", Location = new Point(20, yPos), AutoSize = true };
+                    cmbBranch = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+                    
+                    var branches = await BranchHelper.GetAllBranchesAsync();
+                    foreach (var branch in branches)
+                    {
+                        cmbBranch.Items.Add(branch);
+                    }
+                    if (cmbBranch.Items.Count > 0)
+                    {
+                        cmbBranch.SelectedIndex = 0;
+                    }
+                    yPos += spacing;
+                }
+            }
 
             // Email
             var lblEmail = new Label { Text = "Email:", Location = new Point(20, yPos), AutoSize = true };
@@ -640,6 +810,47 @@ namespace StudentReportInitial.Forms
                         selectedGuardianId = Convert.ToInt32(cmbGuardian.SelectedValue);
                     }
 
+                    // Determine branch assignment
+                    int assignedBranchId = 0;
+                    if (currentUser != null)
+                    {
+                        var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                        if (isSuperAdmin)
+                        {
+                            // When managing all branches, use branch from form dropdown
+                            if (cmbBranch != null && cmbBranch.SelectedItem is Branch selectedBranch)
+                            {
+                                assignedBranchId = selectedBranch.Id;
+                            }
+                            // When specific branch is selected in filter, use that
+                            else if (branchFilterId.HasValue)
+                            {
+                                assignedBranchId = branchFilterId.Value;
+                            }
+                            else
+                            {
+                                MessageBox.Show("Please select a branch for this student.", "Validation Error",
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                            if (branchId > 0)
+                            {
+                                assignedBranchId = branchId;
+                            }
+                        }
+                    }
+                    
+                    if (assignedBranchId == 0)
+                    {
+                        MessageBox.Show("Unable to determine branch assignment. Please ensure a branch is selected.", "Validation Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
                     var student = new Student
                     {
                         StudentId = txtStudentId.Text,
@@ -653,6 +864,7 @@ namespace StudentReportInitial.Forms
                         Phone = phone,
                         Address = txtAddress.Text,
                         GuardianId = selectedGuardianId, // Use selected guardian or 0 to create new
+                        BranchId = assignedBranchId,
                         IsActive = true
                     };
 
@@ -668,7 +880,7 @@ namespace StudentReportInitial.Forms
 
                     pnlStudentForm.Visible = false;
                     dgvStudents.Visible = true;
-                    LoadStudents();
+                    await LoadStudentsAsync();
                 }
                 catch (Exception ex)
                 {
@@ -678,12 +890,21 @@ namespace StudentReportInitial.Forms
             };
 
             // Add all controls to the scrollable panel
-			scrollPanel.Controls.AddRange(new Control[] {
+            var controlsList = new List<Control> {
                 lblTitle, lblStudentId, txtStudentId, lblFirstName, txtFirstName, lblLastName, txtLastName,
 				lblDateOfBirth, dtpDateOfBirth, lblGender, cmbGender, lblGradeLevel, cmbGradeLevel,
 				lblCourse, cmbCourse, lblSection, cmbSectionCode, lblEmail, txtEmail, lblPhone, txtPhone, lblPhoneError, lblAddress, txtAddress,
                 lblGuardian, cmbGuardian, btnNewGuardian, btnSave, btnCancel
-            });
+            };
+            
+            // Add branch controls if they exist
+            if (lblBranch != null && cmbBranch != null)
+            {
+                controlsList.Add(lblBranch);
+                controlsList.Add(cmbBranch);
+            }
+            
+			scrollPanel.Controls.AddRange(controlsList.ToArray());
 
             // Add the scrollable panel to the main form panel
             pnlStudentForm.Controls.Add(scrollPanel);
@@ -704,7 +925,45 @@ namespace StudentReportInitial.Forms
                 await connection.OpenAsync();
 
                 var query = "SELECT Id, FirstName + ' ' + LastName as FullName FROM Users WHERE Role = 3 AND IsActive = 1";
+                
+                // Add branch filter if not Super Admin
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (branchId > 0)
+                        {
+                            query += " AND BranchId = @branchId";
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        query += " AND BranchId = @branchId";
+                    }
+                }
+
                 using var command = new SqlCommand(query, connection);
+                
+                // Add branch parameter if needed
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (branchId > 0)
+                        {
+                            command.Parameters.AddWithValue("@branchId", branchId);
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        command.Parameters.AddWithValue("@branchId", branchFilterId.Value);
+                    }
+                }
+
                 using var adapter = new SqlDataAdapter(command);
                 var dataTable = new DataTable();
                 adapter.Fill(dataTable);
@@ -822,10 +1081,10 @@ namespace StudentReportInitial.Forms
                 // Finally, create the student record in the Students table
                 var query = @"
                     INSERT INTO Students (StudentId, FirstName, LastName, DateOfBirth, Gender, GradeLevel, 
-                                        Section, Email, Phone, Address, GuardianId, IsActive, EnrollmentDate,
+                                        Section, Email, Phone, Address, GuardianId, BranchId, IsActive, EnrollmentDate,
                                         Username, PasswordHash, PasswordSalt)
                     VALUES (@studentId, @firstName, @lastName, @dateOfBirth, @gender, @gradeLevel, 
-                            @section, @email, @phone, @address, @guardianId, @isActive, @enrollmentDate,
+                            @section, @email, @phone, @address, @guardianId, @branchId, @isActive, @enrollmentDate,
                             @username, @passwordHash, @passwordSalt)";
 
                 using var command = new SqlCommand(query, connection, transaction);

@@ -392,11 +392,24 @@ namespace StudentReportInitial.Forms
                 var query = @"
                     SELECT DISTINCT s.Name, s.GradeLevel, s.Section
                     FROM Subjects s
-                    WHERE s.ProfessorId = @professorId AND s.IsActive = 1
-                    ORDER BY s.Name";
+                    WHERE s.ProfessorId = @professorId AND s.IsActive = 1";
+
+                // Add branch filter based on professor's branch
+                var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+                if (professorBranchId > 0)
+                {
+                    query += " AND s.BranchId = @branchId";
+                }
+
+                query += " ORDER BY s.Name";
 
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
+                
+                if (professorBranchId > 0)
+                {
+                    command.Parameters.AddWithValue("@branchId", professorBranchId);
+                }
 
                 using var reader = await command.ExecuteReaderAsync();
                 cmbSubject.Items.Clear();
@@ -437,12 +450,25 @@ namespace StudentReportInitial.Forms
                 var query = @"
                     SELECT s.Id, s.StudentId, s.FirstName, s.LastName, s.GradeLevel, s.Section
                     FROM Students s
-                    WHERE s.GradeLevel = @gradeLevel AND s.Section = @section AND s.IsActive = 1
-                    ORDER BY s.LastName, s.FirstName";
+                    WHERE s.GradeLevel = @gradeLevel AND s.Section = @section AND s.IsActive = 1";
+
+                // Add branch filter based on professor's branch
+                var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+                if (professorBranchId > 0)
+                {
+                    query += " AND s.BranchId = @branchId";
+                }
+
+                query += " ORDER BY s.LastName, s.FirstName";
 
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@gradeLevel", gradeLevel);
                 command.Parameters.AddWithValue("@section", section);
+                
+                if (professorBranchId > 0)
+                {
+                    command.Parameters.AddWithValue("@branchId", professorBranchId);
+                }
 
                 using var adapter = new SqlDataAdapter(command);
                 var dataTable = new DataTable();
@@ -491,6 +517,13 @@ namespace StudentReportInitial.Forms
                     WHERE a.ProfessorId = @professorId 
                         AND a.Subject = @subject 
                         AND CAST(a.Date AS DATE) = CAST(@date AS DATE)";
+
+                // Add branch filter based on professor's branch
+                var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+                if (professorBranchId > 0)
+                {
+                    query += " AND a.BranchId = @branchId";
+                }
 
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
@@ -632,21 +665,45 @@ namespace StudentReportInitial.Forms
                 DELETE FROM Attendance 
                 WHERE ProfessorId = @professorId AND Subject = @subject AND CAST(Date AS DATE) = CAST(@date AS DATE)";
 
+            // Add branch filter based on professor's branch
+            var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+            if (professorBranchId > 0)
+            {
+                deleteQuery += " AND BranchId = @branchId";
+            }
+
             using var deleteCommand = new SqlCommand(deleteQuery, connection);
             deleteCommand.Parameters.AddWithValue("@professorId", currentProfessor.Id);
             deleteCommand.Parameters.AddWithValue("@subject", attendanceRecords.First().Subject);
             deleteCommand.Parameters.AddWithValue("@date", dtpDate.Value.Date);
+            
+            if (professorBranchId > 0)
+            {
+                deleteCommand.Parameters.AddWithValue("@branchId", professorBranchId);
+            }
+            
             await deleteCommand.ExecuteNonQueryAsync();
 
             var insertQuery = @"
-                INSERT INTO Attendance (StudentId, ProfessorId, Subject, Date, Status, Notes, RecordedDate)
-                VALUES (@studentId, @professorId, @subject, @date, @status, @notes, @recordedDate)";
+                INSERT INTO Attendance (StudentId, ProfessorId, Subject, Date, Status, Notes, RecordedDate, BranchId)
+                VALUES (@studentId, @professorId, @subject, @date, @status, @notes, @recordedDate, @branchId)";
 
             string professorName = $"{currentProfessor.FirstName} {currentProfessor.LastName}";
             var subjectName = attendanceRecords.First().Subject;
 
             foreach (var attendance in attendanceRecords)
             {
+                // Get student's branch ID for the attendance record
+                var studentBranchQuery = "SELECT BranchId FROM Students WHERE Id = @studentId";
+                int branchId = 0;
+                using var studentBranchCommand = new SqlCommand(studentBranchQuery, connection);
+                studentBranchCommand.Parameters.AddWithValue("@studentId", attendance.StudentId);
+                var branchResult = await studentBranchCommand.ExecuteScalarAsync();
+                if (branchResult != null && branchResult != DBNull.Value)
+                {
+                    branchId = Convert.ToInt32(branchResult);
+                }
+
                 using var insertCommand = new SqlCommand(insertQuery, connection);
                 insertCommand.Parameters.AddWithValue("@studentId", attendance.StudentId);
                 insertCommand.Parameters.AddWithValue("@professorId", attendance.ProfessorId);
@@ -655,6 +712,7 @@ namespace StudentReportInitial.Forms
                 insertCommand.Parameters.AddWithValue("@status", (int)attendance.Status);
                 insertCommand.Parameters.AddWithValue("@notes", attendance.Notes ?? "");
                 insertCommand.Parameters.AddWithValue("@recordedDate", attendance.RecordedDate);
+                insertCommand.Parameters.AddWithValue("@branchId", branchId);
 
                 await insertCommand.ExecuteNonQueryAsync();
 
@@ -766,6 +824,13 @@ namespace StudentReportInitial.Forms
                     WHERE ProfessorId = @professorId 
                         AND Subject = @subject 
                         AND CAST(Date AS DATE) = CAST(@date AS DATE)";
+
+                // Add branch filter based on professor's branch
+                var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+                if (professorBranchId > 0)
+                {
+                    statsQuery += " AND BranchId = @branchId";
+                }
 
                 using var command = new SqlCommand(statsQuery, connection);
                 command.Parameters.AddWithValue("@professorId", currentProfessor.Id);

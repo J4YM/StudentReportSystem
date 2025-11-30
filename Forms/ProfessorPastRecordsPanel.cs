@@ -280,11 +280,24 @@ namespace StudentReportInitial.Forms
                 var query = @"
                     SELECT DISTINCT s.Name
                     FROM Subjects s
-                    WHERE s.ProfessorId = @professorId AND s.IsActive = 1
-                    ORDER BY s.Name";
+                    WHERE s.ProfessorId = @professorId AND s.IsActive = 1";
+
+                // Add branch filter based on professor's branch
+                var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+                if (professorBranchId > 0)
+                {
+                    query += " AND s.BranchId = @branchId";
+                }
+
+                query += " ORDER BY s.Name";
 
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
+                
+                if (professorBranchId > 0)
+                {
+                    command.Parameters.AddWithValue("@branchId", professorBranchId);
+                }
 
                 using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
@@ -314,20 +327,29 @@ namespace StudentReportInitial.Forms
                 using var connection = DatabaseHelper.GetConnection();
                 await connection.OpenAsync();
 
+                // Add branch filter based on professor's branch
+                var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+                var branchFilter = professorBranchId > 0 ? " AND s.BranchId = @branchId" : "";
+
                 var query = @"
                     SELECT DISTINCT s.Id, s.FirstName + ' ' + s.LastName as StudentName
                     FROM Students s
                     INNER JOIN Grades g ON s.Id = g.StudentId
-                    WHERE g.ProfessorId = @professorId AND s.IsActive = 1
+                    WHERE g.ProfessorId = @professorId AND s.IsActive = 1" + branchFilter + @"
                     UNION
                     SELECT DISTINCT s.Id, s.FirstName + ' ' + s.LastName as StudentName
                     FROM Students s
                     INNER JOIN Attendance a ON s.Id = a.StudentId
-                    WHERE a.ProfessorId = @professorId AND s.IsActive = 1
+                    WHERE a.ProfessorId = @professorId AND s.IsActive = 1" + branchFilter + @"
                     ORDER BY StudentName";
 
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
+                
+                if (professorBranchId > 0)
+                {
+                    command.Parameters.AddWithValue("@branchId", professorBranchId);
+                }
 
                 using var adapter = new SqlDataAdapter(command);
                 var dataTable = new DataTable();
@@ -361,20 +383,29 @@ namespace StudentReportInitial.Forms
                 using var connection = DatabaseHelper.GetConnection();
                 await connection.OpenAsync();
 
+                // Add branch filter based on professor's branch
+                var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+                var branchFilter = professorBranchId > 0 ? " AND s.BranchId = @branchId" : "";
+
                 var query = @"
                     SELECT DISTINCT s.GradeLevel
                     FROM Students s
                     INNER JOIN Grades g ON s.Id = g.StudentId
-                    WHERE g.ProfessorId = @professorId AND s.IsActive = 1
+                    WHERE g.ProfessorId = @professorId AND s.IsActive = 1" + branchFilter + @"
                     UNION
                     SELECT DISTINCT s.GradeLevel
                     FROM Students s
                     INNER JOIN Attendance a ON s.Id = a.StudentId
-                    WHERE a.ProfessorId = @professorId AND s.IsActive = 1
+                    WHERE a.ProfessorId = @professorId AND s.IsActive = 1" + branchFilter + @"
                     ORDER BY s.GradeLevel";
 
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
+                
+                if (professorBranchId > 0)
+                {
+                    command.Parameters.AddWithValue("@branchId", professorBranchId);
+                }
 
                 using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
@@ -483,10 +514,22 @@ namespace StudentReportInitial.Forms
                 INNER JOIN Students s ON g.StudentId = s.Id
                 WHERE g.ProfessorId = @professorId AND s.IsActive = 1";
 
+            // Add branch filter based on professor's branch
+            var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+            if (professorBranchId > 0)
+            {
+                query += " AND g.BranchId = @branchId";
+            }
+
             var parameters = new List<SqlParameter>
             {
                 new SqlParameter("@professorId", currentProfessor.Id)
             };
+            
+            if (professorBranchId > 0)
+            {
+                parameters.Add(new SqlParameter("@branchId", professorBranchId));
+            }
 
             if (cmbSubject.SelectedIndex > 0)
             {
@@ -540,10 +583,22 @@ namespace StudentReportInitial.Forms
                 INNER JOIN Students s ON a.StudentId = s.Id
                 WHERE a.ProfessorId = @professorId AND s.IsActive = 1";
 
+            // Add branch filter based on professor's branch
+            var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+            if (professorBranchId > 0)
+            {
+                query += " AND a.BranchId = @branchId";
+            }
+
             var parameters = new List<SqlParameter>
             {
                 new SqlParameter("@professorId", currentProfessor.Id)
             };
+            
+            if (professorBranchId > 0)
+            {
+                parameters.Add(new SqlParameter("@branchId", professorBranchId));
+            }
 
             if (cmbSubject.SelectedIndex > 0)
             {
@@ -948,6 +1003,7 @@ namespace StudentReportInitial.Forms
                         _ => "QuizzesActivities"
                     };
 
+                    // Note: BranchId is not updated as it should remain tied to the student's branch
                     var updateQuery = @"
                         UPDATE Grades 
                         SET Score = @score, MaxScore = @maxScore, Percentage = @percentage, 
