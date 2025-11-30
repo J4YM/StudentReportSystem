@@ -1,4 +1,4 @@
-using StudentReportInitial.Models;
+﻿using StudentReportInitial.Models;
 using StudentReportInitial.Data;
 using System.Data.SqlClient;
 using System.Data;
@@ -667,8 +667,8 @@ namespace StudentReportInitial.Forms
             await connection.OpenAsync();
 
             var deleteQuery = @"
-                DELETE FROM Attendance 
-                WHERE ProfessorId = @professorId AND Subject = @subject AND CAST(Date AS DATE) = CAST(@date AS DATE)";
+        DELETE FROM Attendance 
+        WHERE ProfessorId = @professorId AND Subject = @subject AND CAST(Date AS DATE) = CAST(@date AS DATE)";
 
             // Add branch filter based on professor's branch
             var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
@@ -681,17 +681,17 @@ namespace StudentReportInitial.Forms
             deleteCommand.Parameters.AddWithValue("@professorId", currentProfessor.Id);
             deleteCommand.Parameters.AddWithValue("@subject", attendanceRecords.First().Subject);
             deleteCommand.Parameters.AddWithValue("@date", dtpDate.Value.Date);
-            
+
             if (professorBranchId > 0)
             {
                 deleteCommand.Parameters.AddWithValue("@branchId", professorBranchId);
             }
-            
+
             await deleteCommand.ExecuteNonQueryAsync();
 
             var insertQuery = @"
-                INSERT INTO Attendance (StudentId, ProfessorId, Subject, Date, Status, Notes, RecordedDate, BranchId)
-                VALUES (@studentId, @professorId, @subject, @date, @status, @notes, @recordedDate, @branchId)";
+        INSERT INTO Attendance (StudentId, ProfessorId, Subject, Date, Status, Notes, RecordedDate, BranchId)
+        VALUES (@studentId, @professorId, @subject, @date, @status, @notes, @recordedDate, @branchId)";
 
             string professorName = $"{currentProfessor.FirstName} {currentProfessor.LastName}";
             var subjectName = attendanceRecords.First().Subject;
@@ -724,10 +724,10 @@ namespace StudentReportInitial.Forms
                 try
                 {
                     var studentQuery = @"
-                        SELECT s.FirstName, s.LastName, s.Phone, u.Phone as GuardianPhone
-                        FROM Students s
-                        LEFT JOIN Users u ON s.GuardianId = u.Id
-                        WHERE s.Id = @studentId";
+                SELECT s.FirstName, s.LastName, s.Phone, u.Phone as GuardianPhone
+                FROM Students s
+                LEFT JOIN Users u ON s.GuardianId = u.Id
+                WHERE s.Id = @studentId";
 
                     using var studentCommand = new SqlCommand(studentQuery, connection);
                     studentCommand.Parameters.AddWithValue("@studentId", attendance.StudentId);
@@ -747,14 +747,14 @@ namespace StudentReportInitial.Forms
 
                         if (!string.IsNullOrEmpty(phoneNumber) && PhoneValidator.IsValidPhilippinesMobile(phoneNumber))
                         {
-                            int attendanceCount = await GetStudentAttendanceCountAsync(connection, attendance.StudentId);
+                            int attendanceCount = await GetStudentPresentCountAsync(connection, attendance.StudentId, subjectName);
 
                             await SmsService.SendAttendanceNotificationAsync(
                                 phoneNumber,
                                 studentName,
                                 subjectName,
                                 attendance.Status.ToString(),
-                                attendance.Date,
+                                DateTime.Now,  // Changed from attendance.Date to DateTime.Now
                                 professorName,
                                 attendanceCount
                             );
@@ -769,23 +769,28 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private async Task<int> GetStudentAttendanceCountAsync(SqlConnection connection, int studentId)
+        // Count only "Present" attendance for this student in this subject
+        private async Task<int> GetStudentPresentCountAsync(SqlConnection connection, int studentId, string subjectName)
         {
             try
             {
                 var countQuery = @"
-                    SELECT COUNT(*) 
-                    FROM Attendance 
-                    WHERE StudentId = @studentId";
+            SELECT COUNT(*) 
+            FROM Attendance 
+            WHERE StudentId = @studentId 
+                AND Subject = @subject
+                AND Status = 1";  // 1 = Present (based on AttendanceStatus enum)
 
                 using var countCommand = new SqlCommand(countQuery, connection);
                 countCommand.Parameters.AddWithValue("@studentId", studentId);
+                countCommand.Parameters.AddWithValue("@subject", subjectName);
 
                 var result = await countCommand.ExecuteScalarAsync();
                 return result != null ? Convert.ToInt32(result) : 0;
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"Error getting attendance count: {ex.Message}");
                 return 0;
             }
         }

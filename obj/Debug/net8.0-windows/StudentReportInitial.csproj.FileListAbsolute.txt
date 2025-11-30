@@ -228,3 +228,4 @@ C:\Users\JamesWindell\Documents\StudentReportSystem\obj\Debug\net8.0-windows\ref
 C:\Users\JamesWindell\Documents\StudentReportSystem\obj\Debug\net8.0-windows\StudentReportInitial.pdb
 C:\Users\JamesWindell\Documents\StudentReportSystem\obj\Debug\net8.0-windows\StudentReportInitial.genruntimeconfig.cache
 C:\Users\JamesWindell\Documents\StudentReportSystem\obj\Debug\net8.0-windows\ref\StudentReportInitial.dll
+C:\Users\JamesWindell\Documents\StudentReportSystem\obj\Debug\net8.0-windows\StudentReportInitial.Forms.AdminUserManagement.resources
