@@ -331,16 +331,13 @@ namespace StudentReportInitial.Forms
                 var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
                 var branchFilter = professorBranchId > 0 ? " AND s.BranchId = @branchId" : "";
 
+                // Load all students enrolled in subjects taught by this professor
                 var query = @"
                     SELECT DISTINCT s.Id, s.FirstName + ' ' + s.LastName as StudentName
                     FROM Students s
-                    INNER JOIN Grades g ON s.Id = g.StudentId
-                    WHERE g.ProfessorId = @professorId AND s.IsActive = 1" + branchFilter + @"
-                    UNION
-                    SELECT DISTINCT s.Id, s.FirstName + ' ' + s.LastName as StudentName
-                    FROM Students s
-                    INNER JOIN Attendance a ON s.Id = a.StudentId
-                    WHERE a.ProfessorId = @professorId AND s.IsActive = 1" + branchFilter + @"
+                    INNER JOIN StudentSubjects ss ON s.Id = ss.StudentId
+                    INNER JOIN Subjects sub ON ss.SubjectId = sub.Id
+                    WHERE sub.ProfessorId = @professorId AND s.IsActive = 1 AND sub.IsActive = 1" + branchFilter + @"
                     ORDER BY StudentName";
 
                 using var command = new SqlCommand(query, connection);

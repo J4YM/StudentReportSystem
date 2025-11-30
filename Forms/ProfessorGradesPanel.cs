@@ -879,9 +879,9 @@ namespace StudentReportInitial.Forms
                   AND AssignmentName = @assignmentName";
 
             var insertQuery = @"
-                INSERT INTO Grades (StudentId, ProfessorId, Subject, Quarter, ComponentType, AssignmentType, AssignmentName, 
+                INSERT INTO Grades (StudentId, ProfessorId, Subject, Quarter, ComponentType, AssignmentName, 
                                   Score, MaxScore, Percentage, Comments, DateRecorded, DueDate, BranchId)
-                VALUES (@studentId, @professorId, @subject, @quarter, @componentType, @assignmentType, @assignmentName, 
+                VALUES (@studentId, @professorId, @subject, @quarter, @componentType, @assignmentName, 
                         @score, @maxScore, @percentage, @comments, @dateRecorded, @dueDate, @branchId)";
 
             // Get professor name
@@ -939,7 +939,6 @@ namespace StudentReportInitial.Forms
                 command.Parameters.AddWithValue("@subject", grade.Subject);
                 command.Parameters.AddWithValue("@quarter", grade.Quarter);
                 command.Parameters.AddWithValue("@componentType", grade.ComponentType);
-                command.Parameters.AddWithValue("@assignmentType", grade.AssignmentType);
                 command.Parameters.AddWithValue("@assignmentName", grade.AssignmentName);
                 command.Parameters.AddWithValue("@score", grade.Score);
                 command.Parameters.AddWithValue("@maxScore", grade.MaxScore);
