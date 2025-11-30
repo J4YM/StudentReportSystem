@@ -2,6 +2,7 @@ using StudentReportInitial.Models;
 using StudentReportInitial.Data;
 using System.Data.SqlClient;
 using System.Data;
+using System.Collections.Generic;
 
 namespace StudentReportInitial.Forms
 {
@@ -393,23 +394,37 @@ namespace StudentReportInitial.Forms
 
         private void TxtSearch_TextChanged(object sender, EventArgs e)
         {
+            ApplyFilters();
+        }
+
+        private void ApplyFilters()
+        {
             if (dgvStudents.DataSource is DataTable dataTable)
             {
-                var filter = $"FirstName LIKE '%{txtSearch.Text}%' OR LastName LIKE '%{txtSearch.Text}%' OR StudentId LIKE '%{txtSearch.Text}%'";
+                var searchText = txtSearch.Text.Replace("'", "''");
+                var filterParts = new List<string>();
+                
+                if (!string.IsNullOrWhiteSpace(searchText))
+                {
+                    filterParts.Add($"(FirstName LIKE '%{searchText}%' OR LastName LIKE '%{searchText}%' OR StudentId LIKE '%{searchText}%')");
+                }
 
                 if (cmbGradeFilter.SelectedIndex > 0)
                 {
-                    var grade = cmbGradeFilter.SelectedItem.ToString()?.Replace("Grade ", "");
-                    filter += $" AND GradeLevel = '{grade}'";
+                    var grade = cmbGradeFilter.SelectedItem?.ToString()?.Replace("'", "''");
+                    if (!string.IsNullOrEmpty(grade))
+                    {
+                        filterParts.Add($"GradeLevel = '{grade}'");
+                    }
                 }
 
-                dataTable.DefaultView.RowFilter = filter;
+                dataTable.DefaultView.RowFilter = filterParts.Count > 0 ? string.Join(" AND ", filterParts) : "";
             }
         }
 
         private void CmbGradeFilter_SelectedIndexChanged(object sender, EventArgs e)
         {
-            TxtSearch_TextChanged(sender, e);
+            ApplyFilters();
         }
 
         private void DgvStudents_SelectionChanged(object sender, EventArgs e)

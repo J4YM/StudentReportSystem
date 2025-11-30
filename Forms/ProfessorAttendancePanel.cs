@@ -244,47 +244,92 @@ namespace StudentReportInitial.Forms
                 int currentRow = e.RowIndex;
                 int currentCol = e.ColumnIndex;
 
-                // Handle selection change
-                comboBox.SelectedIndexChanged += (s, args) =>
+                // Helper method to save the selected value
+                Action<ComboBox> saveValue = (cb) =>
                 {
-                    var cb = s as ComboBox;
-                    if (cb != null && cb.SelectedItem != null && !cb.Disposing && cb.IsHandleCreated)
+                    if (cb != null && cb.SelectedItem != null && !cb.Disposing && 
+                        currentRow >= 0 && currentRow < dgvStudents.Rows.Count && 
+                        currentCol >= 0 && currentCol < dgvStudents.Columns.Count)
                     {
                         try
                         {
-                            dgvStudents[currentCol, currentRow].Value = cb.SelectedItem.ToString();
+                            var selectedValue = cb.SelectedItem.ToString();
+                            var cell = dgvStudents[currentCol, currentRow];
+                            cell.Value = selectedValue;
+                            // Force the DataGridView to commit the edit
+                            dgvStudents.NotifyCurrentCellDirty(true);
+                            dgvStudents.EndEdit();
+                            // Refresh the cell to ensure the value is displayed
+                            dgvStudents.InvalidateCell(currentCol, currentRow);
                         }
-                        catch { }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Error saving attendance status: {ex.Message}");
+                        }
                     }
                 };
 
-                // Handle when ComboBox closes
+                // Handle selection change - update immediately
+                comboBox.SelectedIndexChanged += (s, args) =>
+                {
+                    var cb = s as ComboBox;
+                    if (cb != null)
+                    {
+                        saveValue(cb);
+                    }
+                };
+
+                // Handle when ComboBox closes - ensure value is saved
                 comboBox.DropDownClosed += (s, args) =>
                 {
                     var cb = s as ComboBox;
                     if (cb != null && !cb.Disposing)
                     {
-                        dgvStudents.Controls.Remove(cb);
-                        cb.Dispose();
-                        if (statusComboBox == cb)
+                        saveValue(cb);
+                        
+                        // Use BeginInvoke to remove ComboBox after UI updates
+                        dgvStudents.BeginInvoke(new Action(() =>
                         {
-                            statusComboBox = null;
-                        }
+                            if (dgvStudents.Controls.Contains(cb))
+                            {
+                                dgvStudents.Controls.Remove(cb);
+                            }
+                            if (!cb.IsDisposed)
+                            {
+                                cb.Dispose();
+                            }
+                            if (statusComboBox == cb)
+                            {
+                                statusComboBox = null;
+                            }
+                        }));
                     }
                 };
 
-                // Handle when ComboBox loses focus
+                // Handle when ComboBox loses focus - ensure value is saved
                 comboBox.Leave += (s, args) =>
                 {
                     var cb = s as ComboBox;
                     if (cb != null && !cb.Disposing && dgvStudents.Controls.Contains(cb))
                     {
-                        dgvStudents.Controls.Remove(cb);
-                        cb.Dispose();
-                        if (statusComboBox == cb)
+                        saveValue(cb);
+                        
+                        // Use BeginInvoke to remove ComboBox after UI updates
+                        dgvStudents.BeginInvoke(new Action(() =>
                         {
-                            statusComboBox = null;
-                        }
+                            if (dgvStudents.Controls.Contains(cb))
+                            {
+                                dgvStudents.Controls.Remove(cb);
+                            }
+                            if (!cb.IsDisposed)
+                            {
+                                cb.Dispose();
+                            }
+                            if (statusComboBox == cb)
+                            {
+                                statusComboBox = null;
+                            }
+                        }));
                     }
                 };
 

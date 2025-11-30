@@ -3,6 +3,7 @@ using StudentReportInitial.Data;
 using System.Data.SqlClient;
 using System.Data;
 using System.Text.RegularExpressions;
+using System.Collections.Generic;
 
 namespace StudentReportInitial.Forms
 {
@@ -204,6 +205,7 @@ namespace StudentReportInitial.Forms
                 var query = @"
                     SELECT Id, Username, FirstName, LastName, Email, Phone, Role, CreatedDate, IsActive
                     FROM Users 
+                    WHERE IsActive = 1
                     ORDER BY Role, CreatedDate ASC";
 
                 using var command = new SqlCommand(query, connection);
@@ -243,20 +245,31 @@ namespace StudentReportInitial.Forms
             // Implement search functionality
             if (dgvUsers.DataSource is DataTable dataTable)
             {
-                var filter = $"FirstName LIKE '%{txtSearch.Text}%' OR LastName LIKE '%{txtSearch.Text}%' OR Username LIKE '%{txtSearch.Text}%' OR Email LIKE '%{txtSearch.Text}%'";
+                var searchText = txtSearch.Text.Replace("'", "''");
+                var filterParts = new List<string>();
+                
+                if (!string.IsNullOrWhiteSpace(searchText))
+                {
+                    filterParts.Add($"(FirstName LIKE '%{searchText}%' OR LastName LIKE '%{searchText}%' OR Username LIKE '%{searchText}%' OR Email LIKE '%{searchText}%')");
+                }
                 
                 if (cmbRoleFilter.SelectedIndex > 0)
                 {
-                    filter += $" AND Role = {cmbRoleFilter.SelectedIndex}";
+                    filterParts.Add($"Role = {cmbRoleFilter.SelectedIndex}");
                 }
 
-                dataTable.DefaultView.RowFilter = filter;
+                dataTable.DefaultView.RowFilter = filterParts.Count > 0 ? string.Join(" AND ", filterParts) : "";
             }
         }
 
         private void CmbRoleFilter_SelectedIndexChanged(object sender, EventArgs e)
         {
-            TxtSearch_TextChanged(sender, e);
+            ApplyFilters();
+        }
+
+        private void ApplyFilters()
+        {
+            TxtSearch_TextChanged(null, null);
         }
 
         private void BtnRefresh_Click(object sender, EventArgs e)
@@ -411,7 +424,7 @@ namespace StudentReportInitial.Forms
 
                 try
                 {
-                    // Ensure at least one active admin remains
+                    // at least one active admin remains
                     if (isAdmin && await IsLastActiveAdminAsync(userId))
                     {
                         MessageBox.Show("Cannot delete the last active admin account. At least one admin must remain active for system access.",
@@ -497,7 +510,7 @@ namespace StudentReportInitial.Forms
 
             // Phone
             var lblPhone = new Label { Text = "Phone (International format):", Location = new Point(20, yPos), AutoSize = true };
-            var txtPhone = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), PlaceholderText="+1234567890 or 0XXXXXXXXX" };
+            var txtPhone = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), PlaceholderText="+1234567890" };
             var lblPhoneError = new Label 
             { 
                 Text = "", 

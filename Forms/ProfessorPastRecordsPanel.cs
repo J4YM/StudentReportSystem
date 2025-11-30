@@ -770,62 +770,156 @@ namespace StudentReportInitial.Forms
                 return;
             }
 
+            var currentScore = Convert.ToDecimal(reader["Score"]);
+            var currentMaxScore = Convert.ToDecimal(reader["MaxScore"]);
+            var currentComments = reader["Comments"]?.ToString() ?? "";
+            var currentComponentType = reader["ComponentType"]?.ToString() ?? "QuizzesActivities";
+            var currentQuarter = reader["Quarter"]?.ToString() ?? "Prelim";
+            var currentAssignmentName = reader["AssignmentName"]?.ToString() ?? "";
+
+            reader.Close();
+
             var form = new Form
             {
                 Text = "Edit Grade",
-                Size = new Size(500, 400),
-                StartPosition = FormStartPosition.CenterParent
+                Size = new Size(500, 350),
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false
             };
 
-            var lblScore = new Label { Text = "Score:", Location = new Point(20, 20), AutoSize = true };
-            var nudScore = new NumericUpDown
+            // Component type
+            var lblComponentType = new Label 
+            { 
+                Text = "Component:", 
+                Location = new Point(20, 20), 
+                AutoSize = true 
+            };
+            var cmbComponentType = new ComboBox
             {
                 Location = new Point(20, 40),
                 Size = new Size(200, 25),
-                Minimum = 0,
-                Maximum = 10000,
-                DecimalPlaces = 2,
-                Value = Convert.ToDecimal(reader["Score"])
+                DropDownStyle = ComboBoxStyle.DropDownList
             };
+            cmbComponentType.Items.AddRange(new[] { "Quizzes", "PT/Activities", "Exam" });
+            
+            // Map database value to display text
+            var componentDisplayText = currentComponentType switch
+            {
+                "QuizzesActivities" => "Quizzes",
+                "PerformanceTask" => "PT/Activities",
+                "Exam" => "Exam",
+                _ => "Quizzes"
+            };
+            cmbComponentType.SelectedItem = componentDisplayText;
 
-            var lblMaxScore = new Label { Text = "Max Score:", Location = new Point(240, 20), AutoSize = true };
-            var nudMaxScore = new NumericUpDown
+            // Quarter
+            var lblQuarter = new Label 
+            { 
+                Text = "Quarter:", 
+                Location = new Point(240, 20), 
+                AutoSize = true 
+            };
+            var cmbQuarter = new ComboBox
             {
                 Location = new Point(240, 40),
+                Size = new Size(200, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            cmbQuarter.Items.AddRange(new[] { "Prelim", "Midterm", "PreFinal", "Final" });
+            cmbQuarter.SelectedItem = currentQuarter;
+
+            // Assignment name
+            var lblAssignmentName = new Label 
+            { 
+                Text = "Assignment:", 
+                Location = new Point(20, 70), 
+                AutoSize = true 
+            };
+            var txtAssignmentName = new TextBox
+            {
+                Location = new Point(20, 90),
+                Size = new Size(420, 25),
+                Text = currentAssignmentName
+            };
+
+            // Score
+            var lblScore = new Label 
+            { 
+                Text = $"Score (Max: {currentMaxScore}):", 
+                Location = new Point(20, 120), 
+                AutoSize = true 
+            };
+            var nudScore = new NumericUpDown
+            {
+                Location = new Point(20, 140),
+                Size = new Size(200, 25),
+                Minimum = 0,
+                Maximum = currentMaxScore,
+                DecimalPlaces = 2,
+                Value = currentScore > currentMaxScore ? currentMaxScore : (currentScore < 0 ? 0 : currentScore)
+            };
+
+            // Max score
+            var lblMaxScore = new Label 
+            { 
+                Text = "Max Score:", 
+                Location = new Point(240, 120), 
+                AutoSize = true 
+            };
+            var nudMaxScore = new NumericUpDown
+            {
+                Location = new Point(240, 140),
                 Size = new Size(200, 25),
                 Minimum = 1,
                 Maximum = 10000,
                 DecimalPlaces = 2,
-                Value = Convert.ToDecimal(reader["MaxScore"])
+                Value = currentMaxScore
+            };
+            nudMaxScore.ValueChanged += (s, e) =>
+            {
+                // Update score max when max score changes
+                nudScore.Maximum = nudMaxScore.Value;
+                lblScore.Text = $"Score (Max: {nudMaxScore.Value}):";
             };
 
-            var lblComments = new Label { Text = "Comments:", Location = new Point(20, 80), AutoSize = true };
+            // Comments
+            var lblComments = new Label 
+            { 
+                Text = "Comments:", 
+                Location = new Point(20, 170), 
+                AutoSize = true 
+            };
             var txtComments = new TextBox
             {
-                Location = new Point(20, 100),
-                Size = new Size(420, 100),
+                Location = new Point(20, 190),
+                Size = new Size(420, 80),
                 Multiline = true,
-                Text = reader["Comments"]?.ToString() ?? ""
+                Text = currentComments
             };
 
+            // Buttons
             var btnSave = new Button
             {
                 Text = "Save",
-                Location = new Point(20, 220),
+                Location = new Point(20, 280),
                 Size = new Size(100, 30),
                 BackColor = Color.FromArgb(34, 197, 94),
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                DialogResult = DialogResult.OK
             };
 
             var btnCancel = new Button
             {
                 Text = "Cancel",
-                Location = new Point(130, 220),
+                Location = new Point(130, 280),
                 Size = new Size(100, 30),
                 BackColor = Color.FromArgb(107, 114, 128),
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                DialogResult = DialogResult.Cancel
             };
 
             btnSave.Click += async (s, e) =>
@@ -834,13 +928,31 @@ namespace StudentReportInitial.Forms
                 {
                     var newScore = nudScore.Value;
                     var newMaxScore = nudMaxScore.Value;
+
+                    // Validate score doesn't exceed max
+                    if (newScore > newMaxScore)
+                    {
+                        MessageBox.Show($"Score cannot exceed the maximum score of {newMaxScore}.", "Validation Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
                     var newPercentage = (newScore / newMaxScore) * 100;
 
-                    reader.Close();
+                    // Map display text to ComponentType value
+                    string componentTypeValue = cmbComponentType.SelectedItem?.ToString() switch
+                    {
+                        "Quizzes" => "QuizzesActivities",
+                        "PT/Activities" => "PerformanceTask",
+                        "Exam" => "Exam",
+                        _ => "QuizzesActivities"
+                    };
 
                     var updateQuery = @"
                         UPDATE Grades 
-                        SET Score = @score, MaxScore = @maxScore, Percentage = @percentage, Comments = @comments
+                        SET Score = @score, MaxScore = @maxScore, Percentage = @percentage, 
+                            Comments = @comments, ComponentType = @componentType, Quarter = @quarter,
+                            AssignmentName = @assignmentName
                         WHERE Id = @id AND ProfessorId = @professorId";
 
                     using var updateCommand = new SqlCommand(updateQuery, connection);
@@ -848,6 +960,9 @@ namespace StudentReportInitial.Forms
                     updateCommand.Parameters.AddWithValue("@maxScore", newMaxScore);
                     updateCommand.Parameters.AddWithValue("@percentage", newPercentage);
                     updateCommand.Parameters.AddWithValue("@comments", txtComments.Text);
+                    updateCommand.Parameters.AddWithValue("@componentType", componentTypeValue);
+                    updateCommand.Parameters.AddWithValue("@quarter", cmbQuarter.SelectedItem?.ToString() ?? "Prelim");
+                    updateCommand.Parameters.AddWithValue("@assignmentName", txtAssignmentName.Text);
                     updateCommand.Parameters.AddWithValue("@id", gradeId);
                     updateCommand.Parameters.AddWithValue("@professorId", currentProfessor.Id);
 
@@ -866,7 +981,17 @@ namespace StudentReportInitial.Forms
 
             btnCancel.Click += (s, e) => form.Close();
 
-            form.Controls.AddRange(new Control[] { lblScore, nudScore, lblMaxScore, nudMaxScore, lblComments, txtComments, btnSave, btnCancel });
+            form.Controls.AddRange(new Control[] 
+            { 
+                lblComponentType, cmbComponentType, lblQuarter, cmbQuarter,
+                lblAssignmentName, txtAssignmentName,
+                lblScore, nudScore, lblMaxScore, nudMaxScore,
+                lblComments, txtComments, btnSave, btnCancel 
+            });
+
+            UIStyleHelper.ApplyRoundedButton(btnSave, 10);
+            UIStyleHelper.ApplyRoundedButton(btnCancel, 10);
+
             form.ShowDialog();
         }
 
