@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\JamesWindell\\Documents\\StudentReportInitial\\StudentReportInitial.csproj": {}
+    "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\StudentReportInitial.csproj": {}
   },
   "projects": {
-    "C:\\Users\\JamesWindell\\Documents\\StudentReportInitial\\StudentReportInitial.csproj": {
+    "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\StudentReportInitial.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\JamesWindell\\Documents\\StudentReportInitial\\StudentReportInitial.csproj",
+        "projectUniqueName": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\StudentReportInitial.csproj",
         "projectName": "StudentReportInitial",
-        "projectPath": "C:\\Users\\JamesWindell\\Documents\\StudentReportInitial\\StudentReportInitial.csproj",
+        "projectPath": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\StudentReportInitial.csproj",
         "packagesPath": "C:\\Users\\JamesWindell\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\JamesWindell\\Documents\\StudentReportInitial\\obj\\",
+        "outputPath": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\JamesWindell\\AppData\\Roaming\\NuGet\\NuGet.Config",
@@ -57,6 +57,10 @@
             "System.Drawing.Common": {
               "target": "Package",
               "version": "[8.0.0, )"
+            },
+            "Twilio": {
+              "target": "Package",
+              "version": "[6.3.0, )"
             }
           },
           "imports": [

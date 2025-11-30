@@ -230,24 +230,39 @@ namespace StudentReportInitial.Forms
 
         private async void BtnDeleteSubject_Click(object sender, EventArgs e)
         {
-            if (dgvSubjects.SelectedRows.Count > 0)
+            if (dgvSubjects.SelectedRows.Count == 0)
             {
-                var result = MessageBox.Show("Are you sure you want to delete this subject?", "Confirm Delete", 
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                return;
+            }
 
-                if (result == DialogResult.Yes)
+            var selectedRow = dgvSubjects.SelectedRows[0];
+            var subjectId = Convert.ToInt32(selectedRow.Cells["Id"].Value);
+            var subjectName = selectedRow.Cells["Name"].Value?.ToString() ?? "Unknown";
+            var subjectCode = selectedRow.Cells["Code"].Value?.ToString() ?? "";
+
+            var confirmMessage = $"WARNING: You are about to delete subject '{subjectName}' ({subjectCode}).\n\n" +
+                               "This will:\n" +
+                               "• Deactivate the subject\n" +
+                               "• Students will no longer be able to enroll in this subject\n" +
+                               "• This action cannot be undone\n\n" +
+                               "Are you absolutely sure you want to proceed?";
+
+            var result = MessageBox.Show(confirmMessage, "Confirm Subject Deletion", 
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+            if (result == DialogResult.Yes)
+            {
+                try
                 {
-                    try
-                    {
-                        var subjectId = Convert.ToInt32(dgvSubjects.SelectedRows[0].Cells["Id"].Value);
-                        await DeleteSubjectAsync(subjectId);
-                        LoadSubjects();
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Error deleting subject: {ex.Message}", "Error", 
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    await DeleteSubjectAsync(subjectId);
+                    LoadSubjects();
+                    MessageBox.Show("Subject deleted successfully.", 
+                        "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error deleting subject: {ex.Message}", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }

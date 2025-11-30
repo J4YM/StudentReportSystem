@@ -10,7 +10,8 @@ namespace StudentReportInitial.Forms
         private User currentProfessor;
         private DataGridView dgvGrades;
         private ComboBox cmbSubject;
-        private ComboBox cmbAssignmentType;
+        private ComboBox cmbQuarter;
+        private ComboBox cmbComponentType;
         private TextBox txtAssignmentName;
         private DateTimePicker dtpDueDate;
         private NumericUpDown nudMaxScore;
@@ -40,7 +41,7 @@ namespace StudentReportInitial.Forms
             var pnlHeader = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 100,
+                Height = 120,
                 BackColor = Color.White,
                 Padding = new Padding(20)
             };
@@ -70,33 +71,49 @@ namespace StudentReportInitial.Forms
             };
             cmbSubject.SelectedIndexChanged += CmbSubject_SelectedIndexChanged;
 
-            // Assignment type
-            var lblAssignmentType = new Label
+            // Quarter selection
+            var lblQuarter = new Label
             {
-                Text = "Type:",
+                Text = "Quarter:",
                 Location = new Point(300, 50),
                 AutoSize = true
             };
 
-            cmbAssignmentType = new ComboBox
+            cmbQuarter = new ComboBox
             {
-                Location = new Point(340, 48),
-                Size = new Size(120, 25),
+                Location = new Point(360, 48),
+                Size = new Size(100, 25),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
-            cmbAssignmentType.Items.AddRange(new[] { "Quiz", "Exam", "Project", "Assignment", "Participation", "Other" });
+            cmbQuarter.Items.AddRange(new[] { "Prelim", "Midterm", "PreFinal", "Final" });
+
+            // Component type
+            var lblComponentType = new Label
+            {
+                Text = "Component:",
+                Location = new Point(480, 50),
+                AutoSize = true
+            };
+
+            cmbComponentType = new ComboBox
+            {
+                Location = new Point(560, 48),
+                Size = new Size(150, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            cmbComponentType.Items.AddRange(new[] { "Quizzes", "PT/Activities", "Exam" });
 
             // Assignment name
             var lblAssignmentName = new Label
             {
                 Text = "Assignment:",
-                Location = new Point(480, 50),
+                Location = new Point(730, 50),
                 AutoSize = true
             };
 
             txtAssignmentName = new TextBox
             {
-                Location = new Point(560, 48),
+                Location = new Point(810, 48),
                 Size = new Size(150, 25)
             };
 
@@ -159,9 +176,9 @@ namespace StudentReportInitial.Forms
             btnRefresh.Click += BtnRefresh_Click;
 
             pnlHeader.Controls.AddRange(new Control[] { 
-                lblTitle, lblSubject, cmbSubject, lblAssignmentType, cmbAssignmentType,
-                lblAssignmentName, txtAssignmentName, lblDueDate, dtpDueDate,
-                lblMaxScore, nudMaxScore, btnAddGrade, btnRefresh
+                lblTitle, lblSubject, cmbSubject, lblQuarter, cmbQuarter,
+                lblComponentType, cmbComponentType, lblAssignmentName, txtAssignmentName, 
+                lblDueDate, dtpDueDate, lblMaxScore, nudMaxScore, btnAddGrade, btnRefresh
             });
 
             // Grades grid
@@ -381,9 +398,16 @@ namespace StudentReportInitial.Forms
                 return;
             }
 
-            if (cmbAssignmentType.SelectedIndex == -1)
+            if (cmbQuarter.SelectedIndex == -1)
             {
-                MessageBox.Show("Please select an assignment type.", "Warning", 
+                MessageBox.Show("Please select a quarter.", "Warning", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (cmbComponentType.SelectedIndex == -1)
+            {
+                MessageBox.Show("Please select a component type.", "Warning", 
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -412,6 +436,20 @@ namespace StudentReportInitial.Forms
                 return;
             }
 
+            if (cmbQuarter.SelectedIndex == -1)
+            {
+                MessageBox.Show("Please select a quarter.", "Warning", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (cmbComponentType.SelectedIndex == -1)
+            {
+                MessageBox.Show("Please select a component type.", "Warning", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             try
             {
                 var selectedSubject = cmbSubject.SelectedItem.ToString();
@@ -428,12 +466,17 @@ namespace StudentReportInitial.Forms
                         var score = Convert.ToDecimal(row.Cells["Score"].Value);
                         if (score > 0) // Only save non-zero scores
                         {
+                            // Map display text to ComponentType value
+                            string componentTypeValue = MapComponentType(cmbComponentType.SelectedItem?.ToString() ?? "Quizzes");
+                            
                             var grade = new Grade
                             {
                                 StudentId = Convert.ToInt32(row.Cells["Id"].Value),
                                 ProfessorId = currentProfessor.Id,
                                 Subject = subjectName,
-                                AssignmentType = cmbAssignmentType.SelectedItem.ToString(),
+                                Quarter = cmbQuarter.SelectedItem.ToString() ?? "Prelim",
+                                ComponentType = componentTypeValue,
+                                AssignmentType = cmbComponentType.SelectedItem.ToString() ?? "Quizzes", // Legacy field
                                 AssignmentName = txtAssignmentName.Text,
                                 Score = score,
                                 MaxScore = maxScore,
@@ -454,13 +497,24 @@ namespace StudentReportInitial.Forms
                     return;
                 }
 
-                await SaveGradeRecordsAsync(gradeRecords);
-                MessageBox.Show($"Grades saved successfully for {gradeRecords.Count} students!", "Success", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                var result = await SaveGradeRecordsAsync(gradeRecords);
+                string message = $"Grades saved successfully for {result.SavedCount} student(s)!";
+                if (result.SkippedCount > 0)
+                {
+                    message += $"\n\n{result.SkippedCount} duplicate grade entry(ies) skipped:\n" + 
+                               string.Join("\n", result.SkippedGrades.Take(5));
+                    if (result.SkippedCount > 5)
+                    {
+                        message += $"\n... and {result.SkippedCount - 5} more";
+                    }
+                }
+                MessageBox.Show(message, "Save Complete", 
+                    MessageBoxButtons.OK, result.SkippedCount > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
 
                 // Clear form
                 txtAssignmentName.Clear();
-                cmbAssignmentType.SelectedIndex = -1;
+                cmbQuarter.SelectedIndex = -1;
+                cmbComponentType.SelectedIndex = -1;
                 nudMaxScore.Value = 100;
                 dtpDueDate.Value = DateTime.Today;
                 dgvGrades.DataSource = null;
@@ -472,23 +526,90 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private async Task SaveGradeRecordsAsync(List<Grade> gradeRecords)
+        private static string MapComponentType(string? displayText)
+        {
+            return displayText switch
+            {
+                "Quizzes" => "QuizzesActivities",
+                "PT/Activities" => "PerformanceTask",
+                "Performance Task" => "PerformanceTask", // Legacy support
+                "Quizzes/Activities" => "QuizzesActivities", // Legacy support
+                "Exam" => "Exam",
+                _ => "QuizzesActivities"
+            };
+        }
+
+        private class SaveGradeResult
+        {
+            public int SavedCount { get; set; }
+            public int SkippedCount { get; set; }
+            public List<string> SkippedGrades { get; set; } = new();
+        }
+
+        private async Task<SaveGradeResult> SaveGradeRecordsAsync(List<Grade> gradeRecords)
         {
             using var connection = DatabaseHelper.GetConnection();
             await connection.OpenAsync();
 
+            var checkDuplicateQuery = @"
+                SELECT COUNT(*) 
+                FROM Grades 
+                WHERE StudentId = @studentId 
+                  AND Subject = @subject 
+                  AND Quarter = @quarter 
+                  AND ComponentType = @componentType 
+                  AND AssignmentName = @assignmentName";
+
             var insertQuery = @"
-                INSERT INTO Grades (StudentId, ProfessorId, Subject, AssignmentType, AssignmentName, 
+                INSERT INTO Grades (StudentId, ProfessorId, Subject, Quarter, ComponentType, AssignmentType, AssignmentName, 
                                   Score, MaxScore, Percentage, Comments, DateRecorded, DueDate)
-                VALUES (@studentId, @professorId, @subject, @assignmentType, @assignmentName, 
+                VALUES (@studentId, @professorId, @subject, @quarter, @componentType, @assignmentType, @assignmentName, 
                         @score, @maxScore, @percentage, @comments, @dateRecorded, @dueDate)";
+
+            // Get professor name
+            string professorName = $"{currentProfessor.FirstName} {currentProfessor.LastName}";
+            var subjectName = gradeRecords.First().Subject;
+            var assignmentType = gradeRecords.First().ComponentType;
+
+            var skippedGrades = new List<string>();
+            var savedCount = 0;
 
             foreach (var grade in gradeRecords)
             {
+                // Check for duplicate grade entry
+                using var checkCommand = new SqlCommand(checkDuplicateQuery, connection);
+                checkCommand.Parameters.AddWithValue("@studentId", grade.StudentId);
+                checkCommand.Parameters.AddWithValue("@subject", grade.Subject);
+                checkCommand.Parameters.AddWithValue("@quarter", grade.Quarter);
+                checkCommand.Parameters.AddWithValue("@componentType", grade.ComponentType);
+                checkCommand.Parameters.AddWithValue("@assignmentName", grade.AssignmentName);
+
+                var duplicateCount = Convert.ToInt32(await checkCommand.ExecuteScalarAsync());
+                
+                if (duplicateCount > 0)
+                {
+                    // Get student name for error message
+                    var studentQuery = "SELECT FirstName, LastName FROM Students WHERE Id = @studentId";
+                    using var studentCommand = new SqlCommand(studentQuery, connection);
+                    studentCommand.Parameters.AddWithValue("@studentId", grade.StudentId);
+                    using var studentReader = await studentCommand.ExecuteReaderAsync();
+                    string studentName = "Unknown";
+                    if (await studentReader.ReadAsync())
+                    {
+                        studentName = $"{studentReader.GetString("FirstName")} {studentReader.GetString("LastName")}";
+                    }
+                    studentReader.Close();
+                    
+                    skippedGrades.Add($"{studentName} - {grade.AssignmentName} ({grade.ComponentType})");
+                    continue;
+                }
+
                 using var command = new SqlCommand(insertQuery, connection);
                 command.Parameters.AddWithValue("@studentId", grade.StudentId);
                 command.Parameters.AddWithValue("@professorId", grade.ProfessorId);
                 command.Parameters.AddWithValue("@subject", grade.Subject);
+                command.Parameters.AddWithValue("@quarter", grade.Quarter);
+                command.Parameters.AddWithValue("@componentType", grade.ComponentType);
                 command.Parameters.AddWithValue("@assignmentType", grade.AssignmentType);
                 command.Parameters.AddWithValue("@assignmentName", grade.AssignmentName);
                 command.Parameters.AddWithValue("@score", grade.Score);
@@ -499,7 +620,64 @@ namespace StudentReportInitial.Forms
                 command.Parameters.AddWithValue("@dueDate", grade.DueDate);
 
                 await command.ExecuteNonQueryAsync();
+                savedCount++;
+
+                // Send SMS notification to student/guardian
+                try
+                {
+                    // Get student information including phone number
+                    var studentQuery = @"
+                        SELECT s.FirstName, s.LastName, s.Phone, 
+                               u.Phone as GuardianPhone
+                        FROM Students s
+                        LEFT JOIN Users u ON s.GuardianId = u.Id
+                        WHERE s.Id = @studentId";
+
+                    using var studentCommand = new SqlCommand(studentQuery, connection);
+                    studentCommand.Parameters.AddWithValue("@studentId", grade.StudentId);
+
+                    using var studentReader = await studentCommand.ExecuteReaderAsync();
+                    if (await studentReader.ReadAsync())
+                    {
+                        string studentName = $"{studentReader.GetString("FirstName")} {studentReader.GetString("LastName")}";
+                        string phoneNumber = studentReader.IsDBNull("GuardianPhone") 
+                            ? (studentReader.IsDBNull("Phone") ? "" : studentReader.GetString("Phone"))
+                            : studentReader.GetString("GuardianPhone");
+
+                        // Use student phone if guardian phone is not available
+                        if (string.IsNullOrEmpty(phoneNumber) && !studentReader.IsDBNull("Phone"))
+                        {
+                            phoneNumber = studentReader.GetString("Phone");
+                        }
+
+                        if (!string.IsNullOrEmpty(phoneNumber) && PhoneValidator.IsValidPhilippinesMobile(phoneNumber))
+                        {
+                            await SmsService.SendGradeNotificationAsync(
+                                phoneNumber,
+                                studentName,
+                                subjectName,
+                                assignmentType,
+                                grade.Score,
+                                grade.MaxScore,
+                                professorName
+                            );
+                        }
+                    }
+                    studentReader.Close();
+                }
+                catch (Exception smsEx)
+                {
+                    // Log SMS error but don't fail the grade save
+                    System.Diagnostics.Debug.WriteLine($"SMS notification failed: {smsEx.Message}");
+                }
             }
+
+            return new SaveGradeResult
+            {
+                SavedCount = savedCount,
+                SkippedCount = skippedGrades.Count,
+                SkippedGrades = skippedGrades
+            };
         }
     }
 }

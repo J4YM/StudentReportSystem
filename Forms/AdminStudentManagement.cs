@@ -317,24 +317,39 @@ namespace StudentReportInitial.Forms
 
         private async void BtnDeleteStudent_Click(object sender, EventArgs e)
         {
-            if (dgvStudents.SelectedRows.Count > 0)
+            if (dgvStudents.SelectedRows.Count == 0)
             {
-                var result = MessageBox.Show("Are you sure you want to delete this student?", "Confirm Delete", 
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                return;
+            }
 
-                if (result == DialogResult.Yes)
+            var selectedRow = dgvStudents.SelectedRows[0];
+            var studentId = Convert.ToInt32(selectedRow.Cells["Id"].Value);
+            var studentName = $"{selectedRow.Cells["FirstName"].Value} {selectedRow.Cells["LastName"].Value}";
+            var studentIdValue = selectedRow.Cells["StudentId"].Value?.ToString() ?? "";
+
+            var confirmMessage = $"WARNING: You are about to delete student '{studentName}' (ID: {studentIdValue}).\n\n" +
+                               "This will:\n" +
+                               "• Deactivate the student account\n" +
+                               "• Deactivate the associated user login\n" +
+                               "• This action cannot be undone\n\n" +
+                               "Are you absolutely sure you want to proceed?";
+
+            var result = MessageBox.Show(confirmMessage, "Confirm Student Deletion", 
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+            if (result == DialogResult.Yes)
+            {
+                try
                 {
-                    try
-                    {
-                        var studentId = Convert.ToInt32(dgvStudents.SelectedRows[0].Cells["Id"].Value);
-                        await DeleteStudentAsync(studentId);
-                        LoadStudents();
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Error deleting student: {ex.Message}", "Error", 
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    await DeleteStudentAsync(studentId);
+                    LoadStudents();
+                    MessageBox.Show("Student deleted successfully. Statistics will be updated when you refresh the System Reports panel.", 
+                        "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error deleting student: {ex.Message}", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -437,16 +452,89 @@ namespace StudentReportInitial.Forms
             yPos += spacing;
 
             // Phone
-            var lblPhone = new Label { Text = "Phone:", Location = new Point(20, yPos), AutoSize = true };
-            var txtPhone = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25) };
-            yPos += spacing;
+            var lblPhone = new Label { Text = "Phone (International format):", Location = new Point(20, yPos), AutoSize = true };
+            var txtPhone = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), PlaceholderText="+1234567890 or 0XXXXXXXXX" };
+            var lblPhoneError = new Label 
+            { 
+                Text = "", 
+                Location = new Point(20, yPos + 48), 
+                AutoSize = true,
+                ForeColor = Color.FromArgb(239, 68, 68),
+                Font = new Font("Segoe UI", 8F),
+                Visible = false
+            };
+            
+            // Phone validation on leave
+            txtPhone.Leave += (s, e) =>
+            {
+                string phone = txtPhone.Text.Trim();
+                if (!string.IsNullOrEmpty(phone))
+                {
+                    string errorMsg = PhoneValidator.GetValidationMessage(phone);
+                    if (!string.IsNullOrEmpty(errorMsg))
+                    {
+                        lblPhoneError.Text = errorMsg;
+                        lblPhoneError.Visible = true;
+                        txtPhone.BackColor = Color.FromArgb(254, 242, 242);
+                    }
+                    else
+                    {
+                        lblPhoneError.Visible = false;
+                        txtPhone.BackColor = Color.White;
+                        // Auto-format valid number
+                        txtPhone.Text = PhoneValidator.FormatPhoneNumber(phone);
+                    }
+                }
+                else
+                {
+                    lblPhoneError.Visible = false;
+                    txtPhone.BackColor = Color.White;
+                }
+            };
+
+            txtPhone.TextChanged += (s, e) =>
+            {
+                // Clear error when user starts typing
+                if (lblPhoneError.Visible)
+                {
+                    lblPhoneError.Visible = false;
+                    txtPhone.BackColor = Color.White;
+                }
+            };
+            
+            yPos += spacing + 25;
 
             // Address
             var lblAddress = new Label { Text = "Address:", Location = new Point(20, yPos), AutoSize = true };
             var txtAddress = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25) };
             yPos += spacing;
 
-            // Guardian info removed - will be created automatically
+            // Guardian assignment
+            var lblGuardian = new Label { Text = "Guardian:", Location = new Point(20, yPos), AutoSize = true };
+            var cmbGuardian = new ComboBox 
+            { 
+                Location = new Point(20, yPos + 20), 
+                Size = new Size(250, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            var btnNewGuardian = new Button
+            {
+                Text = "New Guardian",
+                Location = new Point(280, yPos + 20),
+                Size = new Size(100, 25),
+                BackColor = Color.FromArgb(59, 130, 246),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8),
+                Cursor = Cursors.Hand
+            };
+            btnNewGuardian.Click += async (s, e) => await BtnNewGuardian_ClickAsync(cmbGuardian, txtFirstName, txtLastName, txtPhone);
+            LoadGuardiansForComboBox(cmbGuardian);
+            if (cmbGuardian.Items.Count > 0 && !isEditMode)
+            {
+                cmbGuardian.SelectedIndex = 0;
+            }
+            yPos += spacing;
 
             // Buttons
             var btnSave = new Button
@@ -481,6 +569,61 @@ namespace StudentReportInitial.Forms
             {
                 try
                 {
+                    // Validate phone number (mandatory)
+                    string phone = txtPhone.Text.Trim();
+                    if (string.IsNullOrEmpty(phone))
+                    {
+                        lblPhoneError.Text = "Phone number is required.";
+                        lblPhoneError.Visible = true;
+                        txtPhone.BackColor = Color.FromArgb(254, 242, 242);
+                        txtPhone.Focus();
+                        return;
+                    }
+
+                    string phoneError = PhoneValidator.GetValidationMessage(phone);
+                    if (!string.IsNullOrEmpty(phoneError))
+                    {
+                        lblPhoneError.Text = phoneError;
+                        lblPhoneError.Visible = true;
+                        txtPhone.BackColor = Color.FromArgb(254, 242, 242);
+                        txtPhone.Focus();
+                        return;
+                    }
+                    // Format phone number before saving
+                    phone = PhoneValidator.FormatPhoneNumber(phone);
+
+                    // For new students, verify phone number with OTP
+                    if (!isEditMode)
+                    {
+                        string otpCode = SmsService.GenerateOtp();
+                        bool otpSent = await SmsService.SendOtpAsync(phone, otpCode);
+
+                        if (!otpSent)
+                        {
+                            MessageBox.Show("Failed to send verification code. Please check the phone number and try again.",
+                                "Verification Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+
+                        using var otpForm = new OtpVerificationForm(phone, otpCode);
+                        if (otpForm.ShowDialog() != DialogResult.OK || !otpForm.IsVerified)
+                        {
+                            MessageBox.Show("Phone number verification is required to continue.",
+                                "Verification Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+
+                    int selectedGuardianId = 0;
+                    if (cmbGuardian.SelectedValue != null && cmbGuardian.SelectedValue is DataRowView rowView)
+                    {
+                        selectedGuardianId = Convert.ToInt32(rowView.Row["Id"]);
+                    }
+                    else if (cmbGuardian.SelectedValue != null)
+                    {
+                        selectedGuardianId = Convert.ToInt32(cmbGuardian.SelectedValue);
+                    }
+
                     var student = new Student
                     {
                         StudentId = txtStudentId.Text,
@@ -491,9 +634,9 @@ namespace StudentReportInitial.Forms
 						GradeLevel = cmbGradeLevel.SelectedItem?.ToString() ?? "",
 						Section = (cmbCourse.SelectedItem != null && cmbSectionCode.SelectedItem != null) ? $"{cmbCourse.SelectedItem}-{cmbSectionCode.SelectedItem}" : "",
                         Email = txtEmail.Text,
-                        Phone = txtPhone.Text,
+                        Phone = phone,
                         Address = txtAddress.Text,
-                        GuardianId = 0, // Will be set when creating guardian
+                        GuardianId = selectedGuardianId, // Use selected guardian or 0 to create new
                         IsActive = true
                     };
 
@@ -522,8 +665,8 @@ namespace StudentReportInitial.Forms
 			scrollPanel.Controls.AddRange(new Control[] {
                 lblTitle, lblStudentId, txtStudentId, lblFirstName, txtFirstName, lblLastName, txtLastName,
 				lblDateOfBirth, dtpDateOfBirth, lblGender, cmbGender, lblGradeLevel, cmbGradeLevel,
-				lblCourse, cmbCourse, lblSection, cmbSectionCode, lblEmail, txtEmail, lblPhone, txtPhone, lblAddress, txtAddress,
-                btnSave, btnCancel
+				lblCourse, cmbCourse, lblSection, cmbSectionCode, lblEmail, txtEmail, lblPhone, txtPhone, lblPhoneError, lblAddress, txtAddress,
+                lblGuardian, cmbGuardian, btnNewGuardian, btnSave, btnCancel
             });
 
             // Add the scrollable panel to the main form panel
@@ -533,7 +676,7 @@ namespace StudentReportInitial.Forms
             if (isEditMode)
             {
 				LoadStudentData(selectedStudentId, txtStudentId, txtFirstName, txtLastName, dtpDateOfBirth, 
-					cmbGender, cmbGradeLevel, cmbSectionCode, txtEmail, txtPhone, txtAddress);
+					cmbGender, cmbGradeLevel, cmbSectionCode, txtEmail, txtPhone, txtAddress, cmbGuardian);
             }
         }
 
@@ -563,7 +706,7 @@ namespace StudentReportInitial.Forms
 
 		private async void LoadStudentData(int studentId, TextBox txtStudentId, TextBox txtFirstName, 
 			TextBox txtLastName, DateTimePicker dtpDateOfBirth, ComboBox cmbGender, ComboBox cmbGradeLevel,
-			ComboBox cmbSectionCode, TextBox txtEmail, TextBox txtPhone, TextBox txtAddress)
+			ComboBox cmbSectionCode, TextBox txtEmail, TextBox txtPhone, TextBox txtAddress, ComboBox cmbGuardian)
         {
             try
             {
@@ -600,6 +743,20 @@ namespace StudentReportInitial.Forms
                     txtEmail.Text = reader.IsDBNull("Email") ? "" : reader.GetString("Email");
                     txtPhone.Text = reader.IsDBNull("Phone") ? "" : reader.GetString("Phone");
                     txtAddress.Text = reader.IsDBNull("Address") ? "" : reader.GetString("Address");
+                    
+                    // Set guardian selection
+                    if (!reader.IsDBNull("GuardianId"))
+                    {
+                        int guardianId = reader.GetInt32("GuardianId");
+                        for (int i = 0; i < cmbGuardian.Items.Count; i++)
+                        {
+                            if (cmbGuardian.Items[i] is DataRowView rowView && Convert.ToInt32(rowView.Row["Id"]) == guardianId)
+                            {
+                                cmbGuardian.SelectedIndex = i;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -625,10 +782,26 @@ namespace StudentReportInitial.Forms
                 // First, create the student account in the Users table
                 var studentUserId = await AccountHelper.CreateStudentAccountAsync(connection, transaction, student);
 
-                // Then create the guardian account automatically
-                var guardianId = await CreateGuardianAccountAsync(connection, transaction, student);
-                var guardianUsername = GenerateGuardianUsername(student);
-                var guardianPassword = GenerateGuardianPassword(student);
+                // Create guardian account only if no guardian was selected (GuardianId is 0)
+                int guardianId = student.GuardianId;
+                string guardianUsername = "";
+                string guardianPassword = "";
+                
+                if (guardianId == 0)
+                {
+                    guardianId = await CreateGuardianAccountAsync(connection, transaction, student);
+                    guardianUsername = GenerateGuardianUsername(student);
+                    guardianPassword = GenerateGuardianPassword(student);
+                }
+                else
+                {
+                    // Get existing guardian info for display
+                    var guardianQuery = "SELECT Username FROM Users WHERE Id = @id";
+                    using var guardianCommand = new SqlCommand(guardianQuery, connection, transaction);
+                    guardianCommand.Parameters.AddWithValue("@id", guardianId);
+                    var result = await guardianCommand.ExecuteScalarAsync();
+                    guardianUsername = result?.ToString() ?? "N/A";
+                }
 
                 // Finally, create the student record in the Students table
                 var query = @"
@@ -661,16 +834,25 @@ namespace StudentReportInitial.Forms
 
                 transaction.Commit();
 
-                // Show success message with both sets of credentials
-                MessageBox.Show($"Student added successfully!\n\n" +
+                // Show success message
+                string message = $"Student added successfully!\n\n" +
                     $"Student account created:\n" +
                     $"Username: {studentUsername}\n" +
-                    $"Password: {studentPassword}\n\n" +
-                    $"Guardian account created:\n" +
-                    $"Username: {guardianUsername}\n" +
-                    $"Password: {guardianPassword}\n\n" +
-                    "Please provide these credentials to both the student and guardian.", 
-                    "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    $"Password: {studentPassword}\n\n";
+                
+                if (student.GuardianId == 0)
+                {
+                    message += $"Guardian account created:\n" +
+                        $"Username: {guardianUsername}\n" +
+                        $"Password: {guardianPassword}\n\n" +
+                        "Please provide these credentials to both the student and guardian.";
+                }
+                else
+                {
+                    message += $"Assigned to existing guardian: {guardianUsername}";
+                }
+                
+                MessageBox.Show(message, "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
@@ -711,12 +893,56 @@ namespace StudentReportInitial.Forms
         {
             using var connection = DatabaseHelper.GetConnection();
             await connection.OpenAsync();
+            using var transaction = connection.BeginTransaction();
 
-            var query = "UPDATE Students SET IsActive = 0 WHERE Id = @id";
-            using var command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@id", studentId);
+            try
+            {
+                // Get student info to find associated user account
+                var studentQuery = "SELECT StudentId, Email FROM Students WHERE Id = @id";
+                using var studentCommand = new SqlCommand(studentQuery, connection, transaction);
+                studentCommand.Parameters.AddWithValue("@id", studentId);
+                
+                string? studentIdValue = null;
+                string? studentEmail = null;
+                using (var reader = await studentCommand.ExecuteReaderAsync())
+                {
+                    if (await reader.ReadAsync())
+                    {
+                        studentIdValue = reader.GetString("StudentId");
+                        if (!reader.IsDBNull("Email"))
+                        {
+                            studentEmail = reader.GetString("Email");
+                        }
+                    }
+                }
 
-            await command.ExecuteNonQueryAsync();
+                // Deactivate the student record
+                var deleteStudentQuery = "UPDATE Students SET IsActive = 0 WHERE Id = @id";
+                using var deleteStudentCommand = new SqlCommand(deleteStudentQuery, connection, transaction);
+                deleteStudentCommand.Parameters.AddWithValue("@id", studentId);
+                await deleteStudentCommand.ExecuteNonQueryAsync();
+
+                // Also deactivate the associated user account (student login account)
+                // Try matching by username first (format: studentnumber@baliuag.sti.edu.ph)
+                if (!string.IsNullOrEmpty(studentIdValue))
+                {
+                    var studentNumber = studentIdValue.Replace("-", "");
+                    var studentUsername = $"{studentNumber}@baliuag.sti.edu.ph";
+
+                    var deleteUserQuery = "UPDATE Users SET IsActive = 0 WHERE (Username = @username OR Email = @email) AND Role = 4";
+                    using var deleteUserCommand = new SqlCommand(deleteUserQuery, connection, transaction);
+                    deleteUserCommand.Parameters.AddWithValue("@username", studentUsername);
+                    deleteUserCommand.Parameters.AddWithValue("@email", studentEmail ?? studentUsername);
+                    await deleteUserCommand.ExecuteNonQueryAsync();
+                }
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
 
         private async Task<int> CreateGuardianAccountAsync(SqlConnection connection, SqlTransaction transaction, Student student)
@@ -750,6 +976,106 @@ namespace StudentReportInitial.Forms
 
             var result = await command.ExecuteScalarAsync();
             return Convert.ToInt32(result);
+        }
+
+        private async Task BtnNewGuardian_ClickAsync(ComboBox cmbGuardian, TextBox txtFirstName, TextBox txtLastName, TextBox txtPhone)
+        {
+            try
+            {
+                // Validate required fields
+                if (string.IsNullOrWhiteSpace(txtFirstName.Text) || string.IsNullOrWhiteSpace(txtLastName.Text))
+                {
+                    MessageBox.Show("Please enter student's first and last name first to create a guardian account.",
+                        "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(txtPhone.Text))
+                {
+                    MessageBox.Show("Please enter a phone number first to create a guardian account.",
+                        "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Validate phone number
+                string phone = txtPhone.Text.Trim();
+                string phoneError = PhoneValidator.GetValidationMessage(phone);
+                if (!string.IsNullOrEmpty(phoneError))
+                {
+                    MessageBox.Show($"Invalid phone number: {phoneError}",
+                        "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                phone = PhoneValidator.FormatPhoneNumber(phone);
+
+                using var connection = DatabaseHelper.GetConnection();
+                await connection.OpenAsync();
+                using var transaction = connection.BeginTransaction();
+
+                try
+                {
+                    // Create a temporary student object for guardian generation
+                    var tempStudent = new Student
+                    {
+                        FirstName = txtFirstName.Text.Trim(),
+                        LastName = txtLastName.Text.Trim(),
+                        Phone = phone,
+                        StudentId = "TEMP" // Temporary ID for username generation
+                    };
+
+                    // Generate guardian credentials
+                    var guardianUsername = GenerateGuardianUsername(tempStudent);
+                    var guardianPassword = GenerateGuardianPassword(tempStudent);
+                    var guardianFirstName = $"Guardian of {tempStudent.FirstName}";
+                    var guardianLastName = tempStudent.LastName;
+                    var guardianEmail = $"guardian.{DateTime.Now.Ticks}@school.com";
+
+                    // Hash the password
+                    string passwordHash, passwordSalt;
+                    PasswordHasher.CreatePasswordHash(guardianPassword, out passwordHash, out passwordSalt);
+
+                    // Insert guardian account
+                    var query = @"
+                        INSERT INTO Users (Username, PasswordHash, PasswordSalt, FirstName, LastName, Email, Phone, Role, CreatedDate, IsActive)
+                        VALUES (@username, @passwordHash, @passwordSalt, @firstName, @lastName, @email, @phone, @role, @createdDate, @isActive);
+                        SELECT SCOPE_IDENTITY();";
+
+                    using var command = new SqlCommand(query, connection, transaction);
+                    command.Parameters.AddWithValue("@username", guardianUsername);
+                    command.Parameters.AddWithValue("@passwordHash", passwordHash);
+                    command.Parameters.AddWithValue("@passwordSalt", passwordSalt);
+                    command.Parameters.AddWithValue("@firstName", guardianFirstName);
+                    command.Parameters.AddWithValue("@lastName", guardianLastName);
+                    command.Parameters.AddWithValue("@email", guardianEmail);
+                    command.Parameters.AddWithValue("@phone", phone);
+                    command.Parameters.AddWithValue("@role", 3); // Guardian
+                    command.Parameters.AddWithValue("@createdDate", DateTime.Now);
+                    command.Parameters.AddWithValue("@isActive", true);
+
+                    var result = await command.ExecuteScalarAsync();
+                    int guardianId = Convert.ToInt32(result);
+
+                    transaction.Commit();
+
+                    // Reload guardians and select the newly created one
+                    LoadGuardiansForComboBox(cmbGuardian);
+                    cmbGuardian.SelectedValue = guardianId;
+
+                    MessageBox.Show($"Guardian account created successfully!\n\nUsername: {guardianUsername}\nPassword: {guardianPassword}\n\nPlease save these credentials.",
+                        "Guardian Created", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error creating guardian account: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private string GenerateGuardianUsername(Student student)

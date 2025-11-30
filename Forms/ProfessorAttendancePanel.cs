@@ -17,6 +17,7 @@ namespace StudentReportInitial.Forms
         private Button btnRefresh;
         private Panel pnlAttendanceForm;
         private List<Student> currentStudents = new();
+        private Label lblStats = null!;
 
         public ProfessorAttendancePanel(User professor)
         {
@@ -24,7 +25,6 @@ namespace StudentReportInitial.Forms
             InitializeComponent();
             ApplyModernStyling();
             LoadSubjects();
-            LoadStudents();
         }
 
         private void InitializeComponent()
@@ -44,11 +44,12 @@ namespace StudentReportInitial.Forms
                 Padding = new Padding(20)
             };
 
-            var lblStats = new Label
+            lblStats = new Label
             {
                 AutoSize = true,
                 Location = new Point(20, 20),
-                Text = "Loading attendance statistics..."
+                Text = "Please select a subject to view attendance statistics.",
+                Font = new Font("Segoe UI", 9)
             };
             pnlStats.Controls.Add(lblStats);
 
@@ -110,7 +111,6 @@ namespace StudentReportInitial.Forms
                 BackColor = Color.FromArgb(59, 130, 246),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                
                 Cursor = Cursors.Hand
             };
             btnRefresh.Click += BtnRefresh_Click;
@@ -124,34 +124,52 @@ namespace StudentReportInitial.Forms
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = true,
+                MultiSelect = false,
                 ReadOnly = false,
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                RowHeadersVisible = false
+                RowHeadersVisible = false,
+                AutoGenerateColumns = false,
+                EditMode = DataGridViewEditMode.EditOnEnter
             };
 
-            // Add attendance status column
-            var statusColumn = new DataGridViewComboBoxColumn
-            {
-                Name = "AttendanceStatus",
-                HeaderText = "Status",
-                DataPropertyName = "AttendanceStatus",
-                Width = 120
-            };
-            statusColumn.Items.AddRange(new[] { "Present", "Absent", "Late", "Excused" });
-            dgvStudents.Columns.Add(statusColumn);
+            // Add columns manually
+            dgvStudents.Columns.Add("Id", "ID");
+            dgvStudents.Columns["Id"].Visible = false;
+            dgvStudents.Columns["Id"].DataPropertyName = "Id";
 
-            // Add notes column
-            var notesColumn = new DataGridViewTextBoxColumn
-            {
-                Name = "Notes",
-                HeaderText = "Notes",
-                DataPropertyName = "Notes",
-                Width = 200
-            };
-            dgvStudents.Columns.Add(notesColumn);
+            dgvStudents.Columns.Add("StudentId", "Student ID");
+            dgvStudents.Columns["StudentId"].DataPropertyName = "StudentId";
+            dgvStudents.Columns["StudentId"].Width = 100;
+
+            dgvStudents.Columns.Add("FirstName", "First Name");
+            dgvStudents.Columns["FirstName"].DataPropertyName = "FirstName";
+            dgvStudents.Columns["FirstName"].Width = 150;
+
+            dgvStudents.Columns.Add("LastName", "Last Name");
+            dgvStudents.Columns["LastName"].DataPropertyName = "LastName";
+            dgvStudents.Columns["LastName"].Width = 150;
+
+            dgvStudents.Columns.Add("GradeLevel", "Grade");
+            dgvStudents.Columns["GradeLevel"].DataPropertyName = "GradeLevel";
+            dgvStudents.Columns["GradeLevel"].Width = 80;
+
+            dgvStudents.Columns.Add("Section", "Section");
+            dgvStudents.Columns["Section"].DataPropertyName = "Section";
+            dgvStudents.Columns["Section"].Width = 80;
+
+            // Use TextBox column for status (we'll add a separate ComboBox control)
+            dgvStudents.Columns.Add("AttendanceStatus", "Status");
+            dgvStudents.Columns["AttendanceStatus"].Width = 120;
+            dgvStudents.Columns["AttendanceStatus"].ReadOnly = true;
+
+            dgvStudents.Columns.Add("Notes", "Notes");
+            dgvStudents.Columns["Notes"].Width = 200;
+
+            // Event handlers for manual ComboBox handling
+            dgvStudents.CellClick += DgvStudents_CellClick;
+            dgvStudents.CurrentCellDirtyStateChanged += DgvStudents_CurrentCellDirtyStateChanged;
 
             // Action panel
             var pnlActions = new Panel
@@ -170,7 +188,6 @@ namespace StudentReportInitial.Forms
                 BackColor = Color.FromArgb(34, 197, 94),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                
                 Cursor = Cursors.Hand,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold)
             };
@@ -178,11 +195,112 @@ namespace StudentReportInitial.Forms
 
             pnlActions.Controls.Add(btnSaveAttendance);
 
+            // Add controls in correct order
             this.Controls.Add(dgvStudents);
             this.Controls.Add(pnlActions);
             this.Controls.Add(pnlHeader);
+            this.Controls.Add(pnlStats);
 
             this.ResumeLayout(false);
+        }
+
+        private ComboBox? statusComboBox;
+
+        private void DgvStudents_CellClick(object? sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
+
+            if (dgvStudents.Columns[e.ColumnIndex].Name == "AttendanceStatus")
+            {
+                // Remove existing ComboBox if any
+                if (statusComboBox != null)
+                {
+                    dgvStudents.Controls.Remove(statusComboBox);
+                    statusComboBox.Dispose();
+                    statusComboBox = null;
+                }
+
+                // Create a new ComboBox
+                var comboBox = new ComboBox
+                {
+                    DropDownStyle = ComboBoxStyle.DropDownList,
+                    FlatStyle = FlatStyle.Flat
+                };
+                comboBox.Items.AddRange(new[] { "Present", "Absent", "Late", "Excused" });
+
+                // Set current value
+                var currentValue = dgvStudents[e.ColumnIndex, e.RowIndex].Value?.ToString() ?? "Present";
+                comboBox.SelectedItem = currentValue;
+
+                // Position the ComboBox over the cell
+                var rect = dgvStudents.GetCellDisplayRectangle(e.ColumnIndex, e.RowIndex, true);
+                comboBox.Location = rect.Location;
+                comboBox.Size = rect.Size;
+
+                // Store reference
+                statusComboBox = comboBox;
+
+                // Capture the current row and column for the event handlers
+                int currentRow = e.RowIndex;
+                int currentCol = e.ColumnIndex;
+
+                // Handle selection change
+                comboBox.SelectedIndexChanged += (s, args) =>
+                {
+                    var cb = s as ComboBox;
+                    if (cb != null && cb.SelectedItem != null && !cb.Disposing && cb.IsHandleCreated)
+                    {
+                        try
+                        {
+                            dgvStudents[currentCol, currentRow].Value = cb.SelectedItem.ToString();
+                        }
+                        catch { }
+                    }
+                };
+
+                // Handle when ComboBox closes
+                comboBox.DropDownClosed += (s, args) =>
+                {
+                    var cb = s as ComboBox;
+                    if (cb != null && !cb.Disposing)
+                    {
+                        dgvStudents.Controls.Remove(cb);
+                        cb.Dispose();
+                        if (statusComboBox == cb)
+                        {
+                            statusComboBox = null;
+                        }
+                    }
+                };
+
+                // Handle when ComboBox loses focus
+                comboBox.Leave += (s, args) =>
+                {
+                    var cb = s as ComboBox;
+                    if (cb != null && !cb.Disposing && dgvStudents.Controls.Contains(cb))
+                    {
+                        dgvStudents.Controls.Remove(cb);
+                        cb.Dispose();
+                        if (statusComboBox == cb)
+                        {
+                            statusComboBox = null;
+                        }
+                    }
+                };
+
+                // Add to DataGridView and show
+                dgvStudents.Controls.Add(comboBox);
+                comboBox.Focus();
+                comboBox.DroppedDown = true;
+            }
+        }
+
+        private void DgvStudents_CurrentCellDirtyStateChanged(object? sender, EventArgs e)
+        {
+            if (dgvStudents.IsCurrentCellDirty)
+            {
+                dgvStudents.CommitEdit(DataGridViewDataErrorContexts.Commit);
+            }
         }
 
         private void ApplyModernStyling()
@@ -192,17 +310,23 @@ namespace StudentReportInitial.Forms
 
             foreach (Control control in this.Controls)
             {
-                if (control is Button button)
+                if (control is Panel panel)
                 {
-                    button.Font = font;
-                }
-                else if (control is ComboBox comboBox)
-                {
-                    comboBox.Font = font;
-                }
-                else if (control is DateTimePicker dateTimePicker)
-                {
-                    dateTimePicker.Font = font;
+                    foreach (Control childControl in panel.Controls)
+                    {
+                        if (childControl is Button button)
+                        {
+                            button.Font = font;
+                        }
+                        else if (childControl is ComboBox comboBox)
+                        {
+                            comboBox.Font = font;
+                        }
+                        else if (childControl is DateTimePicker dateTimePicker)
+                        {
+                            dateTimePicker.Font = font;
+                        }
+                    }
                 }
             }
 
@@ -230,6 +354,7 @@ namespace StudentReportInitial.Forms
                 command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
 
                 using var reader = await command.ExecuteReaderAsync();
+                cmbSubject.Items.Clear();
                 while (await reader.ReadAsync())
                 {
                     var subjectName = reader.GetString("Name");
@@ -240,7 +365,7 @@ namespace StudentReportInitial.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading subjects: {ex.Message}", "Error", 
+                MessageBox.Show($"Error loading subjects: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -251,8 +376,12 @@ namespace StudentReportInitial.Forms
 
             try
             {
-                var selectedSubject = cmbSubject.SelectedItem.ToString();
+                var selectedSubject = cmbSubject.SelectedItem?.ToString();
+                if (string.IsNullOrEmpty(selectedSubject)) return;
+
                 var parts = selectedSubject.Split(" - ");
+                if (parts.Length < 3) return;
+
                 var subjectName = parts[0];
                 var gradeLevel = parts[1];
                 var section = parts[2];
@@ -274,56 +403,37 @@ namespace StudentReportInitial.Forms
                 var dataTable = new DataTable();
                 adapter.Fill(dataTable);
 
-                // Add attendance columns
-                dataTable.Columns.Add("AttendanceStatus", typeof(string));
-                dataTable.Columns.Add("Notes", typeof(string));
-
-                // Set default values
-                foreach (DataRow row in dataTable.Rows)
-                {
-                    row["AttendanceStatus"] = "Present";
-                    row["Notes"] = "";
-                }
-
                 dgvStudents.DataSource = dataTable;
 
-                // Format columns
-                if (dgvStudents.Columns.Count > 0)
+                // Set default values for attendance columns
+                foreach (DataGridViewRow row in dgvStudents.Rows)
                 {
-                    dgvStudents.Columns["Id"].Visible = false;
-                    dgvStudents.Columns["StudentId"].HeaderText = "Student ID";
-                    dgvStudents.Columns["FirstName"].HeaderText = "First Name";
-                    dgvStudents.Columns["LastName"].HeaderText = "Last Name";
-                    dgvStudents.Columns["GradeLevel"].HeaderText = "Grade";
-                    dgvStudents.Columns["Section"].HeaderText = "Section";
+                    row.Cells["AttendanceStatus"].Value = "Present";
+                    row.Cells["Notes"].Value = "";
                 }
+
+                // Load existing attendance for the selected date
+                await LoadExistingAttendanceAsync();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading students: {ex.Message}", "Error", 
+                MessageBox.Show($"Error loading students: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void CmbSubject_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            LoadStudents();
-        }
-
-        private async void DtpDate_ValueChanged(object sender, EventArgs e)
+        private async Task LoadExistingAttendanceAsync()
         {
             if (cmbSubject.SelectedIndex == -1) return;
 
             try
             {
                 var selectedSubject = cmbSubject.SelectedItem?.ToString();
-                if (string.IsNullOrEmpty(selectedSubject))
-                    return;
-                    
+                if (string.IsNullOrEmpty(selectedSubject)) return;
+
                 var parts = selectedSubject.Split(" - ");
-                if (parts.Length < 1)
-                    return;
-                    
+                if (parts.Length < 1) return;
+
                 var subjectName = parts[0];
 
                 using var connection = DatabaseHelper.GetConnection();
@@ -332,9 +442,10 @@ namespace StudentReportInitial.Forms
                 var query = @"
                     SELECT a.StudentId, a.Status, a.Notes
                     FROM Attendance a
+                    INNER JOIN Students s ON a.StudentId = s.Id
                     WHERE a.ProfessorId = @professorId 
                         AND a.Subject = @subject 
-                        AND a.Date = @date";
+                        AND CAST(a.Date AS DATE) = CAST(@date AS DATE)";
 
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
@@ -373,21 +484,33 @@ namespace StudentReportInitial.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading existing attendance: {ex.Message}", "Error", 
+                MessageBox.Show($"Error loading existing attendance: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void BtnRefresh_Click(object sender, EventArgs e)
+        private async void CmbSubject_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            LoadStudents();
+            await UpdateAttendanceStatsAsync();
+        }
+
+        private async void DtpDate_ValueChanged(object? sender, EventArgs e)
+        {
+            await LoadExistingAttendanceAsync();
+            await UpdateAttendanceStatsAsync();
+        }
+
+        private void BtnRefresh_Click(object? sender, EventArgs e)
         {
             LoadStudents();
         }
 
-        private async void BtnSaveAttendance_Click(object sender, EventArgs e)
+        private async void BtnSaveAttendance_Click(object? sender, EventArgs e)
         {
             if (cmbSubject.SelectedIndex == -1)
             {
-                MessageBox.Show("Please select a subject first.", "Warning", 
+                MessageBox.Show("Please select a subject first.", "Warning",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -401,7 +524,7 @@ namespace StudentReportInitial.Forms
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
-                    
+
                 var parts = selectedSubject.Split(" - ");
                 if (parts.Length < 1)
                 {
@@ -409,9 +532,8 @@ namespace StudentReportInitial.Forms
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
-                    
-                var subjectName = parts[0];
 
+                var subjectName = parts[0];
                 var attendanceRecords = new List<Attendance>();
 
                 foreach (DataGridViewRow row in dgvStudents.Rows)
@@ -433,12 +555,13 @@ namespace StudentReportInitial.Forms
                 }
 
                 await SaveAttendanceRecordsAsync(attendanceRecords);
-                MessageBox.Show("Attendance saved successfully!", "Success", 
+                await UpdateAttendanceStatsAsync();
+                MessageBox.Show("Attendance saved successfully!", "Success",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error saving attendance: {ex.Message}", "Error", 
+                MessageBox.Show($"Error saving attendance: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -460,10 +583,9 @@ namespace StudentReportInitial.Forms
             using var connection = DatabaseHelper.GetConnection();
             await connection.OpenAsync();
 
-            // Delete existing attendance for the same date and subject
             var deleteQuery = @"
                 DELETE FROM Attendance 
-                WHERE ProfessorId = @professorId AND Subject = @subject AND Date = @date";
+                WHERE ProfessorId = @professorId AND Subject = @subject AND CAST(Date AS DATE) = CAST(@date AS DATE)";
 
             using var deleteCommand = new SqlCommand(deleteQuery, connection);
             deleteCommand.Parameters.AddWithValue("@professorId", currentProfessor.Id);
@@ -471,10 +593,12 @@ namespace StudentReportInitial.Forms
             deleteCommand.Parameters.AddWithValue("@date", dtpDate.Value.Date);
             await deleteCommand.ExecuteNonQueryAsync();
 
-            // Insert new attendance records
             var insertQuery = @"
                 INSERT INTO Attendance (StudentId, ProfessorId, Subject, Date, Status, Notes, RecordedDate)
                 VALUES (@studentId, @professorId, @subject, @date, @status, @notes, @recordedDate)";
+
+            string professorName = $"{currentProfessor.FirstName} {currentProfessor.LastName}";
+            var subjectName = attendanceRecords.First().Subject;
 
             foreach (var attendance in attendanceRecords)
             {
@@ -488,6 +612,139 @@ namespace StudentReportInitial.Forms
                 insertCommand.Parameters.AddWithValue("@recordedDate", attendance.RecordedDate);
 
                 await insertCommand.ExecuteNonQueryAsync();
+
+                try
+                {
+                    var studentQuery = @"
+                        SELECT s.FirstName, s.LastName, s.Phone, u.Phone as GuardianPhone
+                        FROM Students s
+                        LEFT JOIN Users u ON s.GuardianId = u.Id
+                        WHERE s.Id = @studentId";
+
+                    using var studentCommand = new SqlCommand(studentQuery, connection);
+                    studentCommand.Parameters.AddWithValue("@studentId", attendance.StudentId);
+
+                    using var studentReader = await studentCommand.ExecuteReaderAsync();
+                    if (await studentReader.ReadAsync())
+                    {
+                        string studentName = $"{studentReader.GetString("FirstName")} {studentReader.GetString("LastName")}";
+                        string phoneNumber = studentReader.IsDBNull("GuardianPhone")
+                            ? (studentReader.IsDBNull("Phone") ? "" : studentReader.GetString("Phone"))
+                            : studentReader.GetString("GuardianPhone");
+
+                        if (string.IsNullOrEmpty(phoneNumber) && !studentReader.IsDBNull("Phone"))
+                        {
+                            phoneNumber = studentReader.GetString("Phone");
+                        }
+
+                        if (!string.IsNullOrEmpty(phoneNumber) && PhoneValidator.IsValidPhilippinesMobile(phoneNumber))
+                        {
+                            int attendanceCount = await GetStudentAttendanceCountAsync(connection, attendance.StudentId);
+
+                            await SmsService.SendAttendanceNotificationAsync(
+                                phoneNumber,
+                                studentName,
+                                subjectName,
+                                attendance.Status.ToString(),
+                                attendance.Date,
+                                professorName,
+                                attendanceCount
+                            );
+                        }
+                    }
+                    studentReader.Close();
+                }
+                catch (Exception smsEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"SMS notification failed: {smsEx.Message}");
+                }
+            }
+        }
+
+        private async Task<int> GetStudentAttendanceCountAsync(SqlConnection connection, int studentId)
+        {
+            try
+            {
+                var countQuery = @"
+                    SELECT COUNT(*) 
+                    FROM Attendance 
+                    WHERE StudentId = @studentId";
+
+                using var countCommand = new SqlCommand(countQuery, connection);
+                countCommand.Parameters.AddWithValue("@studentId", studentId);
+
+                var result = await countCommand.ExecuteScalarAsync();
+                return result != null ? Convert.ToInt32(result) : 0;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private async Task UpdateAttendanceStatsAsync()
+        {
+            if (cmbSubject.SelectedIndex == -1)
+            {
+                lblStats.Text = "Please select a subject to view attendance statistics.";
+                return;
+            }
+
+            try
+            {
+                var selectedSubject = cmbSubject.SelectedItem?.ToString();
+                if (string.IsNullOrEmpty(selectedSubject))
+                {
+                    lblStats.Text = "Please select a subject to view attendance statistics.";
+                    return;
+                }
+
+                var parts = selectedSubject.Split(" - ");
+                if (parts.Length < 1)
+                {
+                    lblStats.Text = "Invalid subject format.";
+                    return;
+                }
+
+                var subjectName = parts[0];
+
+                using var connection = DatabaseHelper.GetConnection();
+                await connection.OpenAsync();
+
+                var statsQuery = @"
+                    SELECT 
+                        SUM(CASE WHEN Status = 1 THEN 1 ELSE 0 END) as Present,
+                        SUM(CASE WHEN Status = 2 THEN 1 ELSE 0 END) as Absent,
+                        SUM(CASE WHEN Status = 3 THEN 1 ELSE 0 END) as Late,
+                        SUM(CASE WHEN Status = 4 THEN 1 ELSE 0 END) as Excused
+                    FROM Attendance
+                    WHERE ProfessorId = @professorId 
+                        AND Subject = @subject 
+                        AND CAST(Date AS DATE) = CAST(@date AS DATE)";
+
+                using var command = new SqlCommand(statsQuery, connection);
+                command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
+                command.Parameters.AddWithValue("@subject", subjectName);
+                command.Parameters.AddWithValue("@date", dtpDate.Value.Date);
+
+                using var reader = await command.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    int present = reader.IsDBNull(0) ? 0 : reader.GetInt32(0);
+                    int absent = reader.IsDBNull(1) ? 0 : reader.GetInt32(1);
+                    int late = reader.IsDBNull(2) ? 0 : reader.GetInt32(2);
+                    int excused = reader.IsDBNull(3) ? 0 : reader.GetInt32(3);
+
+                    lblStats.Text = $"Attendance Statistics - Present: {present} | Absent: {absent} | Late: {late} | Excused: {excused}";
+                }
+                else
+                {
+                    lblStats.Text = "No attendance records found for this date.";
+                }
+            }
+            catch (Exception ex)
+            {
+                lblStats.Text = $"Error loading statistics: {ex.Message}";
             }
         }
     }

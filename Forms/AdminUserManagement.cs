@@ -2,6 +2,7 @@ using StudentReportInitial.Models;
 using StudentReportInitial.Data;
 using System.Data.SqlClient;
 using System.Data;
+using System.Text.RegularExpressions;
 
 namespace StudentReportInitial.Forms
 {
@@ -203,8 +204,7 @@ namespace StudentReportInitial.Forms
                 var query = @"
                     SELECT Id, Username, FirstName, LastName, Email, Phone, Role, CreatedDate, IsActive
                     FROM Users 
-                    WHERE IsActive = 1
-                    ORDER BY CreatedDate DESC";
+                    ORDER BY Role, CreatedDate ASC";
 
                 using var command = new SqlCommand(query, connection);
                 using var adapter = new SqlDataAdapter(command);
@@ -264,50 +264,175 @@ namespace StudentReportInitial.Forms
             LoadUsers();
         }
 
-        private void DgvUsers_SelectionChanged(object sender, EventArgs e)
+        private async void DgvUsers_SelectionChanged(object sender, EventArgs e)
         {
-            btnEditUser.Enabled = btnDeleteUser.Enabled = dgvUsers.SelectedRows.Count > 0;
+            btnEditUser.Enabled = dgvUsers.SelectedRows.Count > 0;
+            
+            if (dgvUsers.SelectedRows.Count > 0)
+            {
+                var selectedRow = dgvUsers.SelectedRows[0];
+                var userId = Convert.ToInt32(selectedRow.Cells["Id"].Value);
+                var userRole = Convert.ToInt32(selectedRow.Cells["Role"].Value);
+                var username = selectedRow.Cells["Username"].Value?.ToString() ?? "";
+                
+                // Check if this is the primary admin account
+                bool isPrimaryAdmin = await IsPrimaryAdminAccountAsync(userId, username);
+                bool isAdmin = userRole == 1; // Role 1 = Admin
+                
+                // Disable delete for primary admin or if it's the last active admin
+                bool canDelete = !isPrimaryAdmin && !(isAdmin && await IsLastActiveAdminAsync(userId));
+                
+                btnDeleteUser.Enabled = canDelete;
+                
+                // Add tooltip for disabled delete button
+                if (!canDelete)
+                {
+                    var tooltip = new ToolTip();
+                    if (isPrimaryAdmin)
+                    {
+                        tooltip.SetToolTip(btnDeleteUser, "Cannot delete the primary admin account. This account is required for system access.");
+                    }
+                    else if (isAdmin)
+                    {
+                        tooltip.SetToolTip(btnDeleteUser, "Cannot delete the last active admin account. At least one admin must remain active.");
+                    }
+                }
+            }
+            else
+            {
+                btnDeleteUser.Enabled = false;
+            }
+        }
+        
+        private async Task<bool> IsPrimaryAdminAccountAsync(int userId, string username)
+        {
+            try
+            {
+                using var connection = DatabaseHelper.GetConnection();
+                await connection.OpenAsync();
+                
+                // Primary admin is either the "admin" username or the first admin created
+                var query = @"
+                    SELECT TOP 1 Id FROM Users 
+                    WHERE Role = 1 
+                    ORDER BY Id ASC";
+                
+                using var command = new SqlCommand(query, connection);
+                var result = await command.ExecuteScalarAsync();
+                
+                if (result != null)
+                {
+                    int firstAdminId = Convert.ToInt32(result);
+                    return userId == firstAdminId || username.ToLower() == "admin";
+                }
+                
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        
+        private async Task<bool> IsLastActiveAdminAsync(int excludeUserId)
+        {
+            try
+            {
+                using var connection = DatabaseHelper.GetConnection();
+                await connection.OpenAsync();
+                
+                var query = @"
+                    SELECT COUNT(*) FROM Users 
+                    WHERE Role = 1 AND IsActive = 1 AND Id != @excludeId";
+                
+                using var command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@excludeId", excludeUserId);
+                var count = Convert.ToInt32(await command.ExecuteScalarAsync());
+                
+                return count == 0; // If no other active admins, this is the last one
+            }
+            catch
+            {
+                return false;
+            }
         }
 
-        private void BtnAddUser_Click(object sender, EventArgs e)
+        private async void BtnAddUser_Click(object sender, EventArgs e)
         {
-            ShowUserForm();
+            await ShowUserForm();
         }
 
-        private void BtnEditUser_Click(object sender, EventArgs e)
+        private async void BtnEditUser_Click(object sender, EventArgs e)
         {
             if (dgvUsers.SelectedRows.Count > 0)
             {
                 selectedUserId = Convert.ToInt32(dgvUsers.SelectedRows[0].Cells["Id"].Value);
-                ShowUserForm(selectedUserId);
+                await ShowUserForm(selectedUserId);
             }
         }
 
         private async void BtnDeleteUser_Click(object sender, EventArgs e)
         {
-            if (dgvUsers.SelectedRows.Count > 0)
+            if (dgvUsers.SelectedRows.Count == 0 || !btnDeleteUser.Enabled)
             {
-                var result = MessageBox.Show("Are you sure you want to delete this user?", "Confirm Delete", 
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                return;
+            }
 
-                if (result == DialogResult.Yes)
+            var selectedRow = dgvUsers.SelectedRows[0];
+            var userId = Convert.ToInt32(selectedRow.Cells["Id"].Value);
+            var username = selectedRow.Cells["Username"].Value?.ToString() ?? "";
+            var userRole = Convert.ToInt32(selectedRow.Cells["Role"].Value);
+            var isAdmin = userRole == 1;
+
+            // Double confirmation for admin accounts
+            var confirmMessage = isAdmin 
+                ? $"WARNING: You are about to delete an Admin account ({username}).\n\nThis action cannot be undone. Are you absolutely sure?"
+                : $"Are you sure you want to delete user '{username}'?\n\nThis action cannot be undone.";
+
+            var result = MessageBox.Show(confirmMessage, "Confirm Delete", 
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+            if (result == DialogResult.Yes)
+            {
+                // Second confirmation for admin accounts
+                if (isAdmin)
                 {
-                    try
+                    var secondConfirm = MessageBox.Show(
+                        "Final confirmation: Delete this Admin account?",
+                        "Final Confirmation",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Exclamation);
+                    
+                    if (secondConfirm != DialogResult.Yes)
                     {
-                        var userId = Convert.ToInt32(dgvUsers.SelectedRows[0].Cells["Id"].Value);
-                        await DeleteUserAsync(userId);
-                        LoadUsers();
+                        return;
                     }
-                    catch (Exception ex)
+                }
+
+                try
+                {
+                    // Ensure at least one active admin remains
+                    if (isAdmin && await IsLastActiveAdminAsync(userId))
                     {
-                        MessageBox.Show($"Error deleting user: {ex.Message}", "Error", 
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Cannot delete the last active admin account. At least one admin must remain active for system access.",
+                            "Deletion Prevented", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
                     }
+
+                    await DeleteUserAsync(userId);
+                    LoadUsers();
+                    MessageBox.Show("User deleted successfully. Statistics will be updated when you refresh the System Reports panel.", 
+                        "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error deleting user: {ex.Message}", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
-        private void ShowUserForm(int userId = -1)
+        private async Task ShowUserForm(int userId = -1)
         {
             try
             {
@@ -337,7 +462,22 @@ namespace StudentReportInitial.Forms
 
             // Password
             var lblPassword = new Label { Text = "Password:", Location = new Point(20, yPos), AutoSize = true };
-            var txtPassword = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), UseSystemPasswordChar = true };
+            var txtPassword = new TextBox
+            {
+                Location = new Point(20, yPos + 20),
+                Size = new Size(250, 25),
+                UseSystemPasswordChar = true
+            };
+            yPos += spacing;
+
+            // Confirm Password
+            var lblConfirmPassword = new Label { Text = "Confirm Password:", Location = new Point(20, yPos), AutoSize = true };
+            var txtConfirmPassword = new TextBox
+            {
+                Location = new Point(20, yPos + 20),
+                Size = new Size(250, 25),
+                UseSystemPasswordChar = true
+            };
             yPos += spacing;
 
             // First Name
@@ -356,15 +496,72 @@ namespace StudentReportInitial.Forms
             yPos += spacing;
 
             // Phone
-            var lblPhone = new Label { Text = "Phone:", Location = new Point(20, yPos), AutoSize = true };
-            var txtPhone = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25) };
-            yPos += spacing;
+            var lblPhone = new Label { Text = "Phone (International format):", Location = new Point(20, yPos), AutoSize = true };
+            var txtPhone = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), PlaceholderText="+1234567890 or 0XXXXXXXXX" };
+            var lblPhoneError = new Label 
+            { 
+                Text = "", 
+                Location = new Point(20, yPos + 48), 
+                AutoSize = true,
+                ForeColor = Color.FromArgb(239, 68, 68),
+                Font = new Font("Segoe UI", 8F),
+                Visible = false
+            };
+            
+            // Phone validation on leave
+            txtPhone.Leave += (s, e) =>
+            {
+                string phone = txtPhone.Text.Trim();
+                if (!string.IsNullOrEmpty(phone))
+                {
+                    string errorMsg = PhoneValidator.GetValidationMessage(phone);
+                    if (!string.IsNullOrEmpty(errorMsg))
+                    {
+                        lblPhoneError.Text = errorMsg;
+                        lblPhoneError.Visible = true;
+                        txtPhone.BackColor = Color.FromArgb(254, 242, 242);
+                    }
+                    else
+                    {
+                        lblPhoneError.Visible = false;
+                        txtPhone.BackColor = Color.White;
+                        // Auto-format valid number
+                        txtPhone.Text = PhoneValidator.FormatPhoneNumber(phone);
+                    }
+                }
+                else
+                {
+                    lblPhoneError.Visible = false;
+                    txtPhone.BackColor = Color.White;
+                }
+            };
+
+            txtPhone.TextChanged += (s, e) =>
+            {
+                // Clear error when user starts typing
+                if (lblPhoneError.Visible)
+                {
+                    lblPhoneError.Visible = false;
+                    txtPhone.BackColor = Color.White;
+                }
+            };
+            
+            yPos += spacing + 25;
 
             // Role
             var lblRole = new Label { Text = "Role:", Location = new Point(20, yPos), AutoSize = true };
             var cmbRole = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), DropDownStyle = ComboBoxStyle.DropDownList };
-            cmbRole.Items.AddRange(new[] { "Admin", "Professor", "Guardian" });
-            yPos += spacing;
+            cmbRole.Items.AddRange(new[] { "Admin", "Professor", "Guardian", "Student" });
+            var lblRoleWarning = new Label 
+            { 
+                Text = "", 
+                Location = new Point(20, yPos + 48), 
+                AutoSize = true,
+                ForeColor = Color.FromArgb(239, 68, 68),
+                Font = new Font("Segoe UI", 8F),
+                Visible = false
+            };
+            yPos += spacing + 25;
 
             // Buttons
             var btnSave = new Button
@@ -395,25 +592,161 @@ namespace StudentReportInitial.Forms
                 pnlUserForm.Visible = false;
                 dgvUsers.Visible = true;
             };
+
             btnSave.Click += async (s, e) =>
             {
                 try
                 {
+                    bool requiresPasswordValidation = !isEditMode ||
+                        !string.IsNullOrWhiteSpace(txtPassword.Text) ||
+                        !string.IsNullOrWhiteSpace(txtConfirmPassword.Text);
+
+                    if (requiresPasswordValidation)
+                    {
+                        if (string.IsNullOrWhiteSpace(txtPassword.Text))
+                        {
+                            MessageBox.Show("Password is required.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            txtPassword.Focus();
+                            return;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(txtConfirmPassword.Text))
+                        {
+                            MessageBox.Show("Please confirm the password.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            txtConfirmPassword.Focus();
+                            return;
+                        }
+
+                        if (txtPassword.Text != txtConfirmPassword.Text)
+                        {
+                            MessageBox.Show("Passwords do not match.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            txtConfirmPassword.Focus();
+                            return;
+                        }
+                    }
+
+                    // Validate email
+                    string email = txtEmail.Text.Trim();
+                    if (string.IsNullOrWhiteSpace(email) || !IsValidEmail(email))
+                    {
+                        MessageBox.Show("Please enter a valid email address.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        txtEmail.Focus();
+                        return;
+                    }
+
+                    // Validate phone number
+                    string phone = txtPhone.Text.Trim();
+                    if (string.IsNullOrEmpty(phone))
+                    {
+                        lblPhoneError.Text = "Phone number is required.";
+                        lblPhoneError.Visible = true;
+                        txtPhone.BackColor = Color.FromArgb(254, 242, 242);
+                        txtPhone.Focus();
+                        return;
+                    }
+
+                    string phoneError = PhoneValidator.GetValidationMessage(phone);
+                    if (!string.IsNullOrEmpty(phoneError))
+                    {
+                        lblPhoneError.Text = phoneError;
+                        lblPhoneError.Visible = true;
+                        txtPhone.BackColor = Color.FromArgb(254, 242, 242);
+                        txtPhone.Focus();
+                        return;
+                    }
+
+                    // Format phone number before saving
+                    phone = PhoneValidator.FormatPhoneNumber(phone);
+                    if (string.IsNullOrEmpty(phone))
+                    {
+                        lblPhoneError.Text = "Invalid phone number format.";
+                        lblPhoneError.Visible = true;
+                        txtPhone.BackColor = Color.FromArgb(254, 242, 242);
+                        txtPhone.Focus();
+                        return;
+                    }
+
+                    // Check if editing an admin account
+                    bool isEditingAdmin = false;
+                    UserRole originalRole = UserRole.Admin;
+                    if (isEditMode)
+                    {
+                        using var checkConnection = DatabaseHelper.GetConnection();
+                        await checkConnection.OpenAsync();
+                        var checkQuery = "SELECT Role FROM Users WHERE Id = @id";
+                        using var checkCommand = new SqlCommand(checkQuery, checkConnection);
+                        checkCommand.Parameters.AddWithValue("@id", selectedUserId);
+                        var roleResult = await checkCommand.ExecuteScalarAsync();
+                        if (roleResult != null)
+                        {
+                            originalRole = (UserRole)Convert.ToInt32(roleResult);
+                            isEditingAdmin = originalRole == UserRole.Admin;
+                        }
+                    }
+
+                    // For new users or when editing admin accounts, verify phone number with OTP
+                    if (!isEditMode || isEditingAdmin)
+                    {
+                        string otpCode = SmsService.GenerateOtp();
+                        bool otpSent = await SmsService.SendOtpAsync(phone, otpCode);
+
+                        if (!otpSent)
+                        {
+                            MessageBox.Show("Failed to send verification code. Please check the phone number and try again.",
+                                "Verification Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+
+                        var otpMessage = isEditingAdmin 
+                            ? "Admin account modification requires OTP verification. Please enter the code sent to your phone."
+                            : "Phone number verification is required to continue.";
+                        
+                        using var otpForm = new OtpVerificationForm(phone, otpCode);
+                        if (otpForm.ShowDialog() != DialogResult.OK || !otpForm.IsVerified)
+                        {
+                            MessageBox.Show(otpMessage,
+                                "Verification Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+                    
+                    // Prevent role downgrade for admin accounts
+                    var newRole = (UserRole)(cmbRole.SelectedIndex + 1);
+                    if (isEditMode && isEditingAdmin && newRole != UserRole.Admin)
+                    {
+                        MessageBox.Show("Cannot change Admin role to a lower permission level. This is a security restriction.",
+                            "Role Change Restricted", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        cmbRole.SelectedIndex = 0; // Reset to Admin
+                        return;
+                    }
+
                     var user = new User
                     {
                         Username = txtUsername.Text,
                         Password = txtPassword.Text,
                         FirstName = txtFirstName.Text,
                         LastName = txtLastName.Text,
-                        Email = txtEmail.Text,
-                        Phone = txtPhone.Text,
+                        Email = email,
+                        Phone = phone,
                         Role = (UserRole)(cmbRole.SelectedIndex + 1),
-                        IsActive = true
+                        IsActive = true,
                     };
 
                     if (isEditMode)
                     {
                         user.Id = selectedUserId;
+                        
+                        // Ensure at least one active admin remains if deactivating an admin
+                        if (isEditingAdmin && !user.IsActive)
+                        {
+                            if (await IsLastActiveAdminAsync(selectedUserId))
+                            {
+                                MessageBox.Show("Cannot deactivate the last active admin account. At least one admin must remain active.",
+                                    "Operation Prevented", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                        }
+                        
                         await UpdateUserAsync(user);
                     }
                     else
@@ -427,7 +760,7 @@ namespace StudentReportInitial.Forms
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error saving user: {ex.Message}", "Error", 
+                    MessageBox.Show($"Error saving user: {ex.Message}", "Error",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             };
@@ -437,16 +770,38 @@ namespace StudentReportInitial.Forms
 
             pnlUserForm.Controls.AddRange(new Control[] {
                 lblTitle, lblUsername, txtUsername, lblPassword, txtPassword,
+                lblConfirmPassword, txtConfirmPassword,
                 lblFirstName, txtFirstName, lblLastName, txtLastName,
-                lblEmail, txtEmail, lblPhone, txtPhone, lblRole, cmbRole,
+                lblEmail, txtEmail, lblPhone, txtPhone, lblPhoneError, lblRole, cmbRole, lblRoleWarning,
                 btnSave, btnCancel
             });
 
             // Load user data if editing
             if (isEditMode)
             {
-                LoadUserData(selectedUserId, txtUsername, txtPassword, txtFirstName, txtLastName, txtEmail, txtPhone, cmbRole);
+                await LoadUserDataAsync(selectedUserId, txtUsername, txtPassword, txtConfirmPassword, txtFirstName, txtLastName, txtEmail, txtPhone, cmbRole, lblRoleWarning);
+                
+                // Check if editing admin account
+                var currentRole = cmbRole.SelectedIndex + 1;
+                if (currentRole == 1) // Admin role
+                {
+                    // Disable role change for admin accounts (prevent downgrade)
+                    cmbRole.Enabled = false;
+                    lblRoleWarning.Text = "Admin role cannot be changed. This prevents security issues.";
+                    lblRoleWarning.Visible = true;
+                }
             }
+            
+            // Monitor role changes to prevent admin downgrade
+            cmbRole.SelectedIndexChanged += (s, e) =>
+            {
+                if (isEditMode && cmbRole.SelectedIndex + 1 < 1) // Trying to change from Admin
+                {
+                    MessageBox.Show("Cannot change Admin role to a lower permission level. This is a security restriction.",
+                        "Role Change Restricted", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    cmbRole.SelectedIndex = 0; // Reset to Admin
+                }
+            };
             }
             catch (Exception ex)
             {
@@ -455,8 +810,8 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private async void LoadUserData(int userId, TextBox txtUsername, TextBox txtPassword, TextBox txtFirstName, 
-            TextBox txtLastName, TextBox txtEmail, TextBox txtPhone, ComboBox cmbRole)
+        private async Task LoadUserDataAsync(int userId, TextBox txtUsername, TextBox txtPassword, TextBox txtConfirmPassword,
+            TextBox txtFirstName, TextBox txtLastName, TextBox txtEmail, TextBox txtPhone, ComboBox cmbRole, Label lblRoleWarning)
         {
             try
             {
@@ -471,12 +826,28 @@ namespace StudentReportInitial.Forms
                 if (await reader.ReadAsync())
                 {
                     txtUsername.Text = reader.GetString("Username");
-                    txtPassword.Text = reader.GetString("Password");
+                    // Clear password fields in edit mode
+                    txtPassword.Text = "";
+                    txtConfirmPassword.Text = "";
                     txtFirstName.Text = reader.GetString("FirstName");
                     txtLastName.Text = reader.GetString("LastName");
                     txtEmail.Text = reader.GetString("Email");
                     txtPhone.Text = reader.IsDBNull("Phone") ? "" : reader.GetString("Phone");
-                    cmbRole.SelectedIndex = reader.GetInt32("Role") - 1;
+                    var role = reader.GetInt32("Role");
+                    cmbRole.SelectedIndex = role - 1;
+                    
+                    // Check if this is an admin account
+                    if (role == 1) // Admin
+                    {
+                        var username = reader.GetString("Username");
+                        bool isPrimaryAdmin = await IsPrimaryAdminAccountAsync(userId, username);
+                        
+                        if (isPrimaryAdmin)
+                        {
+                            lblRoleWarning.Text = "Primary Admin Account - Role cannot be changed";
+                            lblRoleWarning.Visible = true;
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -491,12 +862,12 @@ namespace StudentReportInitial.Forms
             using var connection = DatabaseHelper.GetConnection();
             await connection.OpenAsync();
 
-            // Hash the password
+            // Hash the password (declared only ONCE)
             PasswordHasher.CreatePasswordHash(user.Password, out string passwordHash, out string passwordSalt);
 
             var query = @"
-                INSERT INTO Users (Username, PasswordHash, PasswordSalt, FirstName, LastName, Email, Phone, Role, CreatedDate, IsActive)
-                VALUES (@username, @passwordHash, @passwordSalt, @firstName, @lastName, @email, @phone, @role, @createdDate, @isActive)";
+        INSERT INTO Users (Username, PasswordHash, PasswordSalt, FirstName, LastName, Email, Phone, Role, CreatedDate, IsActive)
+        VALUES (@username, @passwordHash, @passwordSalt, @firstName, @lastName, @email, @phone, @role, @createdDate, @isActive)";
 
             using var command = new SqlCommand(query, connection);
             command.Parameters.AddWithValue("@username", user.Username);
@@ -518,11 +889,26 @@ namespace StudentReportInitial.Forms
             using var connection = DatabaseHelper.GetConnection();
             await connection.OpenAsync();
 
-            var query = @"
-                UPDATE Users 
-                SET Username = @username, FirstName = @firstName, 
-                    LastName = @lastName, Email = @email, Phone = @phone, Role = @role
-                WHERE Id = @id";
+            // Check if password was changed
+            bool passwordChanged = !string.IsNullOrWhiteSpace(user.Password);
+            
+            string query;
+            if (passwordChanged)
+            {
+                query = @"
+                    UPDATE Users 
+                    SET Username = @username, PasswordHash = @passwordHash, PasswordSalt = @passwordSalt,
+                        FirstName = @firstName, LastName = @lastName, Email = @email, Phone = @phone, Role = @role
+                    WHERE Id = @id";
+            }
+            else
+            {
+                query = @"
+                    UPDATE Users 
+                    SET Username = @username, FirstName = @firstName, 
+                        LastName = @lastName, Email = @email, Phone = @phone, Role = @role
+                    WHERE Id = @id";
+            }
 
             using var command = new SqlCommand(query, connection);
             command.Parameters.AddWithValue("@id", user.Id);
@@ -532,6 +918,14 @@ namespace StudentReportInitial.Forms
             command.Parameters.AddWithValue("@email", user.Email);
             command.Parameters.AddWithValue("@phone", user.Phone);
             command.Parameters.AddWithValue("@role", (int)user.Role);
+            
+            if (passwordChanged)
+            {
+                // Hash the new password
+                PasswordHasher.CreatePasswordHash(user.Password, out string passwordHash, out string passwordSalt);
+                command.Parameters.AddWithValue("@passwordHash", passwordHash);
+                command.Parameters.AddWithValue("@passwordSalt", passwordSalt);
+            }
 
             await command.ExecuteNonQueryAsync();
         }
@@ -546,6 +940,16 @@ namespace StudentReportInitial.Forms
             command.Parameters.AddWithValue("@id", userId);
 
             await command.ExecuteNonQueryAsync();
+        }
+
+        private bool IsValidEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return false;
+            }
+
+            return Regex.IsMatch(email.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.IgnoreCase);
         }
     }
 }

@@ -1,7 +1,8 @@
-using StudentReportInitial.Models;
 using StudentReportInitial.Data;
+using StudentReportInitial.Models;
 using System.Data.SqlClient;
 using System.Data;
+using System.Threading.Tasks;
 
 namespace StudentReportInitial.Forms
 {
@@ -15,14 +16,27 @@ namespace StudentReportInitial.Forms
         private Button btnRefresh;
         private Label lblAttendanceSummary;
         private Panel pnlSummary;
+        private Student? linkedStudent;
+        private bool studentContextResolved;
 
         public ViewerAttendancePanel(User user)
         {
             currentUser = user;
             InitializeComponent();
             ApplyModernStyling();
-            LoadSubjects();
-            LoadAttendance();
+            _ = InitializeAsync();
+        }
+
+        private async Task InitializeAsync()
+        {
+            if (!await EnsureStudentContextAsync())
+            {
+                HandleMissingStudentContext();
+                return;
+            }
+
+            await LoadSubjectsAsync();
+            await LoadAttendanceAsync();
         }
 
         private void InitializeComponent()
@@ -186,25 +200,52 @@ namespace StudentReportInitial.Forms
             dgvAttendance.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
         }
 
-        private async void LoadSubjects()
+        private async Task<bool> EnsureStudentContextAsync()
+        {
+            if (studentContextResolved)
+            {
+                return linkedStudent != null;
+            }
+
+            studentContextResolved = true;
+            linkedStudent = await UserContextHelper.GetLinkedStudentAsync(currentUser);
+            return linkedStudent != null;
+        }
+
+        private void HandleMissingStudentContext()
+        {
+            cmbSubject.Enabled = false;
+            dtpFromDate.Enabled = false;
+            dtpToDate.Enabled = false;
+            btnRefresh.Enabled = false;
+            lblAttendanceSummary.Text = "Attendance Summary: No linked student record";
+            dgvAttendance.DataSource = null;
+        }
+
+        private async Task LoadSubjectsAsync()
         {
             try
             {
                 cmbSubject.Items.Clear();
                 cmbSubject.Items.Add("All Subjects");
                 
+                if (!await EnsureStudentContextAsync())
+                {
+                    HandleMissingStudentContext();
+                    return;
+                }
+
                 using var connection = DatabaseHelper.GetConnection();
                 await connection.OpenAsync();
 
                 var query = @"
                     SELECT DISTINCT a.Subject
                     FROM Attendance a
-                    INNER JOIN Students s ON a.StudentId = s.Id
-                    WHERE s.Username = @username
+                    WHERE a.StudentId = @studentId
                     ORDER BY a.Subject";
 
                 using var command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@username", currentUser.Username);
+                command.Parameters.AddWithValue("@studentId", linkedStudent!.Id);
 
                 using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
@@ -224,10 +265,16 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private async void LoadAttendance()
+        private async Task LoadAttendanceAsync()
         {
             try
             {
+                if (!await EnsureStudentContextAsync())
+                {
+                    HandleMissingStudentContext();
+                    return;
+                }
+
                 using var connection = DatabaseHelper.GetConnection();
                 await connection.OpenAsync();
 
@@ -235,13 +282,12 @@ namespace StudentReportInitial.Forms
                     SELECT a.Subject, a.Date, a.Status, a.Notes, a.RecordedDate,
                            u.FirstName + ' ' + u.LastName as ProfessorName
                     FROM Attendance a
-                    INNER JOIN Students s ON a.StudentId = s.Id
                     INNER JOIN Users u ON a.ProfessorId = u.Id
-                    WHERE s.Username = @username AND a.Date BETWEEN @fromDate AND @toDate";
+                    WHERE a.StudentId = @studentId AND a.Date BETWEEN @fromDate AND @toDate";
 
                 var parameters = new List<SqlParameter>
                 {
-                    new SqlParameter("@username", currentUser.Username),
+                    new SqlParameter("@studentId", linkedStudent!.Id),
                     new SqlParameter("@fromDate", dtpFromDate.Value.Date),
                     new SqlParameter("@toDate", dtpToDate.Value.Date)
                 };
@@ -348,21 +394,25 @@ namespace StudentReportInitial.Forms
 
             foreach (DataRow row in dataTable.Rows)
             {
-                var status = row["Status"]?.ToString();
-                switch (status)
+                // Status is stored as integer (1=Present, 2=Absent, 3=Late, 4=Excused)
+                if (row["Status"] != DBNull.Value)
                 {
-                    case "Present":
-                        present++;
-                        break;
-                    case "Absent":
-                        absent++;
-                        break;
-                    case "Late":
-                        late++;
-                        break;
-                    case "Excused":
-                        excused++;
-                        break;
+                    var statusValue = Convert.ToInt32(row["Status"]);
+                    switch (statusValue)
+                    {
+                        case 1: // Present
+                            present++;
+                            break;
+                        case 2: // Absent
+                            absent++;
+                            break;
+                        case 3: // Late
+                            late++;
+                            break;
+                        case 4: // Excused
+                            excused++;
+                            break;
+                    }
                 }
             }
 
@@ -372,14 +422,14 @@ namespace StudentReportInitial.Forms
             lblAttendanceSummary.Text = $"Attendance Summary: {attendanceRate:F1}% ({present + excused}/{total}) - Present: {present}, Absent: {absent}, Late: {late}, Excused: {excused}";
         }
 
-        private void CmbSubject_SelectedIndexChanged(object sender, EventArgs e)
+        private async void CmbSubject_SelectedIndexChanged(object sender, EventArgs e)
         {
-            LoadAttendance();
+            await LoadAttendanceAsync();
         }
 
-        private void BtnRefresh_Click(object sender, EventArgs e)
+        private async void BtnRefresh_Click(object sender, EventArgs e)
         {
-            LoadAttendance();
+            await LoadAttendanceAsync();
         }
     }
 }
