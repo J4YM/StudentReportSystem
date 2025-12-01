@@ -12,6 +12,9 @@ namespace StudentReportInitial.Forms
         private ComboBox cmbRecordType;
         private ComboBox cmbSubject;
         private ComboBox cmbQuarter;
+        private ComboBox cmbStudent;
+        private ComboBox cmbCourse;
+        private ComboBox cmbSection;
         private Button btnRefresh;
         private Button btnEdit;
         private Button btnDelete;
@@ -23,6 +26,9 @@ namespace StudentReportInitial.Forms
             InitializeComponent();
             ApplyModernStyling();
             LoadSubjects();
+            LoadStudents();
+            LoadCourses();
+            LoadSections();
             LoadRecords();
         }
 
@@ -38,7 +44,7 @@ namespace StudentReportInitial.Forms
             var pnlHeader = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 120,
+                Height = 160,
                 BackColor = Color.White,
                 Padding = new Padding(20)
             };
@@ -107,10 +113,64 @@ namespace StudentReportInitial.Forms
             cmbQuarter.SelectedIndex = 0;
             cmbQuarter.SelectedIndexChanged += CmbQuarter_SelectedIndexChanged;
 
+            // Student filter
+            var lblStudent = new Label
+            {
+                Text = "Student:",
+                Location = new Point(20, 80),
+                AutoSize = true
+            };
+
+            cmbStudent = new ComboBox
+            {
+                Location = new Point(80, 78),
+                Size = new Size(200, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            cmbStudent.Items.Add("All Students");
+            cmbStudent.SelectedIndex = 0;
+            cmbStudent.SelectedIndexChanged += CmbStudent_SelectedIndexChanged;
+
+            // Course filter
+            var lblCourse = new Label
+            {
+                Text = "Course:",
+                Location = new Point(300, 80),
+                AutoSize = true
+            };
+
+            cmbCourse = new ComboBox
+            {
+                Location = new Point(360, 78),
+                Size = new Size(150, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            cmbCourse.Items.Add("All Courses");
+            cmbCourse.SelectedIndex = 0;
+            cmbCourse.SelectedIndexChanged += CmbCourse_SelectedIndexChanged;
+
+            // Section filter
+            var lblSection = new Label
+            {
+                Text = "Section:",
+                Location = new Point(530, 80),
+                AutoSize = true
+            };
+
+            cmbSection = new ComboBox
+            {
+                Location = new Point(590, 78),
+                Size = new Size(100, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            cmbSection.Items.Add("All Sections");
+            cmbSection.SelectedIndex = 0;
+            cmbSection.SelectedIndexChanged += CmbSection_SelectedIndexChanged;
+
             btnRefresh = new Button
             {
                 Text = "Refresh",
-                Location = new Point(750, 47),
+                Location = new Point(750, 77),
                 Size = new Size(80, 27),
                 BackColor = Color.FromArgb(59, 130, 246),
                 ForeColor = Color.White,
@@ -121,7 +181,8 @@ namespace StudentReportInitial.Forms
 
             pnlHeader.Controls.AddRange(new Control[] {
                 lblTitle, lblRecordType, cmbRecordType, lblSubject, cmbSubject,
-                lblQuarter, cmbQuarter, btnRefresh
+                lblQuarter, cmbQuarter, lblStudent, cmbStudent, lblCourse, cmbCourse,
+                lblSection, cmbSection, btnRefresh
             });
 
             // Action buttons panel
@@ -219,11 +280,24 @@ namespace StudentReportInitial.Forms
                 var query = @"
                     SELECT DISTINCT s.Name
                     FROM Subjects s
-                    WHERE s.ProfessorId = @professorId AND s.IsActive = 1
-                    ORDER BY s.Name";
+                    WHERE s.ProfessorId = @professorId AND s.IsActive = 1";
+
+                // Add branch filter based on professor's branch
+                var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+                if (professorBranchId > 0)
+                {
+                    query += " AND s.BranchId = @branchId";
+                }
+
+                query += " ORDER BY s.Name";
 
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
+                
+                if (professorBranchId > 0)
+                {
+                    command.Parameters.AddWithValue("@branchId", professorBranchId);
+                }
 
                 using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
@@ -239,6 +313,160 @@ namespace StudentReportInitial.Forms
             catch (Exception ex)
             {
                 MessageBox.Show($"Error loading subjects: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void LoadStudents()
+        {
+            try
+            {
+                cmbStudent.Items.Clear();
+                cmbStudent.Items.Add("All Students");
+
+                using var connection = DatabaseHelper.GetConnection();
+                await connection.OpenAsync();
+
+                // Add branch filter based on professor's branch
+                var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+                var branchFilter = professorBranchId > 0 ? " AND s.BranchId = @branchId" : "";
+
+                // Load all students enrolled in subjects taught by this professor
+                var query = @"
+                    SELECT DISTINCT s.Id, s.FirstName + ' ' + s.LastName as StudentName
+                    FROM Students s
+                    INNER JOIN StudentSubjects ss ON s.Id = ss.StudentId
+                    INNER JOIN Subjects sub ON ss.SubjectId = sub.Id
+                    WHERE sub.ProfessorId = @professorId AND s.IsActive = 1 AND sub.IsActive = 1" + branchFilter + @"
+                    ORDER BY StudentName";
+
+                using var command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
+                
+                if (professorBranchId > 0)
+                {
+                    command.Parameters.AddWithValue("@branchId", professorBranchId);
+                }
+
+                using var adapter = new SqlDataAdapter(command);
+                var dataTable = new DataTable();
+                adapter.Fill(dataTable);
+
+                // Add "All Students" row at the beginning
+                var allStudentsRow = dataTable.NewRow();
+                allStudentsRow["Id"] = 0;
+                allStudentsRow["StudentName"] = "All Students";
+                dataTable.Rows.InsertAt(allStudentsRow, 0);
+
+                cmbStudent.DisplayMember = "StudentName";
+                cmbStudent.ValueMember = "Id";
+                cmbStudent.DataSource = dataTable;
+                cmbStudent.SelectedIndex = 0;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading students: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void LoadCourses()
+        {
+            try
+            {
+                cmbCourse.Items.Clear();
+                cmbCourse.Items.Add("All Courses");
+
+                using var connection = DatabaseHelper.GetConnection();
+                await connection.OpenAsync();
+
+                // Add branch filter based on professor's branch
+                var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+                var branchFilter = professorBranchId > 0 ? " AND s.BranchId = @branchId" : "";
+
+                var query = @"
+                    SELECT DISTINCT s.GradeLevel
+                    FROM Students s
+                    INNER JOIN Grades g ON s.Id = g.StudentId
+                    WHERE g.ProfessorId = @professorId AND s.IsActive = 1" + branchFilter + @"
+                    UNION
+                    SELECT DISTINCT s.GradeLevel
+                    FROM Students s
+                    INNER JOIN Attendance a ON s.Id = a.StudentId
+                    WHERE a.ProfessorId = @professorId AND s.IsActive = 1" + branchFilter + @"
+                    ORDER BY s.GradeLevel";
+
+                using var command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
+                
+                if (professorBranchId > 0)
+                {
+                    command.Parameters.AddWithValue("@branchId", professorBranchId);
+                }
+
+                using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    if (!reader.IsDBNull("GradeLevel"))
+                    {
+                        cmbCourse.Items.Add(reader.GetString("GradeLevel"));
+                    }
+                }
+
+                if (cmbCourse.Items.Count > 0)
+                {
+                    cmbCourse.SelectedIndex = 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading courses: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void LoadSections()
+        {
+            try
+            {
+                cmbSection.Items.Clear();
+                cmbSection.Items.Add("All Sections");
+
+                using var connection = DatabaseHelper.GetConnection();
+                await connection.OpenAsync();
+
+                var query = @"
+                    SELECT DISTINCT s.Section
+                    FROM Students s
+                    INNER JOIN Grades g ON s.Id = g.StudentId
+                    WHERE g.ProfessorId = @professorId AND s.IsActive = 1 AND s.Section IS NOT NULL AND s.Section != ''
+                    UNION
+                    SELECT DISTINCT s.Section
+                    FROM Students s
+                    INNER JOIN Attendance a ON s.Id = a.StudentId
+                    WHERE a.ProfessorId = @professorId AND s.IsActive = 1 AND s.Section IS NOT NULL AND s.Section != ''
+                    ORDER BY s.Section";
+
+                using var command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
+
+                using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    if (!reader.IsDBNull("Section"))
+                    {
+                        cmbSection.Items.Add(reader.GetString("Section"));
+                    }
+                }
+
+                if (cmbSection.Items.Count > 0)
+                {
+                    cmbSection.SelectedIndex = 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading sections: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -275,17 +503,30 @@ namespace StudentReportInitial.Forms
         {
             var query = @"
                 SELECT g.Id, g.StudentId, s.FirstName + ' ' + s.LastName as StudentName,
+                       s.GradeLevel, s.Section,
                        g.Subject, g.Quarter, g.ComponentType, g.AssignmentName,
                        g.Score, g.MaxScore, g.Percentage, g.Comments,
                        g.DateRecorded, g.DueDate
                 FROM Grades g
                 INNER JOIN Students s ON g.StudentId = s.Id
-                WHERE g.ProfessorId = @professorId";
+                WHERE g.ProfessorId = @professorId AND s.IsActive = 1";
+
+            // Add branch filter based on professor's branch
+            var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+            if (professorBranchId > 0)
+            {
+                query += " AND g.BranchId = @branchId";
+            }
 
             var parameters = new List<SqlParameter>
             {
                 new SqlParameter("@professorId", currentProfessor.Id)
             };
+            
+            if (professorBranchId > 0)
+            {
+                parameters.Add(new SqlParameter("@branchId", professorBranchId));
+            }
 
             if (cmbSubject.SelectedIndex > 0)
             {
@@ -297,6 +538,24 @@ namespace StudentReportInitial.Forms
             {
                 query += " AND g.Quarter = @quarter";
                 parameters.Add(new SqlParameter("@quarter", cmbQuarter.SelectedItem.ToString()));
+            }
+
+            if (cmbStudent.SelectedIndex > 0 && cmbStudent.SelectedValue != null)
+            {
+                query += " AND g.StudentId = @studentId";
+                parameters.Add(new SqlParameter("@studentId", cmbStudent.SelectedValue));
+            }
+
+            if (cmbCourse.SelectedIndex > 0)
+            {
+                query += " AND s.GradeLevel = @course";
+                parameters.Add(new SqlParameter("@course", cmbCourse.SelectedItem.ToString()));
+            }
+
+            if (cmbSection.SelectedIndex > 0)
+            {
+                query += " AND s.Section = @section";
+                parameters.Add(new SqlParameter("@section", cmbSection.SelectedItem.ToString()));
             }
 
             query += " ORDER BY g.DateRecorded DESC";
@@ -315,20 +574,51 @@ namespace StudentReportInitial.Forms
         {
             var query = @"
                 SELECT a.Id, a.StudentId, s.FirstName + ' ' + s.LastName as StudentName,
+                       s.GradeLevel, s.Section,
                        a.Subject, a.Date, a.Status, a.Notes, a.RecordedDate
                 FROM Attendance a
                 INNER JOIN Students s ON a.StudentId = s.Id
-                WHERE a.ProfessorId = @professorId";
+                WHERE a.ProfessorId = @professorId AND s.IsActive = 1";
+
+            // Add branch filter based on professor's branch
+            var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+            if (professorBranchId > 0)
+            {
+                query += " AND a.BranchId = @branchId";
+            }
 
             var parameters = new List<SqlParameter>
             {
                 new SqlParameter("@professorId", currentProfessor.Id)
             };
+            
+            if (professorBranchId > 0)
+            {
+                parameters.Add(new SqlParameter("@branchId", professorBranchId));
+            }
 
             if (cmbSubject.SelectedIndex > 0)
             {
                 query += " AND a.Subject = @subject";
                 parameters.Add(new SqlParameter("@subject", cmbSubject.SelectedItem.ToString()));
+            }
+
+            if (cmbStudent.SelectedIndex > 0 && cmbStudent.SelectedValue != null)
+            {
+                query += " AND a.StudentId = @studentId";
+                parameters.Add(new SqlParameter("@studentId", cmbStudent.SelectedValue));
+            }
+
+            if (cmbCourse.SelectedIndex > 0)
+            {
+                query += " AND s.GradeLevel = @course";
+                parameters.Add(new SqlParameter("@course", cmbCourse.SelectedItem.ToString()));
+            }
+
+            if (cmbSection.SelectedIndex > 0)
+            {
+                query += " AND s.Section = @section";
+                parameters.Add(new SqlParameter("@section", cmbSection.SelectedItem.ToString()));
             }
 
             query += " ORDER BY a.Date DESC";
@@ -398,6 +688,21 @@ namespace StudentReportInitial.Forms
             LoadRecords();
         }
 
+        private void CmbStudent_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            LoadRecords();
+        }
+
+        private void CmbCourse_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            LoadRecords();
+        }
+
+        private void CmbSection_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            LoadRecords();
+        }
+
         private void BtnRefresh_Click(object sender, EventArgs e)
         {
             LoadRecords();
@@ -439,16 +744,35 @@ namespace StudentReportInitial.Forms
         {
             if (dgvRecords.SelectedRows.Count == 0) return;
 
-            var result = MessageBox.Show("Are you sure you want to delete this record?", "Confirm Delete",
-                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            var selectedRow = dgvRecords.SelectedRows[0];
+            var recordType = cmbRecordType.SelectedItem?.ToString() ?? "record";
+            var recordId = Convert.ToInt32(selectedRow.Cells["Id"].Value);
+            
+            string recordInfo = "";
+            if (recordType == "Grades")
+            {
+                var studentName = selectedRow.Cells["StudentName"].Value?.ToString() ?? "Unknown";
+                var assignmentName = selectedRow.Cells["AssignmentName"].Value?.ToString() ?? "";
+                recordInfo = $"Grade record for '{studentName}' - {assignmentName}";
+            }
+            else
+            {
+                var studentName = selectedRow.Cells["StudentName"].Value?.ToString() ?? "Unknown";
+                var date = selectedRow.Cells["Date"].Value?.ToString() ?? "";
+                recordInfo = $"Attendance record for '{studentName}' on {date}";
+            }
+
+            var confirmMessage = $"WARNING: You are about to permanently delete this {recordType.ToLower()}.\n\n" +
+                               $"Record: {recordInfo}\n\n" +
+                               "This action cannot be undone. Are you absolutely sure?";
+
+            var result = MessageBox.Show(confirmMessage, "Confirm Record Deletion",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
             if (result != DialogResult.Yes) return;
 
             try
             {
-                var recordId = Convert.ToInt32(dgvRecords.SelectedRows[0].Cells["Id"].Value);
-                var recordType = cmbRecordType.SelectedItem?.ToString();
-
                 using var connection = DatabaseHelper.GetConnection();
                 await connection.OpenAsync();
 
@@ -498,62 +822,156 @@ namespace StudentReportInitial.Forms
                 return;
             }
 
+            var currentScore = Convert.ToDecimal(reader["Score"]);
+            var currentMaxScore = Convert.ToDecimal(reader["MaxScore"]);
+            var currentComments = reader["Comments"]?.ToString() ?? "";
+            var currentComponentType = reader["ComponentType"]?.ToString() ?? "QuizzesActivities";
+            var currentQuarter = reader["Quarter"]?.ToString() ?? "Prelim";
+            var currentAssignmentName = reader["AssignmentName"]?.ToString() ?? "";
+
+            reader.Close();
+
             var form = new Form
             {
                 Text = "Edit Grade",
-                Size = new Size(500, 400),
-                StartPosition = FormStartPosition.CenterParent
+                Size = new Size(500, 350),
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false
             };
 
-            var lblScore = new Label { Text = "Score:", Location = new Point(20, 20), AutoSize = true };
-            var nudScore = new NumericUpDown
+            // Component type
+            var lblComponentType = new Label 
+            { 
+                Text = "Component:", 
+                Location = new Point(20, 20), 
+                AutoSize = true 
+            };
+            var cmbComponentType = new ComboBox
             {
                 Location = new Point(20, 40),
                 Size = new Size(200, 25),
-                Minimum = 0,
-                Maximum = 10000,
-                DecimalPlaces = 2,
-                Value = Convert.ToDecimal(reader["Score"])
+                DropDownStyle = ComboBoxStyle.DropDownList
             };
+            cmbComponentType.Items.AddRange(new[] { "Quizzes", "PT/Activities", "Exam" });
+            
+            // Map database value to display text
+            var componentDisplayText = currentComponentType switch
+            {
+                "QuizzesActivities" => "Quizzes",
+                "PerformanceTask" => "PT/Activities",
+                "Exam" => "Exam",
+                _ => "Quizzes"
+            };
+            cmbComponentType.SelectedItem = componentDisplayText;
 
-            var lblMaxScore = new Label { Text = "Max Score:", Location = new Point(240, 20), AutoSize = true };
-            var nudMaxScore = new NumericUpDown
+            // Quarter
+            var lblQuarter = new Label 
+            { 
+                Text = "Quarter:", 
+                Location = new Point(240, 20), 
+                AutoSize = true 
+            };
+            var cmbQuarter = new ComboBox
             {
                 Location = new Point(240, 40),
+                Size = new Size(200, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            cmbQuarter.Items.AddRange(new[] { "Prelim", "Midterm", "PreFinal", "Final" });
+            cmbQuarter.SelectedItem = currentQuarter;
+
+            // Assignment name
+            var lblAssignmentName = new Label 
+            { 
+                Text = "Assignment:", 
+                Location = new Point(20, 70), 
+                AutoSize = true 
+            };
+            var txtAssignmentName = new TextBox
+            {
+                Location = new Point(20, 90),
+                Size = new Size(420, 25),
+                Text = currentAssignmentName
+            };
+
+            // Score
+            var lblScore = new Label 
+            { 
+                Text = $"Score (Max: {currentMaxScore}):", 
+                Location = new Point(20, 120), 
+                AutoSize = true 
+            };
+            var nudScore = new NumericUpDown
+            {
+                Location = new Point(20, 140),
+                Size = new Size(200, 25),
+                Minimum = 0,
+                Maximum = currentMaxScore,
+                DecimalPlaces = 2,
+                Value = currentScore > currentMaxScore ? currentMaxScore : (currentScore < 0 ? 0 : currentScore)
+            };
+
+            // Max score
+            var lblMaxScore = new Label 
+            { 
+                Text = "Max Score:", 
+                Location = new Point(240, 120), 
+                AutoSize = true 
+            };
+            var nudMaxScore = new NumericUpDown
+            {
+                Location = new Point(240, 140),
                 Size = new Size(200, 25),
                 Minimum = 1,
                 Maximum = 10000,
                 DecimalPlaces = 2,
-                Value = Convert.ToDecimal(reader["MaxScore"])
+                Value = currentMaxScore
+            };
+            nudMaxScore.ValueChanged += (s, e) =>
+            {
+                // Update score max when max score changes
+                nudScore.Maximum = nudMaxScore.Value;
+                lblScore.Text = $"Score (Max: {nudMaxScore.Value}):";
             };
 
-            var lblComments = new Label { Text = "Comments:", Location = new Point(20, 80), AutoSize = true };
+            // Comments
+            var lblComments = new Label 
+            { 
+                Text = "Comments:", 
+                Location = new Point(20, 170), 
+                AutoSize = true 
+            };
             var txtComments = new TextBox
             {
-                Location = new Point(20, 100),
-                Size = new Size(420, 100),
+                Location = new Point(20, 190),
+                Size = new Size(420, 80),
                 Multiline = true,
-                Text = reader["Comments"]?.ToString() ?? ""
+                Text = currentComments
             };
 
+            // Buttons
             var btnSave = new Button
             {
                 Text = "Save",
-                Location = new Point(20, 220),
+                Location = new Point(20, 280),
                 Size = new Size(100, 30),
                 BackColor = Color.FromArgb(34, 197, 94),
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                DialogResult = DialogResult.OK
             };
 
             var btnCancel = new Button
             {
                 Text = "Cancel",
-                Location = new Point(130, 220),
+                Location = new Point(130, 280),
                 Size = new Size(100, 30),
                 BackColor = Color.FromArgb(107, 114, 128),
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                DialogResult = DialogResult.Cancel
             };
 
             btnSave.Click += async (s, e) =>
@@ -562,13 +980,32 @@ namespace StudentReportInitial.Forms
                 {
                     var newScore = nudScore.Value;
                     var newMaxScore = nudMaxScore.Value;
+
+                    // Validate score doesn't exceed max
+                    if (newScore > newMaxScore)
+                    {
+                        MessageBox.Show($"Score cannot exceed the maximum score of {newMaxScore}.", "Validation Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
                     var newPercentage = (newScore / newMaxScore) * 100;
 
-                    reader.Close();
+                    // Map display text to ComponentType value
+                    string componentTypeValue = cmbComponentType.SelectedItem?.ToString() switch
+                    {
+                        "Quizzes" => "QuizzesActivities",
+                        "PT/Activities" => "PerformanceTask",
+                        "Exam" => "Exam",
+                        _ => "QuizzesActivities"
+                    };
 
+                    // Note: BranchId is not updated as it should remain tied to the student's branch
                     var updateQuery = @"
                         UPDATE Grades 
-                        SET Score = @score, MaxScore = @maxScore, Percentage = @percentage, Comments = @comments
+                        SET Score = @score, MaxScore = @maxScore, Percentage = @percentage, 
+                            Comments = @comments, ComponentType = @componentType, Quarter = @quarter,
+                            AssignmentName = @assignmentName
                         WHERE Id = @id AND ProfessorId = @professorId";
 
                     using var updateCommand = new SqlCommand(updateQuery, connection);
@@ -576,6 +1013,9 @@ namespace StudentReportInitial.Forms
                     updateCommand.Parameters.AddWithValue("@maxScore", newMaxScore);
                     updateCommand.Parameters.AddWithValue("@percentage", newPercentage);
                     updateCommand.Parameters.AddWithValue("@comments", txtComments.Text);
+                    updateCommand.Parameters.AddWithValue("@componentType", componentTypeValue);
+                    updateCommand.Parameters.AddWithValue("@quarter", cmbQuarter.SelectedItem?.ToString() ?? "Prelim");
+                    updateCommand.Parameters.AddWithValue("@assignmentName", txtAssignmentName.Text);
                     updateCommand.Parameters.AddWithValue("@id", gradeId);
                     updateCommand.Parameters.AddWithValue("@professorId", currentProfessor.Id);
 
@@ -594,7 +1034,17 @@ namespace StudentReportInitial.Forms
 
             btnCancel.Click += (s, e) => form.Close();
 
-            form.Controls.AddRange(new Control[] { lblScore, nudScore, lblMaxScore, nudMaxScore, lblComments, txtComments, btnSave, btnCancel });
+            form.Controls.AddRange(new Control[] 
+            { 
+                lblComponentType, cmbComponentType, lblQuarter, cmbQuarter,
+                lblAssignmentName, txtAssignmentName,
+                lblScore, nudScore, lblMaxScore, nudMaxScore,
+                lblComments, txtComments, btnSave, btnCancel 
+            });
+
+            UIStyleHelper.ApplyRoundedButton(btnSave, 10);
+            UIStyleHelper.ApplyRoundedButton(btnCancel, 10);
+
             form.ShowDialog();
         }
 

@@ -9,6 +9,7 @@ namespace StudentReportInitial.Models
         public int? ProfessorId { get; set; }  // Made nullable to support unclaimed subjects
         public string GradeLevel { get; set; } = string.Empty;
         public string Section { get; set; } = string.Empty;
+        public int BranchId { get; set; }
         public bool IsActive { get; set; }
         
         // Navigation properties

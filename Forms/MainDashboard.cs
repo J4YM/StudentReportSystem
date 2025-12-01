@@ -17,6 +17,12 @@ namespace StudentReportInitial.Forms
     {
         private User currentUser;
         private Panel? mainContentPanel;
+        private ComboBox? cmbBranchSelector;
+        private Label? lblBranchSelector;
+        private int? selectedBranchId = null;
+        private Button? btnManageUsers;
+        private Button? btnManageStudents;
+        private ToolTip? branchTooltip;
 
         public MainDashboard(User user)
         {
@@ -31,7 +37,7 @@ namespace StudentReportInitial.Forms
             BackColor = Color.FromArgb(248, 250, 252);
             StartPosition = FormStartPosition.CenterScreen;
             Size = new Size(1280, 720);
-            Text = $"STI College Baliuag - AimONE - Welcome {currentUser.FirstName} {currentUser.LastName}";
+            Text = "STI College";
             WindowState = FormWindowState.Maximized;
 
             // Header panel
@@ -41,7 +47,7 @@ namespace StudentReportInitial.Forms
 
             lblAppTitle.Font = new Font("Segoe UI", 16F, FontStyle.Bold);
             lblAppTitle.ForeColor = Color.FromArgb(30, 41, 59);
-            lblAppTitle.Text = "STI College Baliuag - AimONE";
+            // Title will be set in LoadUserInterface based on user role
 
             // User info label
             lblUserInfo.ForeColor = Color.FromArgb(30, 64, 175);
@@ -95,10 +101,56 @@ namespace StudentReportInitial.Forms
             mainContentPanel.BringToFront();
         }
 
-        private void LoadUserInterface()
+        private async void LoadUserInterface()
         {
+            // Set dashboard title based on user role
+            var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+            if (isSuperAdmin)
+            {
+                lblAppTitle.Text = "STI College - AimONE";
+                await InitializeBranchSelectorAsync();
+            }
+            else
+            {
+                // For branch admins, show branch name in title
+                var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                if (branchId > 0)
+                {
+                    var branch = await BranchHelper.GetBranchByIdAsync(branchId);
+                    if (branch != null)
+                    {
+                        lblAppTitle.Text = $"STI College ({branch.Name}) - AimONE";
+                    }
+                    else
+                    {
+                        lblAppTitle.Text = "STI College - AimONE";
+                    }
+                }
+                else
+                {
+                    lblAppTitle.Text = "STI College - AimONE";
+                }
+                
+                // Ensure branch selector is hidden/removed for non-Super Admin users
+                if (lblBranchSelector != null)
+                {
+                    lblBranchSelector.Visible = false;
+                    pnlHeader.Controls.Remove(lblBranchSelector);
+                    lblBranchSelector = null;
+                }
+                if (cmbBranchSelector != null)
+                {
+                    cmbBranchSelector.Visible = false;
+                    pnlHeader.Controls.Remove(cmbBranchSelector);
+                    cmbBranchSelector = null;
+                }
+                // Set selectedBranchId to null for regular admins (they only see their own branch)
+                selectedBranchId = null;
+            }
+
             switch (currentUser.Role)
             {
+                case UserRole.SuperAdmin:
                 case UserRole.Admin:
                     LoadAdminInterface();
                     break;
@@ -112,19 +164,192 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private void LoadAdminInterface()
+        private async Task InitializeBranchSelectorAsync()
+        {
+            try
+            {
+                var branches = await BranchHelper.GetAllBranchesAsync();
+                
+                lblBranchSelector = new Label
+                {
+                    Text = "Branch:",
+                    Location = new Point(20, 50),
+                    AutoSize = true,
+                    Font = new Font("Segoe UI", 9),
+                    ForeColor = Color.FromArgb(51, 65, 85)
+                };
+
+                cmbBranchSelector = new ComboBox
+                {
+                    Location = new Point(80, 48),
+                    Size = new Size(200, 25),
+                    DropDownStyle = ComboBoxStyle.DropDownList,
+                    Font = new Font("Segoe UI", 9)
+                };
+
+                // Create a list that includes "All Branches" and all branches
+                var branchList = new List<object> { "All Branches" };
+                branchList.AddRange(branches);
+                
+                // Custom formatting to handle both string and Branch objects
+                cmbBranchSelector.Format += (s, e) =>
+                {
+                    if (e.ListItem is string str)
+                    {
+                        e.Value = str;
+                    }
+                    else if (e.ListItem is Branch branch)
+                    {
+                        e.Value = branch.Name;
+                    }
+                };
+                
+                // Add items after setting the Format event
+                foreach (var item in branchList)
+                {
+                    cmbBranchSelector.Items.Add(item);
+                }
+                
+                cmbBranchSelector.SelectedIndex = 0; // Default to "All Branches"
+                cmbBranchSelector.SelectedIndexChanged += CmbBranchSelector_SelectedIndexChanged;
+
+                // Add to header panel
+                pnlHeader.Controls.Add(lblBranchSelector);
+                pnlHeader.Controls.Add(cmbBranchSelector);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading branches: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void CmbBranchSelector_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (cmbBranchSelector == null) return;
+
+            // Only allow branch selection changes for Super Admin
+            var isSuperAdmin = currentUser.Role == UserRole.SuperAdmin;
+            if (!isSuperAdmin) return;
+
+            if (cmbBranchSelector.SelectedIndex == 0)
+            {
+                selectedBranchId = null; // All branches
+            }
+            else if (cmbBranchSelector.SelectedItem is Branch branch)
+            {
+                selectedBranchId = branch.Id;
+            }
+
+            // Update button states for Super Admin
+            UpdateManageButtonsState();
+
+            // Reload current panel with new branch filter (Super Admin only)
+            if (mainContentPanel != null && mainContentPanel.Controls.Count > 0)
+            {
+                var currentControl = mainContentPanel.Controls[0];
+                if (currentControl is AdminUserManagement)
+                {
+                    LoadAdminPanel("users");
+                }
+                else if (currentControl is AdminStudentManagement)
+                {
+                    LoadAdminPanel("students");
+                }
+                else if (currentControl is AdminSubjectManagement)
+                {
+                    LoadAdminPanel("subjects");
+                }
+                else if (currentControl is StudentSubjectEnrollment)
+                {
+                    LoadAdminPanel("enrollment");
+                }
+                else
+                {
+                    // Reload reports panel if it's currently displayed (no specific control type)
+                    LoadAdminPanel("reports");
+                }
+            }
+        }
+
+        private void UpdateManageButtonsState()
+        {
+            if (btnManageUsers == null || btnManageStudents == null) return;
+
+            var isAllBranches = selectedBranchId == null;
+            
+            // Enable buttons when "All Branches" is selected, disable when specific branch is selected
+            btnManageUsers.Enabled = isAllBranches;
+            btnManageStudents.Enabled = isAllBranches;
+            btnManageUsers.Visible = isAllBranches;
+            btnManageStudents.Visible = isAllBranches;
+
+            // Update button appearance
+            if (isAllBranches)
+            {
+                // Enable and show buttons when "All Branches" is selected
+                btnManageUsers.BackColor = Color.FromArgb(249, 250, 251); // Normal
+                btnManageUsers.ForeColor = Color.FromArgb(51, 65, 85); // Normal text
+                btnManageUsers.Cursor = Cursors.Hand;
+                btnManageUsers.FlatAppearance.MouseOverBackColor = Color.FromArgb(219, 234, 254);
+                
+                btnManageStudents.BackColor = Color.FromArgb(249, 250, 251); // Normal
+                btnManageStudents.ForeColor = Color.FromArgb(51, 65, 85); // Normal text
+                btnManageStudents.Cursor = Cursors.Hand;
+                btnManageStudents.FlatAppearance.MouseOverBackColor = Color.FromArgb(219, 234, 254);
+
+                // Remove tooltips
+                if (branchTooltip != null)
+                {
+                    branchTooltip.SetToolTip(btnManageUsers, "");
+                    branchTooltip.SetToolTip(btnManageStudents, "");
+                }
+            }
+            else
+            {
+                // Hide buttons when specific branch is selected (redundant with branch filter)
+                btnManageUsers.Visible = false;
+                btnManageStudents.Visible = false;
+            }
+        }
+
+        public int? GetSelectedBranchId()
+        {
+            return selectedBranchId;
+        }
+
+        private async void LoadAdminInterface()
         {
             ClearSidebarButtons();
 
             // Admin sidebar buttons
-            var btnManageUsers = CreateSidebarButton("Manage Users", 0);
-            var btnManageStudents = CreateSidebarButton("Manage Students", 1);
+            btnManageUsers = CreateSidebarButton("Manage Users", 0);
+            btnManageStudents = CreateSidebarButton("Manage Students", 1);
             var btnManageSubjects = CreateSidebarButton("Manage Subjects", 2);
             var btnEnrollStudents = CreateSidebarButton("Student Enrollment", 3);
             var btnReports = CreateSidebarButton("System Reports", 4);
 
-            btnManageUsers.Click += (s, e) => LoadAdminPanel("users");
-            btnManageStudents.Click += (s, e) => LoadAdminPanel("students");
+            // Check if Super Admin and update button states
+            var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+            if (isSuperAdmin)
+            {
+                UpdateManageButtonsState();
+            }
+
+            btnManageUsers.Click += (s, e) => 
+            {
+                if (btnManageUsers.Enabled)
+                {
+                    LoadAdminPanel("users");
+                }
+            };
+            btnManageStudents.Click += (s, e) => 
+            {
+                if (btnManageStudents.Enabled)
+                {
+                    LoadAdminPanel("students");
+                }
+            };
             btnManageSubjects.Click += (s, e) => LoadAdminPanel("subjects");
             btnEnrollStudents.Click += (s, e) => LoadAdminPanel("enrollment");
             btnReports.Click += (s, e) => LoadAdminPanel("reports");
@@ -269,32 +494,35 @@ namespace StudentReportInitial.Forms
         }
 
         // Panel loading methods
-        private void LoadUserManagementPanel()
+        private async void LoadUserManagementPanel()
         {
             if (mainContentPanel != null)
                 mainContentPanel.Controls.Clear();
-            var userManagement = new AdminUserManagement();
+            var branchId = GetSelectedBranchId();
+            var userManagement = new AdminUserManagement(currentUser, branchId);
             userManagement.Dock = DockStyle.Fill;
             if (mainContentPanel != null)
                 mainContentPanel.Controls.Add(userManagement);
         }
 
-        private void LoadStudentManagementPanel()
+        private async void LoadStudentManagementPanel()
         {
             if (mainContentPanel != null)
                 mainContentPanel.Controls.Clear();
-            var studentManagement = new AdminStudentManagement();
+            var branchId = GetSelectedBranchId();
+            var studentManagement = new AdminStudentManagement(currentUser, branchId);
             studentManagement.Dock = DockStyle.Fill;
             if (mainContentPanel != null)
                 mainContentPanel.Controls.Add(studentManagement);
         }
 
-        private void LoadSubjectManagementPanel()
+        private async void LoadSubjectManagementPanel()
         {
             if (mainContentPanel != null)
             {
                 mainContentPanel.Controls.Clear();
-                var subjectManagement = new AdminSubjectManagement();
+                var branchId = GetSelectedBranchId();
+                var subjectManagement = new AdminSubjectManagement(currentUser, branchId);
                 subjectManagement.Dock = DockStyle.Fill;
                 mainContentPanel.Controls.Add(subjectManagement);
                 mainContentPanel.BringToFront(); // Ensure the panel is visible
@@ -334,8 +562,8 @@ namespace StudentReportInitial.Forms
             // Refresh the panel to show loading
             mainContentPanel.Refresh();
 
-            // Load statistics asynchronously
-            var stats = await StatisticsHelper.GetSystemStatisticsAsync();
+            // Load statistics asynchronously with branch filter
+            var stats = await StatisticsHelper.GetSystemStatisticsAsync(currentUser?.Id, selectedBranchId);
 
             // Remove loading label
             mainContentPanel.Controls.Remove(lblLoading);
@@ -865,7 +1093,8 @@ namespace StudentReportInitial.Forms
         {
             if (mainContentPanel != null)
                 mainContentPanel.Controls.Clear();
-            var enrollmentPanel = new StudentSubjectEnrollment();
+            var branchId = GetSelectedBranchId();
+            var enrollmentPanel = new StudentSubjectEnrollment(currentUser, branchId);
             enrollmentPanel.Dock = DockStyle.Fill;
             if (mainContentPanel != null)
                 mainContentPanel.Controls.Add(enrollmentPanel);

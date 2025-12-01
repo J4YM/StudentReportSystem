@@ -1,5 +1,6 @@
 using StudentReportInitial.Data;
 using StudentReportInitial.Models;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Data;
 using System.Threading.Tasks;
@@ -10,14 +11,18 @@ namespace StudentReportInitial.Forms
     {
         private User currentUser;
         private DataGridView dgvAttendance;
+        private ComboBox cmbStudent;
         private ComboBox cmbSubject;
         private DateTimePicker dtpFromDate;
         private DateTimePicker dtpToDate;
         private Button btnRefresh;
         private Label lblAttendanceSummary;
         private Panel pnlSummary;
+        private Label? lblStudentInfo;
         private Student? linkedStudent;
         private bool studentContextResolved;
+        private readonly List<Student> guardianStudents = new();
+        private bool guardianStudentSelectorInitialized = false;
 
         public ViewerAttendancePanel(User user)
         {
@@ -65,18 +70,37 @@ namespace StudentReportInitial.Forms
                 Location = new Point(20, 20)
             };
 
+            // Student selector (for guardians)
+            lblStudentInfo = new Label
+            {
+                Text = "Student:",
+                Location = new Point(20, 50),
+                AutoSize = true,
+                Visible = false
+            };
+
+            cmbStudent = new ComboBox
+            {
+                Location = new Point(90, 48),
+                Size = new Size(220, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                FormattingEnabled = true,
+                Visible = false
+            };
+            cmbStudent.SelectedIndexChanged += CmbStudent_SelectedIndexChanged;
+
             // Subject filter
             var lblSubject = new Label
             {
                 Text = "Subject:",
-                Location = new Point(20, 50),
+                Location = new Point(330, 50),
                 AutoSize = true
             };
 
             cmbSubject = new ComboBox
             {
-                Location = new Point(80, 48),
-                Size = new Size(200, 25),
+                Location = new Point(390, 48),
+                Size = new Size(180, 25),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
             cmbSubject.Items.Add("All Subjects");
@@ -87,13 +111,13 @@ namespace StudentReportInitial.Forms
             var lblFromDate = new Label
             {
                 Text = "From:",
-                Location = new Point(300, 50),
+                Location = new Point(590, 50),
                 AutoSize = true
             };
 
             dtpFromDate = new DateTimePicker
             {
-                Location = new Point(340, 48),
+                Location = new Point(630, 48),
                 Size = new Size(120, 25),
                 Value = DateTime.Today.AddDays(-30)
             };
@@ -101,13 +125,13 @@ namespace StudentReportInitial.Forms
             var lblToDate = new Label
             {
                 Text = "To:",
-                Location = new Point(480, 50),
+                Location = new Point(770, 50),
                 AutoSize = true
             };
 
             dtpToDate = new DateTimePicker
             {
-                Location = new Point(510, 48),
+                Location = new Point(800, 48),
                 Size = new Size(120, 25),
                 Value = DateTime.Today
             };
@@ -115,8 +139,8 @@ namespace StudentReportInitial.Forms
             btnRefresh = new Button
             {
                 Text = "Refresh",
-                Location = new Point(650, 47),
-                Size = new Size(80, 27),
+                Location = new Point(940, 47),
+                Size = new Size(90, 27),
                 BackColor = Color.FromArgb(59, 130, 246),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -126,7 +150,9 @@ namespace StudentReportInitial.Forms
             btnRefresh.Click += BtnRefresh_Click;
 
             pnlHeader.Controls.AddRange(new Control[] { 
-                lblTitle, lblSubject, cmbSubject, lblFromDate, dtpFromDate, 
+                lblTitle,
+                lblStudentInfo!, cmbStudent,
+                lblSubject, cmbSubject, lblFromDate, dtpFromDate, 
                 lblToDate, dtpToDate, btnRefresh
             });
 
@@ -200,6 +226,59 @@ namespace StudentReportInitial.Forms
             dgvAttendance.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
         }
 
+        private void InitializeGuardianStudentSelector()
+        {
+            if (currentUser.Role != UserRole.Guardian || cmbStudent == null || lblStudentInfo == null)
+            {
+                return;
+            }
+
+            if (guardianStudentSelectorInitialized)
+            {
+                cmbStudent.Items.Clear();
+            }
+            else
+            {
+                cmbStudent.Format += (s, e) =>
+                {
+                    if (e.ListItem is Student sItem)
+                    {
+                        e.Value = $"{sItem.FirstName} {sItem.LastName} ({sItem.StudentId})";
+                    }
+                };
+                guardianStudentSelectorInitialized = true;
+            }
+
+            foreach (var student in guardianStudents)
+            {
+                cmbStudent.Items.Add(student);
+            }
+
+            bool hasStudents = guardianStudents.Count > 0;
+            cmbStudent.Visible = hasStudents;
+            lblStudentInfo.Visible = hasStudents;
+
+            if (hasStudents)
+            {
+                var index = guardianStudents.FindIndex(s => linkedStudent != null && s.Id == linkedStudent.Id);
+                if (index >= 0 && index < cmbStudent.Items.Count)
+                {
+                    cmbStudent.SelectedIndex = index;
+                }
+                else
+                {
+                    cmbStudent.SelectedIndex = 0;
+                    linkedStudent = guardianStudents[0];
+                }
+
+                lblStudentInfo.Text = $"Parent of: {linkedStudent!.FirstName} {linkedStudent.LastName} ({linkedStudent.StudentId})";
+            }
+            else
+            {
+                lblStudentInfo.Text = "No linked students found";
+            }
+        }
+
         private async Task<bool> EnsureStudentContextAsync()
         {
             if (studentContextResolved)
@@ -208,13 +287,27 @@ namespace StudentReportInitial.Forms
             }
 
             studentContextResolved = true;
-            linkedStudent = await UserContextHelper.GetLinkedStudentAsync(currentUser);
+
+            if (currentUser.Role == UserRole.Guardian)
+            {
+                var students = await UserContextHelper.GetGuardianStudentsAsync(currentUser);
+                guardianStudents.Clear();
+                guardianStudents.AddRange(students);
+                linkedStudent = guardianStudents.FirstOrDefault();
+                InitializeGuardianStudentSelector();
+            }
+            else
+            {
+                linkedStudent = await UserContextHelper.GetLinkedStudentAsync(currentUser);
+            }
+
             return linkedStudent != null;
         }
 
         private void HandleMissingStudentContext()
         {
             cmbSubject.Enabled = false;
+            if (cmbStudent != null) cmbStudent.Enabled = false;
             dtpFromDate.Enabled = false;
             dtpToDate.Enabled = false;
             btnRefresh.Enabled = false;
@@ -226,14 +319,14 @@ namespace StudentReportInitial.Forms
         {
             try
             {
-                cmbSubject.Items.Clear();
-                cmbSubject.Items.Add("All Subjects");
-                
                 if (!await EnsureStudentContextAsync())
                 {
                     HandleMissingStudentContext();
                     return;
                 }
+
+                cmbSubject.Items.Clear();
+                cmbSubject.Items.Add("All Subjects");
 
                 using var connection = DatabaseHelper.GetConnection();
                 await connection.OpenAsync();
@@ -394,21 +487,25 @@ namespace StudentReportInitial.Forms
 
             foreach (DataRow row in dataTable.Rows)
             {
-                var status = row["Status"]?.ToString();
-                switch (status)
+                // Status is stored as integer (1=Present, 2=Absent, 3=Late, 4=Excused)
+                if (row["Status"] != DBNull.Value)
                 {
-                    case "Present":
-                        present++;
-                        break;
-                    case "Absent":
-                        absent++;
-                        break;
-                    case "Late":
-                        late++;
-                        break;
-                    case "Excused":
-                        excused++;
-                        break;
+                    var statusValue = Convert.ToInt32(row["Status"]);
+                    switch (statusValue)
+                    {
+                        case 1: // Present
+                            present++;
+                            break;
+                        case 2: // Absent
+                            absent++;
+                            break;
+                        case 3: // Late
+                            late++;
+                            break;
+                        case 4: // Excused
+                            excused++;
+                            break;
+                    }
                 }
             }
 
@@ -426,6 +523,21 @@ namespace StudentReportInitial.Forms
         private async void BtnRefresh_Click(object sender, EventArgs e)
         {
             await LoadAttendanceAsync();
+        }
+
+        private async void CmbStudent_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (cmbStudent?.SelectedItem is Student selected)
+            {
+                linkedStudent = selected;
+                if (lblStudentInfo != null)
+                {
+                    lblStudentInfo.Text = $"Parent of: {selected.FirstName} {selected.LastName} ({selected.StudentId})";
+                }
+
+                await LoadSubjectsAsync();
+                await LoadAttendanceAsync();
+            }
         }
     }
 }

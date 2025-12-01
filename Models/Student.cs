@@ -14,6 +14,7 @@ namespace StudentReportInitial.Models
         public string GradeLevel { get; set; } = string.Empty;
         public string Section { get; set; } = string.Empty;
         public int GuardianId { get; set; }
+        public int BranchId { get; set; }
         public DateTime EnrollmentDate { get; set; }
         public bool IsActive { get; set; }
         

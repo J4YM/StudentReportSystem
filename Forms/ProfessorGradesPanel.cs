@@ -101,7 +101,7 @@ namespace StudentReportInitial.Forms
                 Size = new Size(150, 25),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
-            cmbComponentType.Items.AddRange(new[] { "Quizzes/Activities", "Performance Task", "Exam" });
+            cmbComponentType.Items.AddRange(new[] { "Quizzes", "PT/Activities", "Exam" });
 
             // Assignment name
             var lblAssignmentName = new Label
@@ -195,6 +195,9 @@ namespace StudentReportInitial.Forms
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 RowHeadersVisible = false
             };
+            dgvGrades.CellValidating += DgvGrades_CellValidating;
+            dgvGrades.CellEndEdit += DgvGrades_CellEndEdit;
+            dgvGrades.CellDoubleClick += DgvGrades_CellDoubleClick;
 
             // Add score column
             var scoreColumn = new DataGridViewTextBoxColumn
@@ -295,11 +298,24 @@ namespace StudentReportInitial.Forms
                 var query = @"
                     SELECT DISTINCT s.Name, s.GradeLevel, s.Section
                     FROM Subjects s
-                    WHERE s.ProfessorId = @professorId AND s.IsActive = 1
-                    ORDER BY s.Name";
+                    WHERE s.ProfessorId = @professorId AND s.IsActive = 1";
+
+                // Add branch filter based on professor's branch
+                var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+                if (professorBranchId > 0)
+                {
+                    query += " AND s.BranchId = @branchId";
+                }
+
+                query += " ORDER BY s.Name";
 
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
+                
+                if (professorBranchId > 0)
+                {
+                    command.Parameters.AddWithValue("@branchId", professorBranchId);
+                }
 
                 using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
@@ -335,12 +351,25 @@ namespace StudentReportInitial.Forms
                 var query = @"
                     SELECT s.Id, s.StudentId, s.FirstName, s.LastName, s.GradeLevel, s.Section
                     FROM Students s
-                    WHERE s.GradeLevel = @gradeLevel AND s.Section = @section AND s.IsActive = 1
-                    ORDER BY s.LastName, s.FirstName";
+                    WHERE s.GradeLevel = @gradeLevel AND s.Section = @section AND s.IsActive = 1";
+
+                // Add branch filter based on professor's branch
+                var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+                if (professorBranchId > 0)
+                {
+                    query += " AND s.BranchId = @branchId";
+                }
+
+                query += " ORDER BY s.LastName, s.FirstName";
 
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@gradeLevel", gradeLevel);
                 command.Parameters.AddWithValue("@section", section);
+                
+                if (professorBranchId > 0)
+                {
+                    command.Parameters.AddWithValue("@branchId", professorBranchId);
+                }
 
                 using var adapter = new SqlDataAdapter(command);
                 var dataTable = new DataTable();
@@ -420,6 +449,295 @@ namespace StudentReportInitial.Forms
             LoadStudents();
         }
 
+        private void DgvGrades_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
+        {
+            // Only validate the Score column
+            if (e.ColumnIndex == dgvGrades.Columns["Score"].Index)
+            {
+                if (e.FormattedValue != null && !string.IsNullOrWhiteSpace(e.FormattedValue.ToString()))
+                {
+                    if (decimal.TryParse(e.FormattedValue.ToString(), out decimal score))
+                    {
+                        var maxScore = nudMaxScore.Value;
+                        if (score > maxScore)
+                        {
+                            dgvGrades.Rows[e.RowIndex].ErrorText = $"Score will be capped at max score of {maxScore}";
+                            MessageBox.Show($"Score cannot exceed the maximum score of {maxScore}. The score will be automatically capped at {maxScore}.", "Validation Warning",
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            // Don't cancel - let CellEndEdit handle the capping
+                        }
+                        else if (score < 0)
+                        {
+                            dgvGrades.Rows[e.RowIndex].ErrorText = "Score will be set to 0";
+                            MessageBox.Show("Score cannot be negative. The score will be set to 0.", "Validation Warning",
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            // Don't cancel - let CellEndEdit handle the correction
+                        }
+                        else
+                        {
+                            dgvGrades.Rows[e.RowIndex].ErrorText = "";
+                        }
+                    }
+                    else
+                    {
+                        e.Cancel = true;
+                        dgvGrades.Rows[e.RowIndex].ErrorText = "Please enter a valid number";
+                        MessageBox.Show("Please enter a valid number for the score.", "Validation Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
+            }
+        }
+
+        private void DgvGrades_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            // Auto-cap score at max value after editing
+            if (e.ColumnIndex == dgvGrades.Columns["Score"].Index)
+            {
+                var cell = dgvGrades.Rows[e.RowIndex].Cells[e.ColumnIndex];
+                if (cell.Value != null && decimal.TryParse(cell.Value.ToString(), out decimal score))
+                {
+                    var maxScore = nudMaxScore.Value;
+                    if (score > maxScore)
+                    {
+                        cell.Value = maxScore;
+                        dgvGrades.Rows[e.RowIndex].ErrorText = "";
+                    }
+                    else if (score < 0)
+                    {
+                        cell.Value = 0;
+                        dgvGrades.Rows[e.RowIndex].ErrorText = "";
+                    }
+                }
+            }
+        }
+
+        private void DgvGrades_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            // Only handle double-click on student rows (not header)
+            if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
+
+            var row = dgvGrades.Rows[e.RowIndex];
+            if (row.Cells["Id"].Value == null) return;
+
+            // Get current score and comments
+            var currentScore = row.Cells["Score"].Value != null 
+                ? Convert.ToDecimal(row.Cells["Score"].Value) 
+                : 0;
+            var currentComments = row.Cells["Comments"].Value?.ToString() ?? "";
+            var studentName = $"{row.Cells["FirstName"].Value} {row.Cells["LastName"].Value}";
+
+            // Show grade entry form
+            ShowGradeEntryForm(studentName, currentScore, currentComments, (newScore, newComments) =>
+            {
+                row.Cells["Score"].Value = newScore;
+                row.Cells["Comments"].Value = newComments;
+            });
+        }
+
+        private void ShowGradeEntryForm(string studentName, decimal currentScore, string currentComments, 
+            Action<decimal, string> onSave)
+        {
+            var form = new Form
+            {
+                Text = $"Grade Entry - {studentName}",
+                Size = new Size(500, 350),
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+
+            var maxScore = nudMaxScore.Value;
+
+            // Component type
+            var lblComponentType = new Label 
+            { 
+                Text = "Component:", 
+                Location = new Point(20, 20), 
+                AutoSize = true 
+            };
+            var cmbFormComponentType = new ComboBox
+            {
+                Location = new Point(20, 40),
+                Size = new Size(200, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            cmbFormComponentType.Items.AddRange(new[] { "Quizzes", "PT/Activities", "Exam" });
+            if (cmbComponentType.SelectedIndex >= 0)
+            {
+                cmbFormComponentType.SelectedIndex = cmbComponentType.SelectedIndex;
+            }
+            else
+            {
+                cmbFormComponentType.SelectedIndex = 0;
+            }
+
+            // Quarter
+            var lblQuarter = new Label 
+            { 
+                Text = "Quarter:", 
+                Location = new Point(240, 20), 
+                AutoSize = true 
+            };
+            var cmbFormQuarter = new ComboBox
+            {
+                Location = new Point(240, 40),
+                Size = new Size(200, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            cmbFormQuarter.Items.AddRange(new[] { "Prelim", "Midterm", "PreFinal", "Final" });
+            if (cmbQuarter.SelectedIndex >= 0)
+            {
+                cmbFormQuarter.SelectedIndex = cmbQuarter.SelectedIndex;
+            }
+            else
+            {
+                cmbFormQuarter.SelectedIndex = 0;
+            }
+
+            // Assignment name
+            var lblAssignmentName = new Label 
+            { 
+                Text = "Assignment:", 
+                Location = new Point(20, 70), 
+                AutoSize = true 
+            };
+            var txtFormAssignmentName = new TextBox
+            {
+                Location = new Point(20, 90),
+                Size = new Size(420, 25),
+                Text = txtAssignmentName.Text
+            };
+
+            // Score
+            var lblScore = new Label 
+            { 
+                Text = $"Score (Max: {maxScore}):", 
+                Location = new Point(20, 120), 
+                AutoSize = true 
+            };
+            var nudFormScore = new NumericUpDown
+            {
+                Location = new Point(20, 140),
+                Size = new Size(200, 25),
+                Minimum = 0,
+                Maximum = maxScore,
+                DecimalPlaces = 2,
+                Value = currentScore > maxScore ? maxScore : (currentScore < 0 ? 0 : currentScore)
+            };
+
+            // Max score
+            var lblMaxScore = new Label 
+            { 
+                Text = "Max Score:", 
+                Location = new Point(240, 120), 
+                AutoSize = true 
+            };
+            var nudFormMaxScore = new NumericUpDown
+            {
+                Location = new Point(240, 140),
+                Size = new Size(200, 25),
+                Minimum = 1,
+                Maximum = 10000,
+                DecimalPlaces = 2,
+                Value = maxScore
+            };
+            nudFormMaxScore.ValueChanged += (s, e) =>
+            {
+                // Update score max when max score changes
+                nudFormScore.Maximum = nudFormMaxScore.Value;
+                lblScore.Text = $"Score (Max: {nudFormMaxScore.Value}):";
+            };
+
+            // Comments
+            var lblComments = new Label 
+            { 
+                Text = "Comments:", 
+                Location = new Point(20, 170), 
+                AutoSize = true 
+            };
+            var txtFormComments = new TextBox
+            {
+                Location = new Point(20, 190),
+                Size = new Size(420, 80),
+                Multiline = true,
+                Text = currentComments
+            };
+
+            // Buttons
+            var btnSave = new Button
+            {
+                Text = "Save",
+                Location = new Point(20, 280),
+                Size = new Size(100, 30),
+                BackColor = Color.FromArgb(34, 197, 94),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                DialogResult = DialogResult.OK
+            };
+
+            var btnCancel = new Button
+            {
+                Text = "Cancel",
+                Location = new Point(130, 280),
+                Size = new Size(100, 30),
+                BackColor = Color.FromArgb(107, 114, 128),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                DialogResult = DialogResult.Cancel
+            };
+
+            btnSave.Click += (s, e) =>
+            {
+                if (nudFormScore.Value > nudFormMaxScore.Value)
+                {
+                    MessageBox.Show($"Score cannot exceed the maximum score of {nudFormMaxScore.Value}.", "Validation Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Update the form's max score if changed
+                if (nudFormMaxScore.Value != nudMaxScore.Value)
+                {
+                    nudMaxScore.Value = nudFormMaxScore.Value;
+                }
+
+                // Update component type and quarter if changed
+                if (cmbFormComponentType.SelectedIndex != cmbComponentType.SelectedIndex)
+                {
+                    cmbComponentType.SelectedIndex = cmbFormComponentType.SelectedIndex;
+                }
+                if (cmbFormQuarter.SelectedIndex != cmbQuarter.SelectedIndex)
+                {
+                    cmbQuarter.SelectedIndex = cmbFormQuarter.SelectedIndex;
+                }
+                if (txtFormAssignmentName.Text != txtAssignmentName.Text)
+                {
+                    txtAssignmentName.Text = txtFormAssignmentName.Text;
+                }
+
+                onSave(nudFormScore.Value, txtFormComments.Text);
+                form.DialogResult = DialogResult.OK;
+                form.Close();
+            };
+
+            btnCancel.Click += (s, e) => form.Close();
+
+            form.Controls.AddRange(new Control[] 
+            { 
+                lblComponentType, cmbFormComponentType, lblQuarter, cmbFormQuarter,
+                lblAssignmentName, txtFormAssignmentName,
+                lblScore, nudFormScore, lblMaxScore, nudFormMaxScore,
+                lblComments, txtFormComments, btnSave, btnCancel 
+            });
+
+            UIStyleHelper.ApplyRoundedButton(btnSave, 10);
+            UIStyleHelper.ApplyRoundedButton(btnCancel, 10);
+
+            form.ShowDialog();
+        }
+
         private async void BtnSaveGrades_Click(object sender, EventArgs e)
         {
             if (cmbSubject.SelectedIndex == -1)
@@ -467,7 +785,7 @@ namespace StudentReportInitial.Forms
                         if (score > 0) // Only save non-zero scores
                         {
                             // Map display text to ComponentType value
-                            string componentTypeValue = MapComponentType(cmbComponentType.SelectedItem?.ToString() ?? "Quizzes/Activities");
+                            string componentTypeValue = MapComponentType(cmbComponentType.SelectedItem?.ToString() ?? "Quizzes");
                             
                             var grade = new Grade
                             {
@@ -476,7 +794,7 @@ namespace StudentReportInitial.Forms
                                 Subject = subjectName,
                                 Quarter = cmbQuarter.SelectedItem.ToString() ?? "Prelim",
                                 ComponentType = componentTypeValue,
-                                AssignmentType = cmbComponentType.SelectedItem.ToString() ?? "Quizzes/Activities", // Legacy field
+                                AssignmentType = cmbComponentType.SelectedItem.ToString() ?? "Quizzes", // Legacy field
                                 AssignmentName = txtAssignmentName.Text,
                                 Score = score,
                                 MaxScore = maxScore,
@@ -530,8 +848,10 @@ namespace StudentReportInitial.Forms
         {
             return displayText switch
             {
-                "Quizzes/Activities" => "QuizzesActivities",
-                "Performance Task" => "PerformanceTask",
+                "Quizzes" => "QuizzesActivities",
+                "PT/Activities" => "PerformanceTask",
+                "Performance Task" => "PerformanceTask", // Legacy support
+                "Quizzes/Activities" => "QuizzesActivities", // Legacy support
                 "Exam" => "Exam",
                 _ => "QuizzesActivities"
             };
@@ -559,10 +879,10 @@ namespace StudentReportInitial.Forms
                   AND AssignmentName = @assignmentName";
 
             var insertQuery = @"
-                INSERT INTO Grades (StudentId, ProfessorId, Subject, Quarter, ComponentType, AssignmentType, AssignmentName, 
-                                  Score, MaxScore, Percentage, Comments, DateRecorded, DueDate)
-                VALUES (@studentId, @professorId, @subject, @quarter, @componentType, @assignmentType, @assignmentName, 
-                        @score, @maxScore, @percentage, @comments, @dateRecorded, @dueDate)";
+                INSERT INTO Grades (StudentId, ProfessorId, Subject, Quarter, ComponentType, AssignmentName, 
+                                  Score, MaxScore, Percentage, Comments, DateRecorded, DueDate, BranchId)
+                VALUES (@studentId, @professorId, @subject, @quarter, @componentType, @assignmentName, 
+                        @score, @maxScore, @percentage, @comments, @dateRecorded, @dueDate, @branchId)";
 
             // Get professor name
             string professorName = $"{currentProfessor.FirstName} {currentProfessor.LastName}";
@@ -574,6 +894,17 @@ namespace StudentReportInitial.Forms
 
             foreach (var grade in gradeRecords)
             {
+                // Get student's branch ID for the grade record
+                var studentBranchQuery = "SELECT BranchId FROM Students WHERE Id = @studentId";
+                int branchId = 0;
+                using var studentBranchCommand = new SqlCommand(studentBranchQuery, connection);
+                studentBranchCommand.Parameters.AddWithValue("@studentId", grade.StudentId);
+                var branchResult = await studentBranchCommand.ExecuteScalarAsync();
+                if (branchResult != null && branchResult != DBNull.Value)
+                {
+                    branchId = Convert.ToInt32(branchResult);
+                }
+
                 // Check for duplicate grade entry
                 using var checkCommand = new SqlCommand(checkDuplicateQuery, connection);
                 checkCommand.Parameters.AddWithValue("@studentId", grade.StudentId);
@@ -608,7 +939,6 @@ namespace StudentReportInitial.Forms
                 command.Parameters.AddWithValue("@subject", grade.Subject);
                 command.Parameters.AddWithValue("@quarter", grade.Quarter);
                 command.Parameters.AddWithValue("@componentType", grade.ComponentType);
-                command.Parameters.AddWithValue("@assignmentType", grade.AssignmentType);
                 command.Parameters.AddWithValue("@assignmentName", grade.AssignmentName);
                 command.Parameters.AddWithValue("@score", grade.Score);
                 command.Parameters.AddWithValue("@maxScore", grade.MaxScore);
@@ -616,6 +946,7 @@ namespace StudentReportInitial.Forms
                 command.Parameters.AddWithValue("@comments", grade.Comments ?? "");
                 command.Parameters.AddWithValue("@dateRecorded", grade.DateRecorded);
                 command.Parameters.AddWithValue("@dueDate", grade.DueDate);
+                command.Parameters.AddWithValue("@branchId", branchId);
 
                 await command.ExecuteNonQueryAsync();
                 savedCount++;

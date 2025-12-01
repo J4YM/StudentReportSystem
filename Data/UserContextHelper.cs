@@ -1,4 +1,5 @@
 using StudentReportInitial.Models;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
 
@@ -7,7 +8,9 @@ namespace StudentReportInitial.Data
     public static class UserContextHelper
     {
         /// <summary>
-        /// Retrieves the student record tied to the supplied user if the role is Student or Guardian.
+        /// Retrieves the primary linked student for a user.
+        /// For Students: returns their own student record.
+        /// For Guardians: returns the first active student they are linked to (if any).
         /// </summary>
         public static async Task<Student?> GetLinkedStudentAsync(User user)
         {
@@ -29,7 +32,7 @@ namespace StudentReportInitial.Data
                 Connection = connection,
                 CommandText = user.Role == UserRole.Student
                     ? "SELECT TOP 1 * FROM Students WHERE Username = @identifier AND IsActive = 1"
-                    : "SELECT TOP 1 * FROM Students WHERE GuardianId = @identifier AND IsActive = 1 ORDER BY Id"
+                    : "SELECT TOP 1 * FROM Students WHERE GuardianId = @identifier AND IsActive = 1 ORDER BY LastName, FirstName, StudentId"
             };
 
             if (user.Role == UserRole.Student)
@@ -48,6 +51,39 @@ namespace StudentReportInitial.Data
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Returns all active students linked to a guardian. For non-guardian roles, returns an empty list.
+        /// </summary>
+        public static async Task<List<Student>> GetGuardianStudentsAsync(User user)
+        {
+            var result = new List<Student>();
+
+            if (user == null || user.Role != UserRole.Guardian)
+            {
+                return result;
+            }
+
+            using var connection = DatabaseHelper.GetConnection();
+            await connection.OpenAsync();
+
+            var query = @"
+                SELECT * 
+                FROM Students 
+                WHERE GuardianId = @guardianId AND IsActive = 1
+                ORDER BY LastName, FirstName, StudentId";
+
+            using var command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@guardianId", user.Id);
+
+            using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                result.Add(MapStudent(reader));
+            }
+
+            return result;
         }
 
         private static Student MapStudent(SqlDataReader reader)

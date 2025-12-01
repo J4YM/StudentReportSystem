@@ -2,6 +2,8 @@ using StudentReportInitial.Models;
 using StudentReportInitial.Data;
 using System.Data.SqlClient;
 using System.Data;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace StudentReportInitial.Forms
 {
@@ -11,18 +13,19 @@ namespace StudentReportInitial.Forms
         private Button btnAddStudent = null!;
         private Button btnEditStudent = null!;
         private Button btnDeleteStudent = null!;
-        private Button btnRefresh = null!;
-        private TextBox txtSearch = null!;
-        private ComboBox cmbGradeFilter = null!;
         private Panel pnlStudentForm = null!;
         private bool isEditMode = false;
         private int selectedStudentId = -1;
+        private User? currentUser;
+        private int? branchFilterId = null;
 
-        public AdminStudentManagement()
+        public AdminStudentManagement(User? user = null, int? branchId = null)
         {
+            currentUser = user;
+            branchFilterId = branchId;
             InitializeComponent();
             ApplyModernStyling();
-            LoadStudents();
+            LoadStudentsAsync();
             LoadGuardians();
         }
 
@@ -34,47 +37,7 @@ namespace StudentReportInitial.Forms
             this.Dock = DockStyle.Fill;
             this.BackColor = Color.FromArgb(248, 250, 252);
 
-            // Search and filter panel
-            var pnlSearch = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 60,
-                BackColor = Color.White,
-                Padding = new Padding(20)
-            };
-
-            txtSearch = new TextBox
-            {
-                PlaceholderText = "Search students...",
-                Size = new Size(200, 30),
-                Location = new Point(20, 15)
-            };
-            txtSearch.TextChanged += TxtSearch_TextChanged;
-
-			cmbGradeFilter = new ComboBox
-            {
-                Size = new Size(170, 30),
-                Location = new Point(240, 15),
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-			cmbGradeFilter.Items.AddRange(new[] { "All Grades", "1st Year", "2nd Year", "3rd Year", "4th Year" });
-            cmbGradeFilter.SelectedIndex = 0;
-            cmbGradeFilter.SelectedIndexChanged += CmbGradeFilter_SelectedIndexChanged;
-
-            btnRefresh = new Button
-            {
-                Text = "Refresh",
-                Size = new Size(90, 32),
-                Location = new Point(420, 14),
-                BackColor = Color.FromArgb(59, 130, 246),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9),
-                Cursor = Cursors.Hand
-            };
-            btnRefresh.Click += BtnRefresh_Click;
-
-            pnlSearch.Controls.AddRange(new Control[] { txtSearch, cmbGradeFilter, btnRefresh });
+            // Search panel removed
 
             // Action buttons panel
             var pnlActions = new Panel
@@ -154,15 +117,14 @@ namespace StudentReportInitial.Forms
             this.Controls.Add(dgvStudents);
             this.Controls.Add(pnlStudentForm);
             this.Controls.Add(pnlActions);
-            this.Controls.Add(pnlSearch);
 
-            UIStyleHelper.ApplyRoundedButton(btnRefresh, 10);
             UIStyleHelper.ApplyRoundedButton(btnAddStudent, 10);
             UIStyleHelper.ApplyRoundedButton(btnEditStudent, 10);
             UIStyleHelper.ApplyRoundedButton(btnDeleteStudent, 10);
 
             this.ResumeLayout(false);
         }
+
 
         private void ApplyModernStyling()
         {
@@ -193,7 +155,7 @@ namespace StudentReportInitial.Forms
             dgvStudents.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
         }
 
-        private async void LoadStudents()
+        private async Task LoadStudentsAsync()
         {
             try
             {
@@ -203,13 +165,54 @@ namespace StudentReportInitial.Forms
                 var query = @"
                     SELECT s.Id, s.StudentId, s.FirstName, s.LastName, s.DateOfBirth, s.Gender, 
                            s.GradeLevel, s.Section, s.Email, s.Phone, s.EnrollmentDate, s.IsActive,
-                           u.FirstName + ' ' + u.LastName as GuardianName
+                           u.FirstName + ' ' + u.LastName as GuardianName,
+                           b.Name as BranchName
                     FROM Students s
                     INNER JOIN Users u ON s.GuardianId = u.Id
-                    WHERE s.IsActive = 1
-                    ORDER BY s.EnrollmentDate DESC";
+                    LEFT JOIN Branches b ON s.BranchId = b.Id
+                    WHERE s.IsActive = 1";
+
+                // Add branch filter if not Super Admin
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (branchId > 0)
+                        {
+                            query += " AND s.BranchId = @branchId";
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        // Super Admin with branch filter selected
+                        query += " AND s.BranchId = @branchId";
+                    }
+                }
+
+                query += " ORDER BY s.EnrollmentDate DESC";
 
                 using var command = new SqlCommand(query, connection);
+                
+                // Add branch parameter if needed
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (branchId > 0)
+                        {
+                            command.Parameters.AddWithValue("@branchId", branchId);
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        command.Parameters.AddWithValue("@branchId", branchFilterId.Value);
+                    }
+                }
+
                 using var adapter = new SqlDataAdapter(command);
                 var dataTable = new DataTable();
                 adapter.Fill(dataTable);
@@ -232,6 +235,10 @@ namespace StudentReportInitial.Forms
                     dgvStudents.Columns["EnrollmentDate"].HeaderText = "Enrollment Date";
                     dgvStudents.Columns["GuardianName"].HeaderText = "Guardian";
                     dgvStudents.Columns["IsActive"].HeaderText = "Active";
+                    if (dgvStudents.Columns.Contains("BranchName"))
+                    {
+                        dgvStudents.Columns["BranchName"].HeaderText = "Branch";
+                    }
 
                     dgvStudents.Columns["DateOfBirth"].DefaultCellStyle.Format = "MM/dd/yyyy";
                     dgvStudents.Columns["EnrollmentDate"].DefaultCellStyle.Format = "MM/dd/yyyy";
@@ -271,30 +278,8 @@ namespace StudentReportInitial.Forms
             }
         }
 
-		private void TxtSearch_TextChanged(object sender, EventArgs e)
-        {
-            if (dgvStudents.DataSource is DataTable dataTable)
-            {
-				var filter = $"FirstName LIKE '%{txtSearch.Text}%' OR LastName LIKE '%{txtSearch.Text}%' OR StudentId LIKE '%{txtSearch.Text}%'";
-				if (cmbGradeFilter.SelectedIndex > 0)
-				{
-					var grade = cmbGradeFilter.SelectedItem?.ToString()?.Replace("'", "''");
-					filter += $" AND GradeLevel = '{grade}'";
-				}
 
-                dataTable.DefaultView.RowFilter = filter;
-            }
-        }
 
-        private void CmbGradeFilter_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            TxtSearch_TextChanged(sender, e);
-        }
-
-        private void BtnRefresh_Click(object sender, EventArgs e)
-        {
-            LoadStudents();
-        }
 
         private void DgvStudents_SelectionChanged(object sender, EventArgs e)
         {
@@ -317,29 +302,44 @@ namespace StudentReportInitial.Forms
 
         private async void BtnDeleteStudent_Click(object sender, EventArgs e)
         {
-            if (dgvStudents.SelectedRows.Count > 0)
+            if (dgvStudents.SelectedRows.Count == 0)
             {
-                var result = MessageBox.Show("Are you sure you want to delete this student?", "Confirm Delete", 
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                return;
+            }
 
-                if (result == DialogResult.Yes)
+            var selectedRow = dgvStudents.SelectedRows[0];
+            var studentId = Convert.ToInt32(selectedRow.Cells["Id"].Value);
+            var studentName = $"{selectedRow.Cells["FirstName"].Value} {selectedRow.Cells["LastName"].Value}";
+            var studentIdValue = selectedRow.Cells["StudentId"].Value?.ToString() ?? "";
+
+            var confirmMessage = $"WARNING: You are about to delete student '{studentName}' (ID: {studentIdValue}).\n\n" +
+                               "This will:\n" +
+                               "• Deactivate the student account\n" +
+                               "• Deactivate the associated user login\n" +
+                               "• This action cannot be undone\n\n" +
+                               "Are you absolutely sure you want to proceed?";
+
+            var result = MessageBox.Show(confirmMessage, "Confirm Student Deletion", 
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+            if (result == DialogResult.Yes)
+            {
+                try
                 {
-                    try
-                    {
-                        var studentId = Convert.ToInt32(dgvStudents.SelectedRows[0].Cells["Id"].Value);
-                        await DeleteStudentAsync(studentId);
-                        LoadStudents();
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Error deleting student: {ex.Message}", "Error", 
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    await DeleteStudentAsync(studentId);
+                    await LoadStudentsAsync();
+                    MessageBox.Show("Student deleted successfully. Statistics will be updated when you refresh the System Reports panel.", 
+                        "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error deleting student: {ex.Message}", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
-        private void ShowStudentForm(int studentId = -1)
+        private async void ShowStudentForm(int studentId = -1)
         {
             pnlStudentForm.Controls.Clear();
             pnlStudentForm.Visible = true;
@@ -431,6 +431,30 @@ namespace StudentReportInitial.Forms
 			if (cmbGradeLevel.Items.Count > 0) cmbGradeLevel.SelectedIndex = 0;
 			if (cmbCourse.Items.Count > 0) cmbCourse.SelectedIndex = 0;
 
+            // Branch selection (for Super Admin when managing all branches)
+            ComboBox? cmbBranch = null;
+            Label? lblBranch = null;
+            if (currentUser != null && !isEditMode)
+            {
+                var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                if (isSuperAdmin && !branchFilterId.HasValue) // Only show when managing all branches
+                {
+                    lblBranch = new Label { Text = "Branch (Required):", Location = new Point(20, yPos), AutoSize = true };
+                    cmbBranch = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+                    
+                    var branches = await BranchHelper.GetAllBranchesAsync();
+                    foreach (var branch in branches)
+                    {
+                        cmbBranch.Items.Add(branch);
+                    }
+                    if (cmbBranch.Items.Count > 0)
+                    {
+                        cmbBranch.SelectedIndex = 0;
+                    }
+                    yPos += spacing;
+                }
+            }
+
             // Email
             var lblEmail = new Label { Text = "Email:", Location = new Point(20, yPos), AutoSize = true };
             var txtEmail = new TextBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25) };
@@ -496,29 +520,46 @@ namespace StudentReportInitial.Forms
 
             // Guardian assignment
             var lblGuardian = new Label { Text = "Guardian:", Location = new Point(20, yPos), AutoSize = true };
-            var cmbGuardian = new ComboBox 
-            { 
-                Location = new Point(20, yPos + 20), 
-                Size = new Size(250, 25),
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            var btnNewGuardian = new Button
+            yPos += 20;
+            
+            var btnSelectGuardian = new Button
             {
-                Text = "New Guardian",
-                Location = new Point(280, yPos + 20),
-                Size = new Size(100, 25),
+                Text = "Select Existing Guardian",
+                Location = new Point(20, yPos),
+                Size = new Size(180, 30),
                 BackColor = Color.FromArgb(59, 130, 246),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8),
+                Font = new Font("Segoe UI", 9),
                 Cursor = Cursors.Hand
             };
-            LoadGuardiansForComboBox(cmbGuardian);
-            if (cmbGuardian.Items.Count > 0 && !isEditMode)
+            
+            int? selectedGuardianId = null;
+            string? selectedGuardianName = null;
+            var lblGuardianStatus = new Label
             {
-                cmbGuardian.SelectedIndex = 0;
-            }
-            yPos += spacing;
+                Text = "No guardian selected - new guardian will be created",
+                Location = new Point(210, yPos + 5),
+                Size = new Size(300, 20),
+                ForeColor = Color.FromArgb(107, 114, 128),
+                Font = new Font("Segoe UI", 9, FontStyle.Italic),
+                AutoSize = false
+            };
+            
+            btnSelectGuardian.Click += async (s, e) =>
+            {
+                using var guardianForm = new GuardianSelectionForm(currentUser, branchFilterId);
+                if (guardianForm.ShowDialog() == DialogResult.OK && guardianForm.SelectedGuardianId.HasValue)
+                {
+                    selectedGuardianId = guardianForm.SelectedGuardianId.Value;
+                    selectedGuardianName = guardianForm.SelectedGuardianName;
+                    lblGuardianStatus.Text = $"Selected: {selectedGuardianName}";
+                    lblGuardianStatus.ForeColor = Color.FromArgb(34, 197, 94);
+                    lblGuardianStatus.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+                }
+            };
+            
+            yPos += spacing + 10;
 
             // Buttons
             var btnSave = new Button
@@ -553,53 +594,92 @@ namespace StudentReportInitial.Forms
             {
                 try
                 {
-                    // Validate phone number
+                    // Validate phone number (mandatory)
                     string phone = txtPhone.Text.Trim();
-                    if (!string.IsNullOrEmpty(phone))
+                    if (string.IsNullOrEmpty(phone))
                     {
-                        string phoneError = PhoneValidator.GetValidationMessage(phone);
-                        if (!string.IsNullOrEmpty(phoneError))
+                        lblPhoneError.Text = "Phone number is required.";
+                        lblPhoneError.Visible = true;
+                        txtPhone.BackColor = Color.FromArgb(254, 242, 242);
+                        txtPhone.Focus();
+                        return;
+                    }
+
+                    string phoneError = PhoneValidator.GetValidationMessage(phone);
+                    if (!string.IsNullOrEmpty(phoneError))
+                    {
+                        lblPhoneError.Text = phoneError;
+                        lblPhoneError.Visible = true;
+                        txtPhone.BackColor = Color.FromArgb(254, 242, 242);
+                        txtPhone.Focus();
+                        return;
+                    }
+                    // Format phone number before saving
+                    phone = PhoneValidator.FormatPhoneNumber(phone);
+
+                    // For new students, verify phone number with OTP
+                    if (!isEditMode)
+                    {
+                        string otpCode = SmsService.GenerateOtp();
+                        bool otpSent = await SmsService.SendOtpAsync(phone, otpCode);
+
+                        if (!otpSent)
                         {
-                            lblPhoneError.Text = phoneError;
-                            lblPhoneError.Visible = true;
-                            txtPhone.BackColor = Color.FromArgb(254, 242, 242);
-                            txtPhone.Focus();
+                            MessageBox.Show("Failed to send verification code. Please check the phone number and try again.",
+                                "Verification Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                             return;
                         }
-                        // Format phone number before saving
-                        phone = PhoneValidator.FormatPhoneNumber(phone);
 
-                        // For new students, verify phone number with OTP
-                        if (!isEditMode)
+                        using var otpForm = new OtpVerificationForm(phone, otpCode);
+                        if (otpForm.ShowDialog() != DialogResult.OK || !otpForm.IsVerified)
                         {
-                            string otpCode = SmsService.GenerateOtp();
-                            bool otpSent = await SmsService.SendOtpAsync(phone, otpCode);
-
-                            if (!otpSent)
-                            {
-                                MessageBox.Show("Failed to send verification code. Please check the phone number and try again.",
-                                    "Verification Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                return;
-                            }
-
-                            using var otpForm = new OtpVerificationForm(phone, otpCode);
-                            if (otpForm.ShowDialog() != DialogResult.OK || !otpForm.IsVerified)
-                            {
-                                MessageBox.Show("Phone number verification is required to continue.",
-                                    "Verification Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                                return;
-                            }
+                            MessageBox.Show("Phone number verification is required to continue.",
+                                "Verification Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
                         }
                     }
 
-                    int selectedGuardianId = 0;
-                    if (cmbGuardian.SelectedValue != null && cmbGuardian.SelectedValue is DataRowView rowView)
+                    int selectedGuardianIdValue = selectedGuardianId ?? 0;
+
+                    // Determine branch assignment
+                    int assignedBranchId = 0;
+                    if (currentUser != null)
                     {
-                        selectedGuardianId = Convert.ToInt32(rowView.Row["Id"]);
+                        var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                        if (isSuperAdmin)
+                        {
+                            // When managing all branches, use branch from form dropdown
+                            if (cmbBranch != null && cmbBranch.SelectedItem is Branch selectedBranch)
+                            {
+                                assignedBranchId = selectedBranch.Id;
+                            }
+                            // When specific branch is selected in filter, use that
+                            else if (branchFilterId.HasValue)
+                            {
+                                assignedBranchId = branchFilterId.Value;
+                            }
+                            else
+                            {
+                                MessageBox.Show("Please select a branch for this student.", "Validation Error",
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                            if (branchId > 0)
+                            {
+                                assignedBranchId = branchId;
+                            }
+                        }
                     }
-                    else if (cmbGuardian.SelectedValue != null)
+                    
+                    if (assignedBranchId == 0)
                     {
-                        selectedGuardianId = Convert.ToInt32(cmbGuardian.SelectedValue);
+                        MessageBox.Show("Unable to determine branch assignment. Please ensure a branch is selected.", "Validation Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
                     }
 
                     var student = new Student
@@ -614,7 +694,8 @@ namespace StudentReportInitial.Forms
                         Email = txtEmail.Text,
                         Phone = phone,
                         Address = txtAddress.Text,
-                        GuardianId = selectedGuardianId, // Use selected guardian or 0 to create new
+                        GuardianId = selectedGuardianIdValue, // Use selected guardian or 0 to create new
+                        BranchId = assignedBranchId,
                         IsActive = true
                     };
 
@@ -630,7 +711,7 @@ namespace StudentReportInitial.Forms
 
                     pnlStudentForm.Visible = false;
                     dgvStudents.Visible = true;
-                    LoadStudents();
+                    await LoadStudentsAsync();
                 }
                 catch (Exception ex)
                 {
@@ -640,12 +721,21 @@ namespace StudentReportInitial.Forms
             };
 
             // Add all controls to the scrollable panel
-			scrollPanel.Controls.AddRange(new Control[] {
+            var controlsList = new List<Control> {
                 lblTitle, lblStudentId, txtStudentId, lblFirstName, txtFirstName, lblLastName, txtLastName,
 				lblDateOfBirth, dtpDateOfBirth, lblGender, cmbGender, lblGradeLevel, cmbGradeLevel,
 				lblCourse, cmbCourse, lblSection, cmbSectionCode, lblEmail, txtEmail, lblPhone, txtPhone, lblPhoneError, lblAddress, txtAddress,
-                lblGuardian, cmbGuardian, btnNewGuardian, btnSave, btnCancel
-            });
+                lblGuardian, btnSelectGuardian, lblGuardianStatus, btnSave, btnCancel
+            };
+            
+            // Add branch controls if they exist
+            if (lblBranch != null && cmbBranch != null)
+            {
+                controlsList.Add(lblBranch);
+                controlsList.Add(cmbBranch);
+            }
+            
+			scrollPanel.Controls.AddRange(controlsList.ToArray());
 
             // Add the scrollable panel to the main form panel
             pnlStudentForm.Controls.Add(scrollPanel);
@@ -653,45 +743,31 @@ namespace StudentReportInitial.Forms
             // Load student data if editing
             if (isEditMode)
             {
-				LoadStudentData(selectedStudentId, txtStudentId, txtFirstName, txtLastName, dtpDateOfBirth, 
-					cmbGender, cmbGradeLevel, cmbSectionCode, txtEmail, txtPhone, txtAddress, cmbGuardian);
+				var (guardianId, guardianName) = await LoadStudentDataAsync(selectedStudentId, txtStudentId, txtFirstName, txtLastName, dtpDateOfBirth, 
+					cmbGender, cmbGradeLevel, cmbSectionCode, txtEmail, txtPhone, txtAddress, lblGuardianStatus);
+                selectedGuardianId = guardianId;
+                selectedGuardianName = guardianName;
             }
         }
 
-        private async void LoadGuardiansForComboBox(ComboBox cmbGuardian)
-        {
-            try
-            {
-                using var connection = DatabaseHelper.GetConnection();
-                await connection.OpenAsync();
 
-                var query = "SELECT Id, FirstName + ' ' + LastName as FullName FROM Users WHERE Role = 3 AND IsActive = 1";
-                using var command = new SqlCommand(query, connection);
-                using var adapter = new SqlDataAdapter(command);
-                var dataTable = new DataTable();
-                adapter.Fill(dataTable);
-
-                cmbGuardian.DataSource = dataTable;
-                cmbGuardian.DisplayMember = "FullName";
-                cmbGuardian.ValueMember = "Id";
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error loading guardians: {ex.Message}", "Error", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-		private async void LoadStudentData(int studentId, TextBox txtStudentId, TextBox txtFirstName, 
+		private async Task<(int? guardianId, string? guardianName)> LoadStudentDataAsync(int studentId, TextBox txtStudentId, TextBox txtFirstName, 
 			TextBox txtLastName, DateTimePicker dtpDateOfBirth, ComboBox cmbGender, ComboBox cmbGradeLevel,
-			ComboBox cmbSectionCode, TextBox txtEmail, TextBox txtPhone, TextBox txtAddress, ComboBox cmbGuardian)
+			ComboBox cmbSectionCode, TextBox txtEmail, TextBox txtPhone, TextBox txtAddress, Label lblGuardianStatus)
         {
+            int? guardianId = null;
+            string? guardianName = null;
+            
             try
             {
                 using var connection = DatabaseHelper.GetConnection();
                 await connection.OpenAsync();
 
-                var query = "SELECT * FROM Students WHERE Id = @id";
+                var query = @"
+                    SELECT s.*, u.FirstName + ' ' + u.LastName as GuardianName
+                    FROM Students s
+                    LEFT JOIN Users u ON s.GuardianId = u.Id
+                    WHERE s.Id = @id";
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@id", studentId);
 
@@ -725,14 +801,13 @@ namespace StudentReportInitial.Forms
                     // Set guardian selection
                     if (!reader.IsDBNull("GuardianId"))
                     {
-                        int guardianId = reader.GetInt32("GuardianId");
-                        for (int i = 0; i < cmbGuardian.Items.Count; i++)
+                        guardianId = reader.GetInt32("GuardianId");
+                        guardianName = reader.IsDBNull("GuardianName") ? null : reader.GetString("GuardianName");
+                        if (guardianName != null)
                         {
-                            if (cmbGuardian.Items[i] is DataRowView rowView && Convert.ToInt32(rowView.Row["Id"]) == guardianId)
-                            {
-                                cmbGuardian.SelectedIndex = i;
-                                break;
-                            }
+                            lblGuardianStatus.Text = $"Selected: {guardianName}";
+                            lblGuardianStatus.ForeColor = Color.FromArgb(34, 197, 94);
+                            lblGuardianStatus.Font = new Font("Segoe UI", 9, FontStyle.Regular);
                         }
                     }
                 }
@@ -742,6 +817,8 @@ namespace StudentReportInitial.Forms
                 MessageBox.Show($"Error loading student data: {ex.Message}", "Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            
+            return (guardianId, guardianName);
         }
 
         private async Task AddStudentAsync(Student student)
@@ -752,8 +829,38 @@ namespace StudentReportInitial.Forms
 
             try
             {
-                // Generate student credentials
-                var studentUsername = GenerateStudentUsername(student);
+                // Ensure student has branch assigned
+                if (student.BranchId == 0)
+                {
+                    // Get branch from current user or use default
+                    if (currentUser != null)
+                    {
+                        var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                        if (!isSuperAdmin)
+                        {
+                            student.BranchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        }
+                        else if (branchFilterId.HasValue)
+                        {
+                            student.BranchId = branchFilterId.Value;
+                        }
+                    }
+                    
+                    // Default to Baliuag if still 0
+                    if (student.BranchId == 0)
+                    {
+                        var defaultBranchQuery = "SELECT TOP 1 Id FROM Branches WHERE Code = 'BALIUAG'";
+                        using var defaultBranchCommand = new SqlCommand(defaultBranchQuery, connection, transaction);
+                        var defaultBranchResult = await defaultBranchCommand.ExecuteScalarAsync();
+                        if (defaultBranchResult != null)
+                        {
+                            student.BranchId = Convert.ToInt32(defaultBranchResult);
+                        }
+                    }
+                }
+
+                // Generate student credentials with branch-specific email
+                var studentUsername = await GenerateStudentUsernameAsync(student);
                 var studentPassword = GenerateStudentPassword(student);
                 PasswordHasher.CreatePasswordHash(studentPassword, out string studentPasswordHash, out string studentPasswordSalt);
 
@@ -768,7 +875,7 @@ namespace StudentReportInitial.Forms
                 if (guardianId == 0)
                 {
                     guardianId = await CreateGuardianAccountAsync(connection, transaction, student);
-                    guardianUsername = GenerateGuardianUsername(student);
+                    guardianUsername = await GenerateGuardianUsernameAsync(student);
                     guardianPassword = GenerateGuardianPassword(student);
                 }
                 else
@@ -784,10 +891,10 @@ namespace StudentReportInitial.Forms
                 // Finally, create the student record in the Students table
                 var query = @"
                     INSERT INTO Students (StudentId, FirstName, LastName, DateOfBirth, Gender, GradeLevel, 
-                                        Section, Email, Phone, Address, GuardianId, IsActive, EnrollmentDate,
+                                        Section, Email, Phone, Address, GuardianId, BranchId, IsActive, EnrollmentDate,
                                         Username, PasswordHash, PasswordSalt)
                     VALUES (@studentId, @firstName, @lastName, @dateOfBirth, @gender, @gradeLevel, 
-                            @section, @email, @phone, @address, @guardianId, @isActive, @enrollmentDate,
+                            @section, @email, @phone, @address, @guardianId, @branchId, @isActive, @enrollmentDate,
                             @username, @passwordHash, @passwordSalt)";
 
                 using var command = new SqlCommand(query, connection, transaction);
@@ -802,6 +909,7 @@ namespace StudentReportInitial.Forms
                 command.Parameters.AddWithValue("@phone", student.Phone);
                 command.Parameters.AddWithValue("@address", student.Address);
                 command.Parameters.AddWithValue("@guardianId", guardianId);
+                command.Parameters.AddWithValue("@branchId", student.BranchId);
                 command.Parameters.AddWithValue("@isActive", student.IsActive);
                 command.Parameters.AddWithValue("@enrollmentDate", DateTime.Now);
                 command.Parameters.AddWithValue("@username", studentUsername);
@@ -844,7 +952,42 @@ namespace StudentReportInitial.Forms
             using var connection = DatabaseHelper.GetConnection();
             await connection.OpenAsync();
 
-                var query = @"
+            // Validate branch access before updating
+            if (currentUser != null)
+            {
+                var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                if (!isSuperAdmin)
+                {
+                    // Check if student being updated belongs to current admin's branch
+                    var checkQuery = "SELECT BranchId FROM Students WHERE Id = @id";
+                    using var checkCommand = new SqlCommand(checkQuery, connection);
+                    checkCommand.Parameters.AddWithValue("@id", student.Id);
+                    var studentBranchId = await checkCommand.ExecuteScalarAsync();
+                    
+                    var adminBranchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                    if (studentBranchId == null || studentBranchId == DBNull.Value || 
+                        Convert.ToInt32(studentBranchId) != adminBranchId)
+                    {
+                        throw new UnauthorizedAccessException("You can only update students from your own branch.");
+                    }
+                }
+                else if (branchFilterId.HasValue)
+                {
+                    // Super Admin with branch filter - ensure student belongs to selected branch
+                    var checkQuery = "SELECT BranchId FROM Students WHERE Id = @id";
+                    using var checkCommand = new SqlCommand(checkQuery, connection);
+                    checkCommand.Parameters.AddWithValue("@id", student.Id);
+                    var studentBranchId = await checkCommand.ExecuteScalarAsync();
+                    
+                    if (studentBranchId == null || studentBranchId == DBNull.Value || 
+                        Convert.ToInt32(studentBranchId) != branchFilterId.Value)
+                    {
+                        throw new UnauthorizedAccessException("Student does not belong to the selected branch.");
+                    }
+                }
+            }
+
+            var query = @"
                 UPDATE Students 
                 SET StudentId = @studentId, FirstName = @firstName, LastName = @lastName, 
                     DateOfBirth = @dateOfBirth, Gender = @gender, GradeLevel = @gradeLevel,
@@ -871,29 +1014,110 @@ namespace StudentReportInitial.Forms
         {
             using var connection = DatabaseHelper.GetConnection();
             await connection.OpenAsync();
+            using var transaction = connection.BeginTransaction();
 
-            var query = "UPDATE Students SET IsActive = 0 WHERE Id = @id";
-            using var command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@id", studentId);
+            try
+            {
+                // Validate branch access before deleting
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        // Check if student being deleted belongs to current admin's branch
+                        var checkQuery = "SELECT BranchId FROM Students WHERE Id = @id";
+                        using var checkCommand = new SqlCommand(checkQuery, connection, transaction);
+                        checkCommand.Parameters.AddWithValue("@id", studentId);
+                        var studentBranchId = await checkCommand.ExecuteScalarAsync();
+                        
+                        var adminBranchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (studentBranchId == null || studentBranchId == DBNull.Value || 
+                            Convert.ToInt32(studentBranchId) != adminBranchId)
+                        {
+                            transaction.Rollback();
+                            throw new UnauthorizedAccessException("You can only delete students from your own branch.");
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        // Super Admin with branch filter - ensure student belongs to selected branch
+                        var checkQuery = "SELECT BranchId FROM Students WHERE Id = @id";
+                        using var checkCommand = new SqlCommand(checkQuery, connection, transaction);
+                        checkCommand.Parameters.AddWithValue("@id", studentId);
+                        var studentBranchId = await checkCommand.ExecuteScalarAsync();
+                        
+                        if (studentBranchId == null || studentBranchId == DBNull.Value || 
+                            Convert.ToInt32(studentBranchId) != branchFilterId.Value)
+                        {
+                            transaction.Rollback();
+                            throw new UnauthorizedAccessException("Student does not belong to the selected branch.");
+                        }
+                    }
+                }
 
-            await command.ExecuteNonQueryAsync();
+                // Get student info to find associated user account
+                var studentQuery = "SELECT StudentId, Email FROM Students WHERE Id = @id";
+                using var studentCommand = new SqlCommand(studentQuery, connection, transaction);
+                studentCommand.Parameters.AddWithValue("@id", studentId);
+                
+                string? studentIdValue = null;
+                string? studentEmail = null;
+                using (var reader = await studentCommand.ExecuteReaderAsync())
+                {
+                    if (await reader.ReadAsync())
+                    {
+                        studentIdValue = reader.GetString("StudentId");
+                        if (!reader.IsDBNull("Email"))
+                        {
+                            studentEmail = reader.GetString("Email");
+                        }
+                    }
+                }
+
+                // Deactivate the student record
+                var deleteStudentQuery = "UPDATE Students SET IsActive = 0 WHERE Id = @id";
+                using var deleteStudentCommand = new SqlCommand(deleteStudentQuery, connection, transaction);
+                deleteStudentCommand.Parameters.AddWithValue("@id", studentId);
+                await deleteStudentCommand.ExecuteNonQueryAsync();
+
+                // Also deactivate the associated user account (student login account)
+                // Try matching by username first (format: studentnumber@baliuag.sti.edu.ph)
+                if (!string.IsNullOrEmpty(studentIdValue))
+                {
+                    var studentNumber = studentIdValue.Replace("-", "");
+                    var studentUsername = $"{studentNumber}@baliuag.sti.edu.ph";
+
+                    var deleteUserQuery = "UPDATE Users SET IsActive = 0 WHERE (Username = @username OR Email = @email) AND Role = 4";
+                    using var deleteUserCommand = new SqlCommand(deleteUserQuery, connection, transaction);
+                    deleteUserCommand.Parameters.AddWithValue("@username", studentUsername);
+                    deleteUserCommand.Parameters.AddWithValue("@email", studentEmail ?? studentUsername);
+                    await deleteUserCommand.ExecuteNonQueryAsync();
+                }
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
 
         private async Task<int> CreateGuardianAccountAsync(SqlConnection connection, SqlTransaction transaction, Student student)
         {
-            var guardianUsername = GenerateGuardianUsername(student);
+            var guardianUsername = await GenerateGuardianUsernameAsync(student);
             var guardianPassword = GenerateGuardianPassword(student);
             var guardianFirstName = $"Guardian of {student.FirstName}";
             var guardianLastName = student.LastName;
-            var guardianEmail = $"guardian.{student.StudentId.ToLower()}@school.com";
+            var guardianEmail = await EmailDomainHelper.GenerateGuardianEmailAsync(student.StudentId, student.BranchId);
 
             // Hash the password
             string passwordHash, passwordSalt;
             PasswordHasher.CreatePasswordHash(guardianPassword, out passwordHash, out passwordSalt);
 
             var query = @"
-                INSERT INTO Users (Username, PasswordHash, PasswordSalt, FirstName, LastName, Email, Phone, Role, CreatedDate, IsActive)
-                VALUES (@username, @passwordHash, @passwordSalt, @firstName, @lastName, @email, @phone, @role, @createdDate, @isActive);
+                INSERT INTO Users (Username, PasswordHash, PasswordSalt, FirstName, LastName, Email, Phone, Role, BranchId, CreatedDate, IsActive)
+                VALUES (@username, @passwordHash, @passwordSalt, @firstName, @lastName, @email, @phone, @role, @branchId, @createdDate, @isActive);
                 SELECT SCOPE_IDENTITY();";
 
             using var command = new SqlCommand(query, connection, transaction);
@@ -905,6 +1129,7 @@ namespace StudentReportInitial.Forms
             command.Parameters.AddWithValue("@email", guardianEmail);
             command.Parameters.AddWithValue("@phone", student.Phone);
             command.Parameters.AddWithValue("@role", 3); // Guardian
+            command.Parameters.AddWithValue("@branchId", student.BranchId); // Assign guardian to same branch as student
             command.Parameters.AddWithValue("@createdDate", DateTime.Now);
             command.Parameters.AddWithValue("@isActive", true);
 
@@ -912,11 +1137,11 @@ namespace StudentReportInitial.Forms
             return Convert.ToInt32(result);
         }
 
-        private string GenerateGuardianUsername(Student student)
+
+        private async Task<string> GenerateGuardianUsernameAsync(Student student)
         {
-            // Generate username like: guardian_STU001
-            var studentId = student.StudentId.Replace(" ", "").ToLower();
-            return $"guardian_{studentId}";
+            // Generate username like: guardian.[studentID]@[branch-domain].sti.edu.ph
+            return await EmailDomainHelper.GenerateGuardianEmailAsync(student.StudentId, student.BranchId);
         }
 
         private string GenerateGuardianPassword(Student student)
@@ -927,11 +1152,12 @@ namespace StudentReportInitial.Forms
             return $"Guardian@{studentId}!{year}";
         }
 
-        private string GenerateStudentUsername(Student student)
+        private async Task<string> GenerateStudentUsernameAsync(Student student)
         {
-            // Format: studentnumber@baliuag.sti.edu.ph
+            // Format: studentnumber@[branch-domain].sti.edu.ph
             var studentNumber = student.StudentId.Replace("-", ""); // Remove dashes from student ID
-            return $"{studentNumber}@baliuag.sti.edu.ph";
+            var email = await EmailDomainHelper.GenerateStudentEmailAsync(studentNumber, student.BranchId);
+            return email;
         }
 
         private string GenerateStudentPassword(Student student)

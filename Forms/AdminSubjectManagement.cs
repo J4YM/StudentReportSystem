@@ -2,6 +2,7 @@ using StudentReportInitial.Models;
 using StudentReportInitial.Data;
 using System.Data.SqlClient;
 using System.Data;
+using System.Collections.Generic;
 
 namespace StudentReportInitial.Forms
 {
@@ -17,9 +18,13 @@ namespace StudentReportInitial.Forms
         private int selectedSubjectId = -1;
 		private ComboBox? cmbSubjectsGradeFilter;
 		private ComboBox? cmbSubjectsSectionFilter;
+        private User? currentUser;
+        private int? branchFilterId = null;
 
-        public AdminSubjectManagement()
+        public AdminSubjectManagement(User? user = null, int? branchId = null)
         {
+            currentUser = user;
+            branchFilterId = branchId;
             InitializeComponent();
             ApplyModernStyling();
             LoadSubjects();
@@ -172,12 +177,54 @@ namespace StudentReportInitial.Forms
 
                 var query = @"
                     SELECT s.Id, s.Name, s.Code, s.Description, s.GradeLevel, s.Section, s.IsActive,
-                           u.FirstName + ' ' + u.LastName as ProfessorName
+                           COALESCE(u.FirstName + ' ' + u.LastName, 'Unassigned') as ProfessorName,
+                           b.Name as BranchName
                     FROM Subjects s
-                    INNER JOIN Users u ON s.ProfessorId = u.Id
-                    ORDER BY s.Name";
+                    LEFT JOIN Users u ON s.ProfessorId = u.Id
+                    LEFT JOIN Branches b ON s.BranchId = b.Id
+                    WHERE s.IsActive = 1";
+
+                // Add branch filter if not Super Admin
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (branchId > 0)
+                        {
+                            query += " AND s.BranchId = @branchId";
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        // Super Admin with branch filter selected
+                        query += " AND s.BranchId = @branchId";
+                    }
+                }
+
+                query += " ORDER BY s.Name";
 
                 using var command = new SqlCommand(query, connection);
+                
+                // Add branch parameter if needed
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (branchId > 0)
+                        {
+                            command.Parameters.AddWithValue("@branchId", branchId);
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        command.Parameters.AddWithValue("@branchId", branchFilterId.Value);
+                    }
+                }
+
                 using var adapter = new SqlDataAdapter(command);
                 var dataTable = new DataTable();
                 adapter.Fill(dataTable);
@@ -195,6 +242,10 @@ namespace StudentReportInitial.Forms
                     dgvSubjects.Columns["Section"].HeaderText = "Section";
                     dgvSubjects.Columns["ProfessorName"].HeaderText = "Professor";
                     dgvSubjects.Columns["IsActive"].HeaderText = "Active";
+                    if (dgvSubjects.Columns.Contains("BranchName"))
+                    {
+                        dgvSubjects.Columns["BranchName"].HeaderText = "Branch";
+                    }
                 }
             }
             catch (Exception ex)
@@ -230,24 +281,39 @@ namespace StudentReportInitial.Forms
 
         private async void BtnDeleteSubject_Click(object sender, EventArgs e)
         {
-            if (dgvSubjects.SelectedRows.Count > 0)
+            if (dgvSubjects.SelectedRows.Count == 0)
             {
-                var result = MessageBox.Show("Are you sure you want to delete this subject?", "Confirm Delete", 
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                return;
+            }
 
-                if (result == DialogResult.Yes)
+            var selectedRow = dgvSubjects.SelectedRows[0];
+            var subjectId = Convert.ToInt32(selectedRow.Cells["Id"].Value);
+            var subjectName = selectedRow.Cells["Name"].Value?.ToString() ?? "Unknown";
+            var subjectCode = selectedRow.Cells["Code"].Value?.ToString() ?? "";
+
+            var confirmMessage = $"WARNING: You are about to delete subject '{subjectName}' ({subjectCode}).\n\n" +
+                               "This will:\n" +
+                               "• Deactivate the subject\n" +
+                               "• Students will no longer be able to enroll in this subject\n" +
+                               "• This action cannot be undone\n\n" +
+                               "Are you absolutely sure you want to proceed?";
+
+            var result = MessageBox.Show(confirmMessage, "Confirm Subject Deletion", 
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+            if (result == DialogResult.Yes)
+            {
+                try
                 {
-                    try
-                    {
-                        var subjectId = Convert.ToInt32(dgvSubjects.SelectedRows[0].Cells["Id"].Value);
-                        await DeleteSubjectAsync(subjectId);
-                        LoadSubjects();
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Error deleting subject: {ex.Message}", "Error", 
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    await DeleteSubjectAsync(subjectId);
+                    LoadSubjects();
+                    MessageBox.Show("Subject deleted successfully.", 
+                        "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error deleting subject: {ex.Message}", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -257,7 +323,7 @@ namespace StudentReportInitial.Forms
             LoadSubjects();
         }
 
-        private void ShowSubjectForm(int subjectId = -1)
+        private async void ShowSubjectForm(int subjectId = -1)
         {
             pnlSubjectForm.Controls.Clear();
             pnlSubjectForm.Visible = true;
@@ -334,6 +400,30 @@ namespace StudentReportInitial.Forms
             // Load professors
             LoadProfessorsForComboBox(cmbProfessor);
 
+            // Branch selection (for Super Admin when managing all branches)
+            ComboBox? cmbBranch = null;
+            Label? lblBranch = null;
+            if (currentUser != null && !isEditMode)
+            {
+                var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                if (isSuperAdmin && !branchFilterId.HasValue) // Only show when managing all branches
+                {
+                    lblBranch = new Label { Text = "Branch (Required):", Location = new Point(20, yPos), AutoSize = true };
+                    cmbBranch = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(300, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+                    
+                    var branches = await BranchHelper.GetAllBranchesAsync();
+                    foreach (var branch in branches)
+                    {
+                        cmbBranch.Items.Add(branch);
+                    }
+                    if (cmbBranch.Items.Count > 0)
+                    {
+                        cmbBranch.SelectedIndex = 0;
+                    }
+                    yPos += spacing;
+                }
+            }
+
             // Buttons
             var btnSave = new Button
             {
@@ -369,6 +459,47 @@ namespace StudentReportInitial.Forms
 					{
 						composedSection = $"{cmbCourse.SelectedItem}-{cmbSectionCode.SelectedItem}";
 					}
+                    // Determine branch assignment
+                    int assignedBranchId = 0;
+                    if (currentUser != null)
+                    {
+                        var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                        if (isSuperAdmin)
+                        {
+                            // When managing all branches, use branch from form dropdown
+                            if (cmbBranch != null && cmbBranch.SelectedItem is Branch selectedBranch)
+                            {
+                                assignedBranchId = selectedBranch.Id;
+                            }
+                            // When specific branch is selected in filter, use that
+                            else if (branchFilterId.HasValue)
+                            {
+                                assignedBranchId = branchFilterId.Value;
+                            }
+                            else
+                            {
+                                MessageBox.Show("Please select a branch for this subject.", "Validation Error",
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                            if (branchId > 0)
+                            {
+                                assignedBranchId = branchId;
+                            }
+                        }
+                    }
+                    
+                    if (assignedBranchId == 0)
+                    {
+                        MessageBox.Show("Unable to determine branch assignment. Please ensure a branch is selected.", "Validation Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
                     var subject = new Subject
                     {
                         Name = txtName.Text,
@@ -377,6 +508,7 @@ namespace StudentReportInitial.Forms
 						GradeLevel = cmbGradeLevel.SelectedItem?.ToString() ?? "",
 						Section = composedSection,
                         ProfessorId = Convert.ToInt32(cmbProfessor.SelectedValue),
+                        BranchId = assignedBranchId,
                         IsActive = true
                     };
 
@@ -400,11 +532,19 @@ namespace StudentReportInitial.Forms
                 }
             };
 
-			pnlSubjectForm.Controls.AddRange(new Control[] {
+			var controlsList = new List<Control> {
 				lblTitle, lblName, txtName, lblCode, txtCode, lblDescription, txtDescription,
 				lblGradeLevel, cmbGradeLevel, lblCourse, cmbCourse, lblSection, cmbSectionCode, lblProfessor, cmbProfessor,
 				btnSave, btnCancel
-			});
+			};
+			
+			if (lblBranch != null && cmbBranch != null)
+			{
+				controlsList.Add(lblBranch);
+				controlsList.Add(cmbBranch);
+			}
+			
+			pnlSubjectForm.Controls.AddRange(controlsList.ToArray());
 
             // Load subject data if editing
             if (isEditMode)
@@ -421,7 +561,46 @@ namespace StudentReportInitial.Forms
                 await connection.OpenAsync();
 
                 var query = "SELECT Id, FirstName + ' ' + LastName as FullName FROM Users WHERE Role = 2 AND IsActive = 1";
+                
+                // Add branch filter
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (branchId > 0)
+                        {
+                            query += " AND BranchId = @branchId";
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        // Super Admin with branch filter selected
+                        query += " AND BranchId = @branchId";
+                    }
+                }
+
                 using var command = new SqlCommand(query, connection);
+                
+                // Add branch parameter if needed
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (branchId > 0)
+                        {
+                            command.Parameters.AddWithValue("@branchId", branchId);
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        command.Parameters.AddWithValue("@branchId", branchFilterId.Value);
+                    }
+                }
+
                 using var adapter = new SqlDataAdapter(command);
                 var dataTable = new DataTable();
                 adapter.Fill(dataTable);
@@ -513,8 +692,8 @@ namespace StudentReportInitial.Forms
             await connection.OpenAsync();
 
             var query = @"
-                INSERT INTO Subjects (Name, Code, Description, GradeLevel, Section, ProfessorId, IsActive)
-                VALUES (@name, @code, @description, @gradeLevel, @section, @professorId, @isActive)";
+                INSERT INTO Subjects (Name, Code, Description, GradeLevel, Section, ProfessorId, BranchId, IsActive)
+                VALUES (@name, @code, @description, @gradeLevel, @section, @professorId, @branchId, @isActive)";
 
             using var command = new SqlCommand(query, connection);
             command.Parameters.AddWithValue("@name", subject.Name);
@@ -523,6 +702,7 @@ namespace StudentReportInitial.Forms
             command.Parameters.AddWithValue("@gradeLevel", subject.GradeLevel);
             command.Parameters.AddWithValue("@section", subject.Section);
             command.Parameters.AddWithValue("@professorId", subject.ProfessorId);
+            command.Parameters.AddWithValue("@branchId", subject.BranchId);
             command.Parameters.AddWithValue("@isActive", subject.IsActive);
 
             await command.ExecuteNonQueryAsync();
@@ -532,6 +712,41 @@ namespace StudentReportInitial.Forms
         {
             using var connection = DatabaseHelper.GetConnection();
             await connection.OpenAsync();
+
+            // Validate branch access before updating
+            if (currentUser != null)
+            {
+                var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                if (!isSuperAdmin)
+                {
+                    // Check if subject being updated belongs to current admin's branch
+                    var checkQuery = "SELECT BranchId FROM Subjects WHERE Id = @id";
+                    using var checkCommand = new SqlCommand(checkQuery, connection);
+                    checkCommand.Parameters.AddWithValue("@id", subject.Id);
+                    var subjectBranchId = await checkCommand.ExecuteScalarAsync();
+                    
+                    var adminBranchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                    if (subjectBranchId == null || subjectBranchId == DBNull.Value || 
+                        Convert.ToInt32(subjectBranchId) != adminBranchId)
+                    {
+                        throw new UnauthorizedAccessException("You can only update subjects from your own branch.");
+                    }
+                }
+                else if (branchFilterId.HasValue)
+                {
+                    // Super Admin with branch filter - ensure subject belongs to selected branch
+                    var checkQuery = "SELECT BranchId FROM Subjects WHERE Id = @id";
+                    using var checkCommand = new SqlCommand(checkQuery, connection);
+                    checkCommand.Parameters.AddWithValue("@id", subject.Id);
+                    var subjectBranchId = await checkCommand.ExecuteScalarAsync();
+                    
+                    if (subjectBranchId == null || subjectBranchId == DBNull.Value || 
+                        Convert.ToInt32(subjectBranchId) != branchFilterId.Value)
+                    {
+                        throw new UnauthorizedAccessException("Subject does not belong to the selected branch.");
+                    }
+                }
+            }
 
             var query = @"
                 UPDATE Subjects 
@@ -555,6 +770,41 @@ namespace StudentReportInitial.Forms
         {
             using var connection = DatabaseHelper.GetConnection();
             await connection.OpenAsync();
+
+            // Validate branch access before deleting
+            if (currentUser != null)
+            {
+                var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                if (!isSuperAdmin)
+                {
+                    // Check if subject being deleted belongs to current admin's branch
+                    var checkQuery = "SELECT BranchId FROM Subjects WHERE Id = @id";
+                    using var checkCommand = new SqlCommand(checkQuery, connection);
+                    checkCommand.Parameters.AddWithValue("@id", subjectId);
+                    var subjectBranchId = await checkCommand.ExecuteScalarAsync();
+                    
+                    var adminBranchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                    if (subjectBranchId == null || subjectBranchId == DBNull.Value || 
+                        Convert.ToInt32(subjectBranchId) != adminBranchId)
+                    {
+                        throw new UnauthorizedAccessException("You can only delete subjects from your own branch.");
+                    }
+                }
+                else if (branchFilterId.HasValue)
+                {
+                    // Super Admin with branch filter - ensure subject belongs to selected branch
+                    var checkQuery = "SELECT BranchId FROM Subjects WHERE Id = @id";
+                    using var checkCommand = new SqlCommand(checkQuery, connection);
+                    checkCommand.Parameters.AddWithValue("@id", subjectId);
+                    var subjectBranchId = await checkCommand.ExecuteScalarAsync();
+                    
+                    if (subjectBranchId == null || subjectBranchId == DBNull.Value || 
+                        Convert.ToInt32(subjectBranchId) != branchFilterId.Value)
+                    {
+                        throw new UnauthorizedAccessException("Subject does not belong to the selected branch.");
+                    }
+                }
+            }
 
             var query = "UPDATE Subjects SET IsActive = 0 WHERE Id = @id";
             using var command = new SqlCommand(query, connection);

@@ -26,10 +26,10 @@ namespace StudentReportInitial.Forms
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             MinimizeBox = false;
-            Text = "STI College Baliuag - AimONE - Login";
+            Text = "STI College - AimONE - Login";
             AcceptButton = btnLogin;
 
-            // Set background image - try multiple formats
+            // Set background image
             try
             {
                 string imagesFolder = Path.Combine(Application.StartupPath, "Images");
@@ -37,7 +37,6 @@ namespace StudentReportInitial.Forms
                 string imageName = "sti_baliuag_building";
                 string? imagePath = null;
 
-                // Try to find the image with any supported extension
                 foreach (var ext in imageExtensions)
                 {
                     string testPath = Path.Combine(imagesFolder, imageName + ext);
@@ -52,7 +51,7 @@ namespace StudentReportInitial.Forms
                 {
                     BackgroundImage = Image.FromFile(imagePath);
                     BackgroundImageLayout = ImageLayout.Stretch;
-                    BackColor = Color.FromArgb(245, 247, 250); // Fallback color
+                    BackColor = Color.FromArgb(245, 247, 250);
                 }
                 else
                 {
@@ -66,9 +65,8 @@ namespace StudentReportInitial.Forms
                 BackColor = Color.FromArgb(245, 247, 250);
             }
 
-            // Hero panel styling with semi-transparent overlay for better text visibility
             pnlHero.Padding = new Padding(32, 56, 32, 32);
-            // Use custom paint for semi-transparent overlay
+
             pnlHero.Paint += (s, e) =>
             {
                 using (var brush = new SolidBrush(Color.FromArgb(200, 37, 99, 235)))
@@ -249,6 +247,11 @@ namespace StudentReportInitial.Forms
                 txtPassword.PasswordChar = '*';
                 btnTogglePassword.Text = "Show";
             }
+        }
+
+        private void lblHeroSubtitle_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

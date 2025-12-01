@@ -34,11 +34,11 @@ namespace StudentReportInitial.Forms
             lblTitle = new Label();
             pnlLogin = new Panel();
             pnlLoginCard = new Panel();
+            btnTogglePassword = new Button();
             lblError = new Label();
             btnLogin = new Button();
             txtPassword = new TextBox();
             lblPassword = new Label();
-            btnTogglePassword = new Button();
             txtUsername = new TextBox();
             lblUsername = new Label();
             lblSubtitle = new Label();
@@ -57,13 +57,14 @@ namespace StudentReportInitial.Forms
             lblHeroSubtitle.Location = new Point(32, 124);
             lblHeroSubtitle.MaximumSize = new Size(196, 0);
             lblHeroSubtitle.Name = "lblHeroSubtitle";
-            lblHeroSubtitle.Size = new Size(196, 60);
+            lblHeroSubtitle.Size = new Size(196, 45);
             lblHeroSubtitle.TabIndex = 1;
             lblHeroSubtitle.Text = "Streamline class records, grades, and communication in one modern workspace.";
+            lblHeroSubtitle.Click += lblHeroSubtitle_Click;
             // 
             // pnlHero
             // 
-            pnlHero.BackColor = Color.Transparent; // Transparent for custom paint overlay
+            pnlHero.BackColor = Color.Transparent;
             pnlHero.Controls.Add(lblHeroSubtitle);
             pnlHero.Controls.Add(lblTitle);
             pnlHero.Dock = DockStyle.Left;
@@ -80,13 +81,13 @@ namespace StudentReportInitial.Forms
             lblTitle.Location = new Point(32, 56);
             lblTitle.MaximumSize = new Size(196, 0);
             lblTitle.Name = "lblTitle";
-            lblTitle.Size = new Size(71, 15);
+            lblTitle.Size = new Size(73, 15);
             lblTitle.TabIndex = 0;
             lblTitle.Text = "STI BALIUAG";
             // 
             // pnlLogin
             // 
-            pnlLogin.BackColor = Color.Transparent; // Transparent to show background image
+            pnlLogin.BackColor = Color.Transparent;
             pnlLogin.Controls.Add(pnlLoginCard);
             pnlLogin.Dock = DockStyle.Fill;
             pnlLogin.Location = new Point(260, 0);
@@ -113,6 +114,16 @@ namespace StudentReportInitial.Forms
             pnlLoginCard.Padding = new Padding(28, 32, 28, 32);
             pnlLoginCard.Size = new Size(360, 320);
             pnlLoginCard.TabIndex = 0;
+            // 
+            // btnTogglePassword
+            // 
+            btnTogglePassword.Location = new Point(274, 178);
+            btnTogglePassword.Name = "btnTogglePassword";
+            btnTogglePassword.Size = new Size(58, 23);
+            btnTogglePassword.TabIndex = 8;
+            btnTogglePassword.Text = "Show";
+            btnTogglePassword.UseVisualStyleBackColor = true;
+            btnTogglePassword.Click += btnTogglePassword_Click;
             // 
             // lblError
             // 
@@ -146,16 +157,6 @@ namespace StudentReportInitial.Forms
             txtPassword.Size = new Size(240, 23);
             txtPassword.TabIndex = 5;
             txtPassword.KeyPress += txtPassword_KeyPress;
-            // btnTogglePassword
-            // 
-            btnTogglePassword.Location = new Point(274, 178);
-            btnTogglePassword.Name = "btnTogglePassword";
-            btnTogglePassword.Size = new Size(58, 23);
-            btnTogglePassword.TabIndex = 8;
-            btnTogglePassword.Text = "Show";
-            btnTogglePassword.UseVisualStyleBackColor = true;
-            btnTogglePassword.Click += btnTogglePassword_Click;
-            // 
             // 
             // lblPassword
             // 
@@ -218,6 +219,7 @@ namespace StudentReportInitial.Forms
             Name = "LoginForm";
             Text = "Login";
             pnlHero.ResumeLayout(false);
+            pnlHero.PerformLayout();
             pnlLogin.ResumeLayout(false);
             pnlLoginCard.ResumeLayout(false);
             pnlLoginCard.PerformLayout();

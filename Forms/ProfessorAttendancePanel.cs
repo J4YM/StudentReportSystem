@@ -1,4 +1,4 @@
-using StudentReportInitial.Models;
+﻿using StudentReportInitial.Models;
 using StudentReportInitial.Data;
 using System.Data.SqlClient;
 using System.Data;
@@ -244,47 +244,92 @@ namespace StudentReportInitial.Forms
                 int currentRow = e.RowIndex;
                 int currentCol = e.ColumnIndex;
 
-                // Handle selection change
-                comboBox.SelectedIndexChanged += (s, args) =>
+                // Helper method to save the selected value
+                Action<ComboBox> saveValue = (cb) =>
                 {
-                    var cb = s as ComboBox;
-                    if (cb != null && cb.SelectedItem != null && !cb.Disposing && cb.IsHandleCreated)
+                    if (cb != null && cb.SelectedItem != null && !cb.Disposing && 
+                        currentRow >= 0 && currentRow < dgvStudents.Rows.Count && 
+                        currentCol >= 0 && currentCol < dgvStudents.Columns.Count)
                     {
                         try
                         {
-                            dgvStudents[currentCol, currentRow].Value = cb.SelectedItem.ToString();
+                            var selectedValue = cb.SelectedItem.ToString();
+                            var cell = dgvStudents[currentCol, currentRow];
+                            cell.Value = selectedValue;
+                            // Force the DataGridView to commit the edit
+                            dgvStudents.NotifyCurrentCellDirty(true);
+                            dgvStudents.EndEdit();
+                            // Refresh the cell to ensure the value is displayed
+                            dgvStudents.InvalidateCell(currentCol, currentRow);
                         }
-                        catch { }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Error saving attendance status: {ex.Message}");
+                        }
                     }
                 };
 
-                // Handle when ComboBox closes
+                // Handle selection change - update immediately
+                comboBox.SelectedIndexChanged += (s, args) =>
+                {
+                    var cb = s as ComboBox;
+                    if (cb != null)
+                    {
+                        saveValue(cb);
+                    }
+                };
+
+                // Handle when ComboBox closes - ensure value is saved
                 comboBox.DropDownClosed += (s, args) =>
                 {
                     var cb = s as ComboBox;
                     if (cb != null && !cb.Disposing)
                     {
-                        dgvStudents.Controls.Remove(cb);
-                        cb.Dispose();
-                        if (statusComboBox == cb)
+                        saveValue(cb);
+                        
+                        // Use BeginInvoke to remove ComboBox after UI updates
+                        dgvStudents.BeginInvoke(new Action(() =>
                         {
-                            statusComboBox = null;
-                        }
+                            if (dgvStudents.Controls.Contains(cb))
+                            {
+                                dgvStudents.Controls.Remove(cb);
+                            }
+                            if (!cb.IsDisposed)
+                            {
+                                cb.Dispose();
+                            }
+                            if (statusComboBox == cb)
+                            {
+                                statusComboBox = null;
+                            }
+                        }));
                     }
                 };
 
-                // Handle when ComboBox loses focus
+                // Handle when ComboBox loses focus - ensure value is saved
                 comboBox.Leave += (s, args) =>
                 {
                     var cb = s as ComboBox;
                     if (cb != null && !cb.Disposing && dgvStudents.Controls.Contains(cb))
                     {
-                        dgvStudents.Controls.Remove(cb);
-                        cb.Dispose();
-                        if (statusComboBox == cb)
+                        saveValue(cb);
+                        
+                        // Use BeginInvoke to remove ComboBox after UI updates
+                        dgvStudents.BeginInvoke(new Action(() =>
                         {
-                            statusComboBox = null;
-                        }
+                            if (dgvStudents.Controls.Contains(cb))
+                            {
+                                dgvStudents.Controls.Remove(cb);
+                            }
+                            if (!cb.IsDisposed)
+                            {
+                                cb.Dispose();
+                            }
+                            if (statusComboBox == cb)
+                            {
+                                statusComboBox = null;
+                            }
+                        }));
                     }
                 };
 
@@ -347,11 +392,24 @@ namespace StudentReportInitial.Forms
                 var query = @"
                     SELECT DISTINCT s.Name, s.GradeLevel, s.Section
                     FROM Subjects s
-                    WHERE s.ProfessorId = @professorId AND s.IsActive = 1
-                    ORDER BY s.Name";
+                    WHERE s.ProfessorId = @professorId AND s.IsActive = 1";
+
+                // Add branch filter based on professor's branch
+                var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+                if (professorBranchId > 0)
+                {
+                    query += " AND s.BranchId = @branchId";
+                }
+
+                query += " ORDER BY s.Name";
 
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
+                
+                if (professorBranchId > 0)
+                {
+                    command.Parameters.AddWithValue("@branchId", professorBranchId);
+                }
 
                 using var reader = await command.ExecuteReaderAsync();
                 cmbSubject.Items.Clear();
@@ -392,12 +450,25 @@ namespace StudentReportInitial.Forms
                 var query = @"
                     SELECT s.Id, s.StudentId, s.FirstName, s.LastName, s.GradeLevel, s.Section
                     FROM Students s
-                    WHERE s.GradeLevel = @gradeLevel AND s.Section = @section AND s.IsActive = 1
-                    ORDER BY s.LastName, s.FirstName";
+                    WHERE s.GradeLevel = @gradeLevel AND s.Section = @section AND s.IsActive = 1";
+
+                // Add branch filter based on professor's branch
+                var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+                if (professorBranchId > 0)
+                {
+                    query += " AND s.BranchId = @branchId";
+                }
+
+                query += " ORDER BY s.LastName, s.FirstName";
 
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@gradeLevel", gradeLevel);
                 command.Parameters.AddWithValue("@section", section);
+                
+                if (professorBranchId > 0)
+                {
+                    command.Parameters.AddWithValue("@branchId", professorBranchId);
+                }
 
                 using var adapter = new SqlDataAdapter(command);
                 var dataTable = new DataTable();
@@ -447,10 +518,22 @@ namespace StudentReportInitial.Forms
                         AND a.Subject = @subject 
                         AND CAST(a.Date AS DATE) = CAST(@date AS DATE)";
 
+                // Add branch filter based on professor's branch
+                var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+                if (professorBranchId > 0)
+                {
+                    query += " AND a.BranchId = @branchId";
+                }
+
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
                 command.Parameters.AddWithValue("@subject", subjectName);
                 command.Parameters.AddWithValue("@date", dtpDate.Value.Date);
+                
+                if (professorBranchId > 0)
+                {
+                    command.Parameters.AddWithValue("@branchId", professorBranchId);
+                }
 
                 using var reader = await command.ExecuteReaderAsync();
                 var attendanceData = new Dictionary<int, (AttendanceStatus status, string notes)>();
@@ -584,24 +667,48 @@ namespace StudentReportInitial.Forms
             await connection.OpenAsync();
 
             var deleteQuery = @"
-                DELETE FROM Attendance 
-                WHERE ProfessorId = @professorId AND Subject = @subject AND CAST(Date AS DATE) = CAST(@date AS DATE)";
+        DELETE FROM Attendance 
+        WHERE ProfessorId = @professorId AND Subject = @subject AND CAST(Date AS DATE) = CAST(@date AS DATE)";
+
+            // Add branch filter based on professor's branch
+            var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+            if (professorBranchId > 0)
+            {
+                deleteQuery += " AND BranchId = @branchId";
+            }
 
             using var deleteCommand = new SqlCommand(deleteQuery, connection);
             deleteCommand.Parameters.AddWithValue("@professorId", currentProfessor.Id);
             deleteCommand.Parameters.AddWithValue("@subject", attendanceRecords.First().Subject);
             deleteCommand.Parameters.AddWithValue("@date", dtpDate.Value.Date);
+
+            if (professorBranchId > 0)
+            {
+                deleteCommand.Parameters.AddWithValue("@branchId", professorBranchId);
+            }
+
             await deleteCommand.ExecuteNonQueryAsync();
 
             var insertQuery = @"
-                INSERT INTO Attendance (StudentId, ProfessorId, Subject, Date, Status, Notes, RecordedDate)
-                VALUES (@studentId, @professorId, @subject, @date, @status, @notes, @recordedDate)";
+        INSERT INTO Attendance (StudentId, ProfessorId, Subject, Date, Status, Notes, RecordedDate, BranchId)
+        VALUES (@studentId, @professorId, @subject, @date, @status, @notes, @recordedDate, @branchId)";
 
             string professorName = $"{currentProfessor.FirstName} {currentProfessor.LastName}";
             var subjectName = attendanceRecords.First().Subject;
 
             foreach (var attendance in attendanceRecords)
             {
+                // Get student's branch ID for the attendance record
+                var studentBranchQuery = "SELECT BranchId FROM Students WHERE Id = @studentId";
+                int branchId = 0;
+                using var studentBranchCommand = new SqlCommand(studentBranchQuery, connection);
+                studentBranchCommand.Parameters.AddWithValue("@studentId", attendance.StudentId);
+                var branchResult = await studentBranchCommand.ExecuteScalarAsync();
+                if (branchResult != null && branchResult != DBNull.Value)
+                {
+                    branchId = Convert.ToInt32(branchResult);
+                }
+
                 using var insertCommand = new SqlCommand(insertQuery, connection);
                 insertCommand.Parameters.AddWithValue("@studentId", attendance.StudentId);
                 insertCommand.Parameters.AddWithValue("@professorId", attendance.ProfessorId);
@@ -610,16 +717,17 @@ namespace StudentReportInitial.Forms
                 insertCommand.Parameters.AddWithValue("@status", (int)attendance.Status);
                 insertCommand.Parameters.AddWithValue("@notes", attendance.Notes ?? "");
                 insertCommand.Parameters.AddWithValue("@recordedDate", attendance.RecordedDate);
+                insertCommand.Parameters.AddWithValue("@branchId", branchId);
 
                 await insertCommand.ExecuteNonQueryAsync();
 
                 try
                 {
                     var studentQuery = @"
-                        SELECT s.FirstName, s.LastName, s.Phone, u.Phone as GuardianPhone
-                        FROM Students s
-                        LEFT JOIN Users u ON s.GuardianId = u.Id
-                        WHERE s.Id = @studentId";
+                SELECT s.FirstName, s.LastName, s.Phone, u.Phone as GuardianPhone
+                FROM Students s
+                LEFT JOIN Users u ON s.GuardianId = u.Id
+                WHERE s.Id = @studentId";
 
                     using var studentCommand = new SqlCommand(studentQuery, connection);
                     studentCommand.Parameters.AddWithValue("@studentId", attendance.StudentId);
@@ -639,14 +747,14 @@ namespace StudentReportInitial.Forms
 
                         if (!string.IsNullOrEmpty(phoneNumber) && PhoneValidator.IsValidPhilippinesMobile(phoneNumber))
                         {
-                            int attendanceCount = await GetStudentAttendanceCountAsync(connection, attendance.StudentId);
+                            int attendanceCount = await GetStudentPresentCountAsync(connection, attendance.StudentId, subjectName);
 
                             await SmsService.SendAttendanceNotificationAsync(
                                 phoneNumber,
                                 studentName,
                                 subjectName,
                                 attendance.Status.ToString(),
-                                attendance.Date,
+                                DateTime.Now,  // Changed from attendance.Date to DateTime.Now
                                 professorName,
                                 attendanceCount
                             );
@@ -661,23 +769,28 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private async Task<int> GetStudentAttendanceCountAsync(SqlConnection connection, int studentId)
+        // Count only "Present" attendance for this student in this subject
+        private async Task<int> GetStudentPresentCountAsync(SqlConnection connection, int studentId, string subjectName)
         {
             try
             {
                 var countQuery = @"
-                    SELECT COUNT(*) 
-                    FROM Attendance 
-                    WHERE StudentId = @studentId";
+            SELECT COUNT(*) 
+            FROM Attendance 
+            WHERE StudentId = @studentId 
+                AND Subject = @subject
+                AND Status = 1";  // 1 = Present (based on AttendanceStatus enum)
 
                 using var countCommand = new SqlCommand(countQuery, connection);
                 countCommand.Parameters.AddWithValue("@studentId", studentId);
+                countCommand.Parameters.AddWithValue("@subject", subjectName);
 
                 var result = await countCommand.ExecuteScalarAsync();
                 return result != null ? Convert.ToInt32(result) : 0;
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"Error getting attendance count: {ex.Message}");
                 return 0;
             }
         }
@@ -722,10 +835,22 @@ namespace StudentReportInitial.Forms
                         AND Subject = @subject 
                         AND CAST(Date AS DATE) = CAST(@date AS DATE)";
 
+                // Add branch filter based on professor's branch
+                var professorBranchId = await BranchHelper.GetUserBranchIdAsync(currentProfessor.Id);
+                if (professorBranchId > 0)
+                {
+                    statsQuery += " AND BranchId = @branchId";
+                }
+
                 using var command = new SqlCommand(statsQuery, connection);
                 command.Parameters.AddWithValue("@professorId", currentProfessor.Id);
                 command.Parameters.AddWithValue("@subject", subjectName);
                 command.Parameters.AddWithValue("@date", dtpDate.Value.Date);
+                
+                if (professorBranchId > 0)
+                {
+                    command.Parameters.AddWithValue("@branchId", professorBranchId);
+                }
 
                 using var reader = await command.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
