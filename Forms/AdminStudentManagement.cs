@@ -4,6 +4,7 @@ using System.Data.SqlClient;
 using System.Data;
 using System.Collections.Generic;
 using System.Linq;
+using StudentReportInitial.Theming;
 
 namespace StudentReportInitial.Forms
 {
@@ -33,6 +34,7 @@ namespace StudentReportInitial.Forms
             branchFilterId = branchId;
             InitializeComponent();
             ApplyModernStyling();
+            ThemeManager.ApplyTheme(this);
             LoadStudentsAsync();
             LoadGuardians();
         }
@@ -1014,6 +1016,8 @@ namespace StudentReportInitial.Forms
 
             // Add the scrollable panel to the main form panel
             pnlStudentForm.Controls.Add(scrollPanel);
+
+            ThemeManager.ApplyTheme(pnlStudentForm);
 
             // Load student data if editing
             if (isEditMode)

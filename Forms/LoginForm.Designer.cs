@@ -70,8 +70,9 @@ namespace StudentReportInitial.Forms
             pnlHero.Dock = DockStyle.Left;
             pnlHero.Location = new Point(0, 0);
             pnlHero.Name = "pnlHero";
-            pnlHero.Size = new Size(260, 420);
+            pnlHero.Size = new Size(450, 650);
             pnlHero.TabIndex = 0;
+            pnlHero.Paint += pnlHero_Paint;
             // 
             // lblTitle
             // 
@@ -90,10 +91,10 @@ namespace StudentReportInitial.Forms
             pnlLogin.BackColor = Color.Transparent;
             pnlLogin.Controls.Add(pnlLoginCard);
             pnlLogin.Dock = DockStyle.Fill;
-            pnlLogin.Location = new Point(260, 0);
+            pnlLogin.Location = new Point(450, 0);
             pnlLogin.Name = "pnlLogin";
-            pnlLogin.Padding = new Padding(60, 48, 60, 48);
-            pnlLogin.Size = new Size(440, 420);
+            pnlLogin.Padding = new Padding(60, 80, 80, 80);
+            pnlLogin.Size = new Size(650, 650);
             pnlLogin.TabIndex = 1;
             // 
             // pnlLoginCard
@@ -109,15 +110,16 @@ namespace StudentReportInitial.Forms
             pnlLoginCard.Controls.Add(lblUsername);
             pnlLoginCard.Controls.Add(lblSubtitle);
             pnlLoginCard.Controls.Add(lblLoginHeading);
-            pnlLoginCard.Location = new Point(20, 24);
+            pnlLoginCard.Location = new Point(63, 83);
             pnlLoginCard.Name = "pnlLoginCard";
             pnlLoginCard.Padding = new Padding(28, 32, 28, 32);
-            pnlLoginCard.Size = new Size(360, 320);
+            pnlLoginCard.Size = new Size(500, 360);
             pnlLoginCard.TabIndex = 0;
+            pnlLoginCard.Paint += pnlLoginCard_Paint;
             // 
             // btnTogglePassword
             // 
-            btnTogglePassword.Location = new Point(274, 178);
+            btnTogglePassword.Location = new Point(302, 230);
             btnTogglePassword.Name = "btnTogglePassword";
             btnTogglePassword.Size = new Size(58, 23);
             btnTogglePassword.TabIndex = 8;
@@ -129,7 +131,7 @@ namespace StudentReportInitial.Forms
             // 
             lblError.AutoSize = true;
             lblError.ForeColor = Color.FromArgb(239, 68, 68);
-            lblError.Location = new Point(28, 264);
+            lblError.Location = new Point(28, 267);
             lblError.Name = "lblError";
             lblError.Size = new Size(81, 15);
             lblError.TabIndex = 7;
@@ -141,9 +143,9 @@ namespace StudentReportInitial.Forms
             btnLogin.BackColor = Color.FromArgb(37, 99, 235);
             btnLogin.FlatStyle = FlatStyle.Flat;
             btnLogin.ForeColor = Color.White;
-            btnLogin.Location = new Point(28, 216);
+            btnLogin.Location = new Point(28, 285);
             btnLogin.Name = "btnLogin";
-            btnLogin.Size = new Size(304, 38);
+            btnLogin.Size = new Size(320, 40);
             btnLogin.TabIndex = 6;
             btnLogin.Text = "Login";
             btnLogin.UseVisualStyleBackColor = false;
@@ -151,7 +153,7 @@ namespace StudentReportInitial.Forms
             // 
             // txtPassword
             // 
-            txtPassword.Location = new Point(28, 178);
+            txtPassword.Location = new Point(56, 230);
             txtPassword.Name = "txtPassword";
             txtPassword.PasswordChar = '*';
             txtPassword.Size = new Size(240, 23);
@@ -161,7 +163,7 @@ namespace StudentReportInitial.Forms
             // lblPassword
             // 
             lblPassword.AutoSize = true;
-            lblPassword.Location = new Point(28, 156);
+            lblPassword.Location = new Point(56, 212);
             lblPassword.Name = "lblPassword";
             lblPassword.Size = new Size(57, 15);
             lblPassword.TabIndex = 4;
@@ -169,7 +171,7 @@ namespace StudentReportInitial.Forms
             // 
             // txtUsername
             // 
-            txtUsername.Location = new Point(28, 122);
+            txtUsername.Location = new Point(56, 170);
             txtUsername.Name = "txtUsername";
             txtUsername.Size = new Size(304, 23);
             txtUsername.TabIndex = 3;
@@ -177,7 +179,7 @@ namespace StudentReportInitial.Forms
             // lblUsername
             // 
             lblUsername.AutoSize = true;
-            lblUsername.Location = new Point(28, 100);
+            lblUsername.Location = new Point(56, 152);
             lblUsername.Name = "lblUsername";
             lblUsername.Size = new Size(60, 15);
             lblUsername.TabIndex = 2;
@@ -187,7 +189,7 @@ namespace StudentReportInitial.Forms
             // 
             lblSubtitle.AutoSize = true;
             lblSubtitle.ForeColor = Color.FromArgb(100, 116, 139);
-            lblSubtitle.Location = new Point(28, 64);
+            lblSubtitle.Location = new Point(28, 90);
             lblSubtitle.Name = "lblSubtitle";
             lblSubtitle.Size = new Size(165, 15);
             lblSubtitle.TabIndex = 1;
@@ -197,7 +199,7 @@ namespace StudentReportInitial.Forms
             // 
             lblLoginHeading.AutoSize = true;
             lblLoginHeading.ForeColor = Color.FromArgb(51, 65, 85);
-            lblLoginHeading.Location = new Point(28, 32);
+            lblLoginHeading.Location = new Point(28, 50);
             lblLoginHeading.Name = "lblLoginHeading";
             lblLoginHeading.Size = new Size(118, 15);
             lblLoginHeading.TabIndex = 0;
@@ -213,7 +215,7 @@ namespace StudentReportInitial.Forms
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.FromArgb(245, 247, 250);
-            ClientSize = new Size(700, 420);
+            ClientSize = new Size(1100, 650);
             Controls.Add(pnlLogin);
             Controls.Add(pnlHero);
             Name = "LoginForm";

@@ -3,20 +3,20 @@
   "WorkspaceRootPath": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\forms\\professorattendancepanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\professorattendancepanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\data\\smsservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:data\\smsservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\forms\\loginform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\loginform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
     },
     {
       "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\forms\\loginform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\loginform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\forms\\loginform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
-      "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\loginform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\forms\\professorattendancepanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\professorattendancepanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\data\\smsservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:data\\smsservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
@@ -141,7 +141,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Document",
@@ -157,12 +157,12 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 1,
               "Title": "LoginForm.cs",
               "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\LoginForm.cs",
               "RelativeDocumentMoniker": "Forms\\LoginForm.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\LoginForm.cs",
-              "RelativeToolTip": "Forms\\LoginForm.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\LoginForm.cs*",
+              "RelativeToolTip": "Forms\\LoginForm.cs*",
               "ViewState": "AgIAAKgAAAAAAAAAAAAgwEIAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-19T14:51:38.833Z",
@@ -181,24 +181,25 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 0,
               "Title": "LoginForm.cs [Design]",
               "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\LoginForm.cs",
               "RelativeDocumentMoniker": "Forms\\LoginForm.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\LoginForm.cs [Design]",
-              "RelativeToolTip": "..\\..\\..\\Documents\\StudentReportSystem\\Forms\\LoginForm.cs [Design]",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\LoginForm.cs [Design]*",
+              "RelativeToolTip": "Forms\\LoginForm.cs [Design]*",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-14T13:25:24.692Z"
+              "WhenOpened": "2025-09-14T13:25:24.692Z",
+              "EditorCaption": " [Design]"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "ProfessorAttendancePanel.cs",
               "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\ProfessorAttendancePanel.cs",
               "RelativeDocumentMoniker": "Forms\\ProfessorAttendancePanel.cs",
               "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\ProfessorAttendancePanel.cs",
               "RelativeToolTip": "Forms\\ProfessorAttendancePanel.cs",
-              "ViewState": "AgIAANsCAAAAAAAAAAAqwOwCAAAZAAAAAAAAAA==",
+              "ViewState": "AgIAAP8CAAAAAAAAAAAmwPQCAABeAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-23T17:06:58.152Z",
               "EditorCaption": ""
@@ -216,7 +217,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 3,
               "Title": "SmsService.cs",
               "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Data\\SmsService.cs",
               "RelativeDocumentMoniker": "Data\\SmsService.cs",
@@ -281,11 +282,12 @@
               "Title": "LoginForm.Designer.cs",
               "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\LoginForm.Designer.cs",
               "RelativeDocumentMoniker": "Forms\\LoginForm.Designer.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\LoginForm.Designer.cs",
-              "RelativeToolTip": "Forms\\LoginForm.Designer.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\LoginForm.Designer.cs*",
+              "RelativeToolTip": "Forms\\LoginForm.Designer.cs*",
               "ViewState": "AgIAANcAAAAAAAAAAAAwwC8AAAAlAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-19T15:08:35.394Z"
+              "WhenOpened": "2025-11-19T15:08:35.394Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",

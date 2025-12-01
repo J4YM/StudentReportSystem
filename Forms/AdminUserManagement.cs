@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
+using StudentReportInitial.Theming;
 
 namespace StudentReportInitial.Forms
 {
@@ -38,6 +39,7 @@ namespace StudentReportInitial.Forms
             branchFilterId = branchId;
             InitializeComponent();
             ApplyModernStyling();
+            ThemeManager.ApplyTheme(this);
             LoadUsersAsync();
         }
 
@@ -538,7 +540,6 @@ namespace StudentReportInitial.Forms
 
             cmbRoleFilter.Items.Clear();
             cmbRoleFilter.Items.Add(FilterAllLabel);
-            cmbRoleFilter.Items.Add("Super Admin");
             cmbRoleFilter.Items.Add("Admin");
             cmbRoleFilter.Items.Add("Professor");
             cmbRoleFilter.Items.Add("Guardian");
@@ -706,16 +707,17 @@ namespace StudentReportInitial.Forms
                 var userId = Convert.ToInt32(selectedRow.Cells["Id"].Value);
                 var userRole = Convert.ToInt32(selectedRow.Cells["Role"].Value);
                 var username = selectedRow.Cells["Username"].Value?.ToString() ?? "";
-                bool isAdminAccount = userRole == (int)UserRole.Admin || userRole == (int)UserRole.SuperAdmin;
+                bool isSuperAdminAccount = userRole == (int)UserRole.SuperAdmin;
+                bool isAdminAccount = userRole == (int)UserRole.Admin || isSuperAdminAccount;
                 bool canManageAdmins = await IsCurrentUserSuperAdminAsync();
                 btnEditUser.Enabled = hasSelection && (!isAdminAccount || canManageAdmins);
                 
                 // Check if this is the primary admin account
                 bool isPrimaryAdmin = await IsPrimaryAdminAccountAsync(userId, username);
-                bool isAdmin = userRole == 1; // Role 1 = Admin
+                bool isAdmin = userRole == (int)UserRole.Admin;
                 
                 // Disable delete for ALL admin accounts
-                bool canDelete = !isAdmin;
+                bool canDelete = !isAdmin && !isSuperAdminAccount;
                 
                 // Additional check: also disable for primary admin (even if not admin role, though unlikely)
                 if (isPrimaryAdmin)
@@ -732,6 +734,10 @@ namespace StudentReportInitial.Forms
                     if (isPrimaryAdmin)
                     {
                         tooltip.SetToolTip(btnDeleteUser, "Cannot delete the primary admin account. This account is required for system access.");
+                    }
+                    else if (isSuperAdminAccount)
+                    {
+                        tooltip.SetToolTip(btnDeleteUser, "The Super Admin account cannot be deleted.");
                     }
                     else if (isAdmin)
                     {
@@ -843,7 +849,15 @@ namespace StudentReportInitial.Forms
             var userId = Convert.ToInt32(selectedRow.Cells["Id"].Value);
             var username = selectedRow.Cells["Username"].Value?.ToString() ?? "";
             var userRole = Convert.ToInt32(selectedRow.Cells["Role"].Value);
-            var isAdmin = userRole == 1;
+            var isSuperAdmin = userRole == (int)UserRole.SuperAdmin;
+            var isAdmin = userRole == (int)UserRole.Admin;
+
+            if (isSuperAdmin)
+            {
+                MessageBox.Show("The Super Admin account cannot be deleted.", "Access Restricted",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
             // Double confirmation for admin accounts
             var confirmMessage = isAdmin 
@@ -1606,6 +1620,8 @@ namespace StudentReportInitial.Forms
             {
                 updatePhoneFieldVisibility();
             }
+
+            ThemeManager.ApplyTheme(pnlUserForm);
 
             // Load user data if editing
             if (isEditMode)

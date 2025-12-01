@@ -1,5 +1,6 @@
 using StudentReportInitial.Forms;
 using StudentReportInitial.Data;
+using StudentReportInitial.Theming;
 
 namespace StudentReportInitial
 {
@@ -14,6 +15,7 @@ namespace StudentReportInitial
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
+            ThemeManager.Initialize();
 
             try
             {

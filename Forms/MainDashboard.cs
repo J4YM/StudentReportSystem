@@ -8,8 +8,7 @@ using System.ComponentModel;
 using System.Drawing.Design;
 using System.Data.SqlClient;
 using System.Data;
-
-
+using StudentReportInitial.Theming;
 
 namespace StudentReportInitial.Forms
 {
@@ -23,6 +22,7 @@ namespace StudentReportInitial.Forms
         private Button? btnManageUsers;
         private Button? btnManageStudents;
         private ToolTip? branchTooltip;
+        private readonly ToolTip themeToggleTooltip = new();
 
         public MainDashboard(User user)
         {
@@ -30,6 +30,9 @@ namespace StudentReportInitial.Forms
             InitializeComponent();
             ApplyModernStyling();
             LoadUserInterface();
+            ThemeManager.ThemeChanged += ThemeManager_ThemeChanged;
+            ThemeManager.ApplyTheme(this);
+            UpdateThemeToggleVisual();
         }
 
         private void ApplyModernStyling()
@@ -69,6 +72,15 @@ namespace StudentReportInitial.Forms
             btnLogout.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 38, 38);
             btnLogout.FlatAppearance.MouseDownBackColor = Color.FromArgb(185, 28, 28);
             UIStyleHelper.ApplyRoundedButton(btnLogout, 12);
+
+            if (btnThemeToggle != null)
+            {
+                btnThemeToggle.FlatStyle = FlatStyle.Flat;
+                btnThemeToggle.FlatAppearance.BorderSize = 0;
+                btnThemeToggle.Cursor = Cursors.Hand;
+                btnThemeToggle.Font = new Font("Segoe UI", 16F, FontStyle.Bold);
+                btnThemeToggle.ForeColor = Color.FromArgb(30, 41, 59);
+            }
 
             // Sidebar panel
             pnlSidebar.BackColor = Color.White;
@@ -162,6 +174,8 @@ namespace StudentReportInitial.Forms
                     LoadViewerInterface();
                     break;
             }
+
+            ThemeManager.ApplyTheme(this);
         }
 
         private async Task InitializeBranchSelectorAsync()
@@ -1203,6 +1217,52 @@ namespace StudentReportInitial.Forms
                 UserRole.Student => "Student",
                 _ => role.ToString()
             };
+        }
+
+        private void ThemeManager_ThemeChanged(object? sender, EventArgs e)
+        {
+            if (IsDisposed)
+            {
+                return;
+            }
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new MethodInvoker(() =>
+                {
+                    ThemeManager.ApplyTheme(this);
+                    UpdateThemeToggleVisual();
+                }));
+                return;
+            }
+
+            ThemeManager.ApplyTheme(this);
+            UpdateThemeToggleVisual();
+        }
+
+        private void btnThemeToggle_Click(object? sender, EventArgs e)
+        {
+            ThemeManager.ToggleTheme();
+            UpdateThemeToggleVisual();
+        }
+
+        private void UpdateThemeToggleVisual()
+        {
+            if (btnThemeToggle == null)
+            {
+                return;
+            }
+
+            bool isDark = ThemeManager.CurrentTheme == AppTheme.Dark;
+            btnThemeToggle.Text = isDark ? "\u263C" : "\u263E";
+            var tooltipText = isDark ? "Switch to light mode" : "Switch to dark mode";
+            themeToggleTooltip.SetToolTip(btnThemeToggle, tooltipText);
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            ThemeManager.ThemeChanged -= ThemeManager_ThemeChanged;
+            base.OnFormClosed(e);
         }
     }
 }

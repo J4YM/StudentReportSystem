@@ -3,7 +3,9 @@ using StudentReportInitial.Data;
 using System.Data.SqlClient;
 using System.Windows.Forms;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
+using StudentReportInitial.Theming;
 
 namespace StudentReportInitial.Forms
 {
@@ -16,124 +18,235 @@ namespace StudentReportInitial.Forms
         {
             InitializeComponent();
             ApplyModernStyling();
+            ThemeManager.ApplyTheme(this);
         }
 
         private void ApplyModernStyling()
         {
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(700, 420);
-            MinimumSize = new Size(700, 420);
+            ClientSize = new Size(1100, 650);
+            MinimumSize = new Size(1100, 650);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             MinimizeBox = false;
             Text = "STI College - AimONE - Login";
             AcceptButton = btnLogin;
+            DoubleBuffered = true;
 
-            // Set background image
-            try
-            {
-                string imagesFolder = Path.Combine(Application.StartupPath, "Images");
-                string[] imageExtensions = { ".jpg", ".jpeg", ".png", ".bmp" };
-                string imageName = "sti_baliuag_building";
-                string? imagePath = null;
-
-                foreach (var ext in imageExtensions)
-                {
-                    string testPath = Path.Combine(imagesFolder, imageName + ext);
-                    if (File.Exists(testPath))
-                    {
-                        imagePath = testPath;
-                        break;
-                    }
-                }
-
-                if (imagePath != null && File.Exists(imagePath))
-                {
-                    BackgroundImage = Image.FromFile(imagePath);
-                    BackgroundImageLayout = ImageLayout.Stretch;
-                    BackColor = Color.FromArgb(245, 247, 250);
-                }
-                else
-                {
-                    // If image not found, use solid color
-                    BackColor = Color.FromArgb(245, 247, 250);
-                }
-            }
-            catch
-            {
-                // If image loading fails, use solid color
-                BackColor = Color.FromArgb(245, 247, 250);
-            }
-
-            pnlHero.Padding = new Padding(32, 56, 32, 32);
-
-            pnlHero.Paint += (s, e) =>
-            {
-                using (var brush = new SolidBrush(Color.FromArgb(200, 37, 99, 235)))
-                {
-                    e.Graphics.FillRectangle(brush, pnlHero.ClientRectangle);
-                }
-            };
-            pnlHero.BackColor = Color.Transparent; // Make panel transparent so custom paint shows
-            lblTitle.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
-            lblTitle.AutoSize = true;
-            lblTitle.MaximumSize = new Size(200, 0);
-            lblTitle.TextAlign = ContentAlignment.TopLeft;
+            // Left illustration section typography
+            pnlHero.BackColor = Color.Transparent;
+            lblTitle.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
+            lblTitle.Text = "STI College Login Portal";
             lblTitle.ForeColor = Color.White;
-            lblTitle.BackColor = Color.Transparent;
-            lblHeroSubtitle.Font = new Font("Segoe UI", 10F);
-            lblHeroSubtitle.MaximumSize = new Size(200, 0);
+            lblHeroSubtitle.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             lblHeroSubtitle.ForeColor = Color.White;
-            lblHeroSubtitle.BackColor = Color.Transparent;
+            lblHeroSubtitle.Text = string.Empty;
 
-            // Login card styling - make it semi-transparent to show background
+            // Right login section styling
             pnlLogin.BackColor = Color.Transparent;
-            pnlLoginCard.BackColor = Color.White;
+            pnlLoginCard.BackColor = Color.Transparent;
             pnlLoginCard.BorderStyle = BorderStyle.None;
-            UIStyleHelper.ApplyRoundedCorners(pnlLoginCard, 18, drawBorder: true);
 
-            lblLoginHeading.Font = new Font("Segoe UI", 16F, FontStyle.Bold);
-            lblLoginHeading.Text = "Welcome back";
-            lblSubtitle.Font = new Font("Segoe UI", 10F);
+            lblLoginHeading.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
+            lblLoginHeading.Text = "STI Student Portal Login";
+            lblLoginHeading.ForeColor = ColorTranslator.FromHtml("#002B5C");
+
+            lblSubtitle.Font = new Font("Segoe UI", 11F, FontStyle.Regular);
             lblSubtitle.ForeColor = Color.FromArgb(100, 116, 139);
 
-            lblUsername.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            lblUsername.Font = new Font("Segoe UI", 10.5F, FontStyle.Regular);
             lblUsername.ForeColor = Color.FromArgb(51, 65, 85);
-            txtUsername.Font = new Font("Segoe UI", 10F);
+            txtUsername.Font = new Font("Segoe UI", 11F, FontStyle.Regular);
             txtUsername.BorderStyle = BorderStyle.FixedSingle;
             txtUsername.BackColor = Color.White;
-            txtUsername.ForeColor = Color.FromArgb(51, 65, 85);
-            txtUsername.PlaceholderText = "Enter your username";
+            txtUsername.ForeColor = Color.FromArgb(31, 41, 55);
+            txtUsername.PlaceholderText = "Enter your STI email";
 
-            lblPassword.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            lblPassword.Font = new Font("Segoe UI", 10.5F, FontStyle.Regular);
             lblPassword.ForeColor = Color.FromArgb(51, 65, 85);
-            txtPassword.Font = new Font("Segoe UI", 10F);
+            txtPassword.Font = new Font("Segoe UI", 11F, FontStyle.Regular);
             txtPassword.BorderStyle = BorderStyle.FixedSingle;
             txtPassword.BackColor = Color.White;
-            txtPassword.ForeColor = Color.FromArgb(51, 65, 85);
+            txtPassword.ForeColor = Color.FromArgb(31, 41, 55);
             txtPassword.PlaceholderText = "Enter your password";
             txtPassword.UseSystemPasswordChar = true;
 
             btnTogglePassword.FlatStyle = FlatStyle.Flat;
             btnTogglePassword.FlatAppearance.BorderSize = 0;
             btnTogglePassword.BackColor = Color.Transparent;
-            btnTogglePassword.ForeColor = Color.FromArgb(37, 99, 235);
+            btnTogglePassword.ForeColor = Color.FromArgb(0, 116, 204);
             btnTogglePassword.Cursor = Cursors.Hand;
 
-            btnLogin.BackColor = Color.FromArgb(37, 99, 235);
-            btnLogin.ForeColor = Color.White;
-            btnLogin.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            btnLogin.BackColor = ColorTranslator.FromHtml("#FFDD00");
+            btnLogin.ForeColor = ColorTranslator.FromHtml("#002B5C");
+            btnLogin.Font = new Font("Segoe UI Semibold", 12F, FontStyle.Bold);
             btnLogin.FlatStyle = FlatStyle.Flat;
             btnLogin.FlatAppearance.BorderSize = 0;
             btnLogin.Cursor = Cursors.Hand;
-            btnLogin.FlatAppearance.MouseOverBackColor = Color.FromArgb(29, 78, 216);
-            btnLogin.FlatAppearance.MouseDownBackColor = Color.FromArgb(30, 64, 175);
-            UIStyleHelper.ApplyRoundedButton(btnLogin, 14);
+            btnLogin.FlatAppearance.MouseOverBackColor = ColorTranslator.FromHtml("#FFE866");
+            btnLogin.FlatAppearance.MouseDownBackColor = ColorTranslator.FromHtml("#E5C800");
+            UIStyleHelper.ApplyRoundedButton(btnLogin, 18);
 
             lblError.ForeColor = Color.FromArgb(239, 68, 68);
             lblError.Font = new Font("Segoe UI", 9F);
             lblError.TextAlign = ContentAlignment.MiddleLeft;
             lblError.Visible = false;
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+
+            var rect = ClientRectangle;
+            if (rect.Width <= 0 || rect.Height <= 0)
+            {
+                return;
+            }
+
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+            using (var brush = new LinearGradientBrush(
+                       rect,
+                       ColorTranslator.FromHtml("#004A99"),
+                       ColorTranslator.FromHtml("#0074CC"),
+                       LinearGradientMode.Horizontal))
+            {
+                e.Graphics.FillRectangle(brush, rect);
+            }
+
+            // Soft shadow behind main card panel (if present)
+            if (pnlLogin != null)
+            {
+                var bounds = pnlLogin.Bounds;
+                bounds.Offset(10, 14);
+                using var shadowBrush = new SolidBrush(Color.FromArgb(50, 0, 0, 0));
+                e.Graphics.FillRectangle(shadowBrush, bounds);
+            }
+        }
+
+        private void pnlHero_Paint(object sender, PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            var bounds = pnlHero.ClientRectangle;
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            // Large circular gradient
+            int circleSize = Math.Min(bounds.Width, bounds.Height) - 80;
+            var circleRect = new Rectangle(
+                bounds.Left + (bounds.Width - circleSize) / 2,
+                bounds.Top + 80,
+                circleSize,
+                circleSize);
+
+            using (var circleBrush = new LinearGradientBrush(
+                       circleRect,
+                       Color.FromArgb(180, 127, 184, 255),
+                       Color.FromArgb(220, 224, 242, 255),
+                       LinearGradientMode.ForwardDiagonal))
+            {
+                g.FillEllipse(circleBrush, circleRect);
+            }
+
+            // Graduation cap icon
+            var capCenter = new Point(circleRect.Left + circleRect.Width / 2, circleRect.Top + circleRect.Height / 2);
+            var capWidth = circleRect.Width / 2;
+            var capHeight = capWidth / 3;
+
+            Point[] capTop =
+            {
+                new Point(capCenter.X - capWidth / 2, capCenter.Y),
+                new Point(capCenter.X, capCenter.Y - capHeight),
+                new Point(capCenter.X + capWidth / 2, capCenter.Y),
+                new Point(capCenter.X, capCenter.Y + capHeight)
+            };
+
+            using (var capBrush = new SolidBrush(Color.White))
+            using (var capPen = new Pen(Color.FromArgb(0, 43, 92), 2))
+            {
+                g.FillPolygon(capBrush, capTop);
+                g.DrawPolygon(capPen, capTop);
+
+                // Tassel
+                var tasselStart = new Point(capCenter.X + capWidth / 2, capCenter.Y);
+                var tasselEnd = new Point(tasselStart.X + 18, tasselStart.Y + 28);
+                g.DrawLine(capPen, tasselStart, tasselEnd);
+                g.FillEllipse(capBrush, tasselEnd.X - 3, tasselEnd.Y - 3, 6, 6);
+            }
+
+            // Decorative dots and triangles
+            using var yellowBrush = new SolidBrush(ColorTranslator.FromHtml("#FFDD00"));
+            using var blueBrush = new SolidBrush(ColorTranslator.FromHtml("#7FB8FF"));
+
+            g.FillEllipse(yellowBrush, circleRect.Left - 12, circleRect.Top + 20, 8, 8);
+            g.FillEllipse(yellowBrush, circleRect.Right + 6, circleRect.Top + 40, 10, 10);
+            g.FillEllipse(blueBrush, circleRect.Left + 30, circleRect.Bottom + 6, 10, 10);
+
+            Point[] triangle1 =
+            {
+                new Point(circleRect.Left - 20, circleRect.Bottom - 10),
+                new Point(circleRect.Left - 4, circleRect.Bottom - 2),
+                new Point(circleRect.Left - 12, circleRect.Bottom + 10)
+            };
+            g.FillPolygon(blueBrush, triangle1);
+
+            // Simple book icon near circle
+            var bookRect = new Rectangle(circleRect.Right - 80, circleRect.Bottom - 60, 48, 34);
+            using var bookBrush = new SolidBrush(Color.FromArgb(250, 250, 250));
+            using var bookPen = new Pen(ColorTranslator.FromHtml("#FFDD00"), 2);
+            g.FillRectangle(bookBrush, bookRect);
+            g.DrawRectangle(bookPen, bookRect);
+            g.DrawLine(bookPen, bookRect.Left + bookRect.Width / 2, bookRect.Top,
+                bookRect.Left + bookRect.Width / 2, bookRect.Bottom);
+        }
+
+        private void pnlLoginCard_Paint(object sender, PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            // Email icon near username textbox
+            var centerEmail = new Point(txtUsername.Left - 26, txtUsername.Top + txtUsername.Height / 2);
+            DrawEnvelopeIcon(g, centerEmail);
+
+            // Lock icon near password textbox
+            var centerLock = new Point(txtPassword.Left - 26, txtPassword.Top + txtPassword.Height / 2);
+            DrawLockIcon(g, centerLock);
+        }
+
+        private static void DrawEnvelopeIcon(Graphics g, Point center)
+        {
+            var size = 16;
+            var rect = new Rectangle(center.X - size / 2, center.Y - size / 2, size, size);
+            using var pen = new Pen(Color.White, 1.5f);
+            using var brush = new SolidBrush(Color.FromArgb(255, 221, 0));
+
+            g.FillRectangle(brush, rect);
+            g.DrawRectangle(pen, rect);
+
+            // Envelope flap
+            g.DrawLine(pen, rect.Left, rect.Top, rect.Left + rect.Width / 2, rect.Top + rect.Height / 2);
+            g.DrawLine(pen, rect.Right, rect.Top, rect.Left + rect.Width / 2, rect.Top + rect.Height / 2);
+        }
+
+        private static void DrawLockIcon(Graphics g, Point center)
+        {
+            var size = 16;
+            var bodyRect = new Rectangle(center.X - size / 2, center.Y - size / 4, size, size / 2 + 4);
+            using var brush = new SolidBrush(Color.FromArgb(0, 43, 92));
+            using var pen = new Pen(Color.White, 1.5f);
+
+            // Body
+            g.FillRectangle(brush, bodyRect);
+            g.DrawRectangle(pen, bodyRect);
+
+            // Shackle
+            var shackleRect = new Rectangle(center.X - size / 4, center.Y - size / 2, size / 2, size / 2);
+            g.DrawArc(pen, shackleRect, 200, 140);
         }
 
         private async void btnLogin_Click(object sender, EventArgs e)

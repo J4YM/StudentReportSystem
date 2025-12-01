@@ -31,6 +31,7 @@ namespace StudentReportInitial.Forms
             pnlHeader = new Panel();
             lblAppTitle = new Label();
             lblUserInfo = new Label();
+            btnThemeToggle = new Button();
             btnLogout = new Button();
             pnlSidebar = new Panel();
             pnlSidebarHeader = new Panel();
@@ -45,6 +46,7 @@ namespace StudentReportInitial.Forms
             // 
             pnlHeader.Controls.Add(lblAppTitle);
             pnlHeader.Controls.Add(lblUserInfo);
+            pnlHeader.Controls.Add(btnThemeToggle);
             pnlHeader.Controls.Add(btnLogout);
             pnlHeader.Dock = DockStyle.Top;
             pnlHeader.Location = new Point(0, 0);
@@ -65,13 +67,24 @@ namespace StudentReportInitial.Forms
             // lblUserInfo
             // 
             lblUserInfo.Dock = DockStyle.Right;
-            lblUserInfo.Location = new Point(854, 0);
+            lblUserInfo.Location = new Point(794, 0);
             lblUserInfo.Name = "lblUserInfo";
             lblUserInfo.Padding = new Padding(0, 12, 12, 12);
             lblUserInfo.Size = new Size(240, 72);
             lblUserInfo.TabIndex = 1;
             lblUserInfo.Text = "User Info";
             lblUserInfo.TextAlign = ContentAlignment.MiddleRight;
+            // 
+            // btnThemeToggle
+            // 
+            btnThemeToggle.Dock = DockStyle.Right;
+            btnThemeToggle.Location = new Point(914, 0);
+            btnThemeToggle.Name = "btnThemeToggle";
+            btnThemeToggle.Size = new Size(60, 72);
+            btnThemeToggle.TabIndex = 3;
+            btnThemeToggle.Text = "🌙";
+            btnThemeToggle.UseVisualStyleBackColor = false;
+            btnThemeToggle.Click += btnThemeToggle_Click;
             // 
             // btnLogout
             // 
@@ -153,5 +166,6 @@ namespace StudentReportInitial.Forms
         private System.Windows.Forms.Panel pnlSidebarHeader;
         private System.Windows.Forms.Label lblSidebarTitle;
         private System.Windows.Forms.FlowLayoutPanel flpSidebarButtons;
+        private System.Windows.Forms.Button btnThemeToggle;
     }
 }
