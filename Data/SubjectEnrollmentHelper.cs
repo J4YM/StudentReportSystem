@@ -96,7 +96,7 @@ namespace StudentReportInitial.Data
             }
         }
 
-        public static async Task<bool> EnrollStudentInSubjectAsync(int studentId, int subjectId)
+        public static async Task<bool> EnrollStudentInSubjectAsync(int studentId, int subjectId, int? branchId = null)
         {
             using var connection = DatabaseHelper.GetConnection();
             await connection.OpenAsync();
@@ -104,26 +104,56 @@ namespace StudentReportInitial.Data
 
             try
             {
-                // Check if student exists and is active
-                var checkStudentQuery = "SELECT IsActive FROM Students WHERE Id = @studentId";
+                // Check if student exists and is active plus branch
+                var checkStudentQuery = "SELECT IsActive, BranchId FROM Students WHERE Id = @studentId";
                 using var checkStudentCommand = new SqlCommand(checkStudentQuery, connection, transaction);
                 checkStudentCommand.Parameters.AddWithValue("@studentId", studentId);
-                var isStudentActive = await checkStudentCommand.ExecuteScalarAsync();
-
-                if (isStudentActive == null || !(bool)isStudentActive)
+                int studentBranchId;
+                using (var reader = await checkStudentCommand.ExecuteReaderAsync())
                 {
-                    throw new InvalidOperationException("Student does not exist or is inactive.");
+                    if (!await reader.ReadAsync())
+                    {
+                        throw new InvalidOperationException("Student does not exist.");
+                    }
+
+                    var isActive = reader.GetBoolean(reader.GetOrdinal("IsActive"));
+                    if (!isActive)
+                    {
+                        throw new InvalidOperationException("Student is inactive.");
+                    }
+
+                    studentBranchId = reader.GetInt32(reader.GetOrdinal("BranchId"));
                 }
 
-                // Check if the subject exists and is active
-                var checkSubjectQuery = "SELECT IsActive FROM Subjects WHERE Id = @subjectId";
+                if (branchId.HasValue && studentBranchId != branchId.Value)
+                {
+                    throw new UnauthorizedAccessException("You can only manage students from your assigned branch.");
+                }
+
+                // Check if the subject exists, is active, and belongs to the same branch
+                var checkSubjectQuery = "SELECT IsActive, BranchId FROM Subjects WHERE Id = @subjectId";
                 using var checkSubjectCommand = new SqlCommand(checkSubjectQuery, connection, transaction);
                 checkSubjectCommand.Parameters.AddWithValue("@subjectId", subjectId);
-                var isSubjectActive = await checkSubjectCommand.ExecuteScalarAsync();
-
-                if (isSubjectActive == null || !(bool)isSubjectActive)
+                int subjectBranchId;
+                using (var reader = await checkSubjectCommand.ExecuteReaderAsync())
                 {
-                    throw new InvalidOperationException("Subject does not exist or is inactive.");
+                    if (!await reader.ReadAsync())
+                    {
+                        throw new InvalidOperationException("Subject does not exist.");
+                    }
+
+                    var isActive = reader.GetBoolean(reader.GetOrdinal("IsActive"));
+                    if (!isActive)
+                    {
+                        throw new InvalidOperationException("Subject is inactive.");
+                    }
+
+                    subjectBranchId = reader.GetInt32(reader.GetOrdinal("BranchId"));
+                }
+
+                if (studentBranchId != subjectBranchId)
+                {
+                    throw new InvalidOperationException("Subject belongs to a different branch.");
                 }
 
                 // Check if student is already enrolled
@@ -158,7 +188,7 @@ namespace StudentReportInitial.Data
             }
         }
 
-        public static async Task<bool> UnenrollStudentFromSubjectAsync(int studentId, int subjectId)
+        public static async Task<bool> UnenrollStudentFromSubjectAsync(int studentId, int subjectId, int? branchId = null)
         {
             using var connection = DatabaseHelper.GetConnection();
             await connection.OpenAsync();
@@ -166,16 +196,42 @@ namespace StudentReportInitial.Data
 
             try
             {
-                // Check if student is enrolled
-                var checkEnrollmentQuery = "SELECT COUNT(*) FROM StudentSubjects WHERE StudentId = @studentId AND SubjectId = @subjectId";
-                using var checkEnrollmentCommand = new SqlCommand(checkEnrollmentQuery, connection, transaction);
-                checkEnrollmentCommand.Parameters.AddWithValue("@studentId", studentId);
-                checkEnrollmentCommand.Parameters.AddWithValue("@subjectId", subjectId);
-                var enrollmentExists = Convert.ToInt32(await checkEnrollmentCommand.ExecuteScalarAsync()) > 0;
+                // Check if student is enrolled and retrieve branch
+                var enrollmentInfoQuery = @"
+                    SELECT s.BranchId
+                    FROM StudentSubjects ss
+                    INNER JOIN Students s ON ss.StudentId = s.Id
+                    WHERE ss.StudentId = @studentId AND ss.SubjectId = @subjectId";
+                using var enrollmentCommand = new SqlCommand(enrollmentInfoQuery, connection, transaction);
+                enrollmentCommand.Parameters.AddWithValue("@studentId", studentId);
+                enrollmentCommand.Parameters.AddWithValue("@subjectId", subjectId);
+                var enrollmentBranchObj = await enrollmentCommand.ExecuteScalarAsync();
 
-                if (!enrollmentExists)
+                if (enrollmentBranchObj == null || enrollmentBranchObj == DBNull.Value)
                 {
                     throw new InvalidOperationException("Student is not enrolled in this subject.");
+                }
+
+                var enrollmentBranchId = Convert.ToInt32(enrollmentBranchObj);
+                if (branchId.HasValue && enrollmentBranchId != branchId.Value)
+                {
+                    throw new UnauthorizedAccessException("You can only manage enrollments within your branch.");
+                }
+
+                // Ensure subject belongs to the same branch
+                var subjectBranchQuery = "SELECT BranchId FROM Subjects WHERE Id = @subjectId";
+                using var subjectBranchCommand = new SqlCommand(subjectBranchQuery, connection, transaction);
+                subjectBranchCommand.Parameters.AddWithValue("@subjectId", subjectId);
+                var subjectBranchObj = await subjectBranchCommand.ExecuteScalarAsync();
+                if (subjectBranchObj == null || subjectBranchObj == DBNull.Value)
+                {
+                    throw new InvalidOperationException("Subject does not exist.");
+                }
+
+                var subjectBranchId = Convert.ToInt32(subjectBranchObj);
+                if (subjectBranchId != enrollmentBranchId)
+                {
+                    throw new InvalidOperationException("Subject belongs to a different branch.");
                 }
 
                 // Remove the enrollment record

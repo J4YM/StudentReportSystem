@@ -1,138 +1,137 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\",
+  "WorkspaceRootPath": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\forms\\professorattendancepanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\forms\\professorattendancepanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\professorattendancepanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\data\\smsservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\data\\smsservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:data\\smsservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\app.config||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
-      "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:app.config||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\forms\\loginform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\forms\\loginform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\loginform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\forms\\loginform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\forms\\loginform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\loginform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\forms\\maindashboard.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\forms\\maindashboard.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\maindashboard.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\forms\\studentsubjectenrollment.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\forms\\studentsubjectenrollment.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\studentsubjectenrollment.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\forms\\adminusermanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\forms\\adminusermanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\adminusermanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\forms\\adminusermanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\forms\\adminusermanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\adminusermanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\data\\accounthelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\data\\accounthelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:data\\accounthelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\forms\\viewergradespanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\forms\\viewergradespanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\viewergradespanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\data\\gradecalculator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\data\\gradecalculator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:data\\gradecalculator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\forms\\viewergradespanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\forms\\viewergradespanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\viewergradespanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\forms\\professorgradespanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\forms\\professorgradespanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\professorgradespanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\.gitignore||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\.gitignore||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:.gitignore||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\data\\phonevalidator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\data\\phonevalidator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:data\\phonevalidator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\data\\databasehelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\data\\databasehelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:data\\databasehelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\forms\\loginform.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\forms\\loginform.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\loginform.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\forms\\userprofilepanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\forms\\userprofilepanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\userprofilepanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\data\\usercontexthelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\data\\usercontexthelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:data\\usercontexthelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\forms\\addadminform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\forms\\addadminform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\addadminform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\forms\\adminsubjectmanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\forms\\adminsubjectmanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\adminsubjectmanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\data\\subjectenrollmenthelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\data\\subjectenrollmenthelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:data\\subjectenrollmenthelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\forms\\uistylehelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\forms\\uistylehelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\uistylehelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\forms\\maindashboard.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\forms\\maindashboard.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\maindashboard.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\studentreportinitial.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\studentreportinitial.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:studentreportinitial.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\forms\\adminsubjectmanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\forms\\adminsubjectmanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\adminsubjectmanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\models\\subject.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\models\\subject.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:models\\subject.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\documents\\studentreportsystem\\models\\attendance.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|c:\\users\\jameswindell\\downloads\\studentreportsystem-init(1)\\studentreportsystem-init\\models\\attendance.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:models\\attendance.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\forms\\adminstudentmanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "AbsoluteMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\forms\\adminstudentmanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
       "RelativeMoniker": "D:0:0:{1525221B-904F-4643-8213-8E20F0FD3CCA}|StudentReportInitial.csproj|solutionrelative:forms\\adminstudentmanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\app.config||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
     }
   ],
   "DocumentGroupContainers": [
@@ -146,24 +145,23 @@
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 32,
               "Title": "app.config",
               "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\app.config",
-              "RelativeDocumentMoniker": "app.config",
+              "RelativeDocumentMoniker": "..\\..\\..\\Documents\\StudentReportSystem\\app.config",
               "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\app.config",
-              "RelativeToolTip": "app.config",
+              "RelativeToolTip": "..\\..\\..\\Documents\\StudentReportSystem\\app.config",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000601|",
-              "WhenOpened": "2025-11-30T14:44:14.801Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T14:44:14.801Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 2,
               "Title": "LoginForm.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\LoginForm.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\LoginForm.cs",
               "RelativeDocumentMoniker": "Forms\\LoginForm.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\LoginForm.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\LoginForm.cs",
               "RelativeToolTip": "Forms\\LoginForm.cs",
               "ViewState": "AgIAAKgAAAAAAAAAAAAgwEIAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -172,49 +170,47 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 4,
               "Title": "Form1.cs [Design]",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Form1.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Form1.cs",
               "RelativeDocumentMoniker": "Form1.cs",
               "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Form1.cs [Design]",
-              "RelativeToolTip": "Form1.cs [Design]",
+              "RelativeToolTip": "..\\..\\..\\Documents\\StudentReportSystem\\Form1.cs [Design]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-14T07:08:12.107Z",
-              "EditorCaption": " [Design]"
+              "WhenOpened": "2025-09-14T07:08:12.107Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 3,
               "Title": "LoginForm.cs [Design]",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\LoginForm.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\LoginForm.cs",
               "RelativeDocumentMoniker": "Forms\\LoginForm.cs",
               "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\LoginForm.cs [Design]",
-              "RelativeToolTip": "Forms\\LoginForm.cs [Design]",
+              "RelativeToolTip": "..\\..\\..\\Documents\\StudentReportSystem\\Forms\\LoginForm.cs [Design]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-14T13:25:24.692Z",
-              "EditorCaption": " [Design]"
+              "WhenOpened": "2025-09-14T13:25:24.692Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "ProfessorAttendancePanel.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\ProfessorAttendancePanel.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\ProfessorAttendancePanel.cs",
               "RelativeDocumentMoniker": "Forms\\ProfessorAttendancePanel.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\ProfessorAttendancePanel.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\ProfessorAttendancePanel.cs",
               "RelativeToolTip": "Forms\\ProfessorAttendancePanel.cs",
-              "ViewState": "AgIAAMkCAAAAAAAAAAAqwOwCAAAZAAAAAAAAAA==",
+              "ViewState": "AgIAANsCAAAAAAAAAAAqwOwCAAAZAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-23T17:06:58.152Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 13,
               "Title": "ViewerGradesPanel.cs [Design]",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\ViewerGradesPanel.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\ViewerGradesPanel.cs",
               "RelativeDocumentMoniker": "Forms\\ViewerGradesPanel.cs",
               "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\ViewerGradesPanel.cs [Design]",
-              "RelativeToolTip": "Forms\\ViewerGradesPanel.cs [Design]",
+              "RelativeToolTip": "..\\..\\..\\Documents\\StudentReportSystem\\Forms\\ViewerGradesPanel.cs [Design]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-23T17:40:12.311Z"
             },
@@ -222,22 +218,21 @@
               "$type": "Document",
               "DocumentIndex": 1,
               "Title": "SmsService.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Data\\SmsService.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Data\\SmsService.cs",
               "RelativeDocumentMoniker": "Data\\SmsService.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Data\\SmsService.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Data\\SmsService.cs",
               "RelativeToolTip": "Data\\SmsService.cs",
               "ViewState": "AgIAAO0AAAAAAAAAAAAuwA8BAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-18T12:22:57.999Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-18T12:22:57.999Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 7,
               "Title": "StudentSubjectEnrollment.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\StudentSubjectEnrollment.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\StudentSubjectEnrollment.cs",
               "RelativeDocumentMoniker": "Forms\\StudentSubjectEnrollment.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\StudentSubjectEnrollment.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\StudentSubjectEnrollment.cs",
               "RelativeToolTip": "Forms\\StudentSubjectEnrollment.cs",
               "ViewState": "AgIAADcAAAAAAAAAAAAowE8AAAAqAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -245,24 +240,23 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 5,
               "Title": "Form1.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Form1.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Form1.cs",
               "RelativeDocumentMoniker": "Form1.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Form1.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Form1.cs",
               "RelativeToolTip": "Form1.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-30T08:35:24.009Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T08:35:24.009Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 6,
               "Title": "MainDashboard.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\MainDashboard.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\MainDashboard.cs",
               "RelativeDocumentMoniker": "Forms\\MainDashboard.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\MainDashboard.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\MainDashboard.cs",
               "RelativeToolTip": "Forms\\MainDashboard.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAANQDAAARAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -271,11 +265,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 11,
               "Title": "ViewerGradesPanel.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\ViewerGradesPanel.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\ViewerGradesPanel.cs",
               "RelativeDocumentMoniker": "Forms\\ViewerGradesPanel.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\ViewerGradesPanel.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\ViewerGradesPanel.cs",
               "RelativeToolTip": "Forms\\ViewerGradesPanel.cs",
               "ViewState": "AgIAAN4AAAAAAAAAAAAmwI4AAAA3AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -283,24 +277,23 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 18,
               "Title": "LoginForm.Designer.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\LoginForm.Designer.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\LoginForm.Designer.cs",
               "RelativeDocumentMoniker": "Forms\\LoginForm.Designer.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\LoginForm.Designer.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\LoginForm.Designer.cs",
               "RelativeToolTip": "Forms\\LoginForm.Designer.cs",
               "ViewState": "AgIAANcAAAAAAAAAAAAwwC8AAAAlAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-19T15:08:35.394Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-19T15:08:35.394Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 8,
               "Title": "AdminUserManagement.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\AdminUserManagement.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\AdminUserManagement.cs",
               "RelativeDocumentMoniker": "Forms\\AdminUserManagement.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\AdminUserManagement.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\AdminUserManagement.cs",
               "RelativeToolTip": "Forms\\AdminUserManagement.cs",
               "ViewState": "AgIAAPsBAAAAAAAAAADwv/0BAAAbAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -309,11 +302,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 14,
               "Title": "ProfessorGradesPanel.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\ProfessorGradesPanel.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\ProfessorGradesPanel.cs",
               "RelativeDocumentMoniker": "Forms\\ProfessorGradesPanel.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\ProfessorGradesPanel.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\ProfessorGradesPanel.cs",
               "RelativeToolTip": "Forms\\ProfessorGradesPanel.cs",
               "ViewState": "AgIAAI4BAAAAAAAAAAAuwFkCAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -321,11 +314,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 15,
               "Title": ".gitignore",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\.gitignore",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\.gitignore",
               "RelativeDocumentMoniker": ".gitignore",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\.gitignore",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\.gitignore",
               "RelativeToolTip": ".gitignore",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAADsAAAAQAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
@@ -333,23 +326,22 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 9,
               "Title": "AdminUserManagement.cs [Design]",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\AdminUserManagement.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\AdminUserManagement.cs",
               "RelativeDocumentMoniker": "Forms\\AdminUserManagement.cs",
               "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\AdminUserManagement.cs [Design]",
-              "RelativeToolTip": "Forms\\AdminUserManagement.cs [Design]",
+              "RelativeToolTip": "..\\..\\..\\Documents\\StudentReportSystem\\Forms\\AdminUserManagement.cs [Design]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-30T05:22:43.961Z",
-              "EditorCaption": " [Design]"
+              "WhenOpened": "2025-11-30T05:22:43.961Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 10,
               "Title": "AccountHelper.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Data\\AccountHelper.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Data\\AccountHelper.cs",
               "RelativeDocumentMoniker": "Data\\AccountHelper.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Data\\AccountHelper.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Data\\AccountHelper.cs",
               "RelativeToolTip": "Data\\AccountHelper.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAD0AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -357,11 +349,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 12,
               "Title": "GradeCalculator.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Data\\GradeCalculator.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Data\\GradeCalculator.cs",
               "RelativeDocumentMoniker": "Data\\GradeCalculator.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Data\\GradeCalculator.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Data\\GradeCalculator.cs",
               "RelativeToolTip": "Data\\GradeCalculator.cs",
               "ViewState": "AgIAADgAAAAAAAAAAAAuwFEAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -369,11 +361,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 16,
               "Title": "PhoneValidator.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Data\\PhoneValidator.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Data\\PhoneValidator.cs",
               "RelativeDocumentMoniker": "Data\\PhoneValidator.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Data\\PhoneValidator.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Data\\PhoneValidator.cs",
               "RelativeToolTip": "Data\\PhoneValidator.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -381,11 +373,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 21,
+              "DocumentIndex": 20,
               "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Program.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Program.cs",
               "RelativeDocumentMoniker": "Program.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Program.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Program.cs",
               "RelativeToolTip": "Program.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABkAAAARAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -393,11 +385,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 17,
               "Title": "DatabaseHelper.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Data\\DatabaseHelper.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Data\\DatabaseHelper.cs",
               "RelativeDocumentMoniker": "Data\\DatabaseHelper.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Data\\DatabaseHelper.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Data\\DatabaseHelper.cs",
               "RelativeToolTip": "Data\\DatabaseHelper.cs",
               "ViewState": "AgIAAFwAAAAAAAAAAAAwwCMAAABAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -405,11 +397,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 19,
               "Title": "UserProfilePanel.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\UserProfilePanel.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\UserProfilePanel.cs",
               "RelativeDocumentMoniker": "Forms\\UserProfilePanel.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\UserProfilePanel.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\UserProfilePanel.cs",
               "RelativeToolTip": "Forms\\UserProfilePanel.cs",
               "ViewState": "AgIAABEAAAAAAAAAAAAQwEUBAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -417,11 +409,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 22,
+              "DocumentIndex": 21,
               "Title": "UserContextHelper.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Data\\UserContextHelper.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Data\\UserContextHelper.cs",
               "RelativeDocumentMoniker": "Data\\UserContextHelper.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Data\\UserContextHelper.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Data\\UserContextHelper.cs",
               "RelativeToolTip": "Data\\UserContextHelper.cs",
               "ViewState": "AgIAAEsAAAAAAAAAAAAowAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -429,11 +421,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 23,
+              "DocumentIndex": 22,
               "Title": "AddAdminForm.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\AddAdminForm.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\AddAdminForm.cs",
               "RelativeDocumentMoniker": "Forms\\AddAdminForm.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\AddAdminForm.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\AddAdminForm.cs",
               "RelativeToolTip": "Forms\\AddAdminForm.cs",
               "ViewState": "AgIAAAUAAAAAAAAAAAAxwBIAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -441,11 +433,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 24,
+              "DocumentIndex": 23,
               "Title": "AdminSubjectManagement.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\AdminSubjectManagement.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\AdminSubjectManagement.cs",
               "RelativeDocumentMoniker": "Forms\\AdminSubjectManagement.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\AdminSubjectManagement.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\AdminSubjectManagement.cs",
               "RelativeToolTip": "Forms\\AdminSubjectManagement.cs",
               "ViewState": "AgIAAI0AAAAAAAAAAAAowCEAAAAsAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -454,11 +446,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 25,
+              "DocumentIndex": 24,
               "Title": "SubjectEnrollmentHelper.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Data\\SubjectEnrollmentHelper.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Data\\SubjectEnrollmentHelper.cs",
               "RelativeDocumentMoniker": "Data\\SubjectEnrollmentHelper.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Data\\SubjectEnrollmentHelper.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Data\\SubjectEnrollmentHelper.cs",
               "RelativeToolTip": "Data\\SubjectEnrollmentHelper.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -466,11 +458,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 26,
+              "DocumentIndex": 25,
               "Title": "UIStyleHelper.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\UIStyleHelper.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\UIStyleHelper.cs",
               "RelativeDocumentMoniker": "Forms\\UIStyleHelper.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\UIStyleHelper.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\UIStyleHelper.cs",
               "RelativeToolTip": "Forms\\UIStyleHelper.cs",
               "ViewState": "AgIAACYAAAAAAAAAAAAuwD4AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -478,35 +470,33 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 27,
+              "DocumentIndex": 26,
               "Title": "MainDashboard.cs [Design]",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\MainDashboard.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\MainDashboard.cs",
               "RelativeDocumentMoniker": "Forms\\MainDashboard.cs",
               "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\MainDashboard.cs [Design]",
-              "RelativeToolTip": "Forms\\MainDashboard.cs [Design]",
+              "RelativeToolTip": "..\\..\\..\\Documents\\StudentReportSystem\\Forms\\MainDashboard.cs [Design]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-14T08:01:56.757Z",
-              "EditorCaption": " [Design]"
+              "WhenOpened": "2025-09-14T08:01:56.757Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 28,
+              "DocumentIndex": 27,
               "Title": "StudentReportInitial",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\StudentReportInitial.csproj",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\StudentReportInitial.csproj",
               "RelativeDocumentMoniker": "StudentReportInitial.csproj",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\StudentReportInitial.csproj",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\StudentReportInitial.csproj",
               "RelativeToolTip": "StudentReportInitial.csproj",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2025-10-21T13:18:03.879Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-21T13:18:03.879Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 30,
+              "DocumentIndex": 29,
               "Title": "Subject.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Models\\Subject.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Models\\Subject.cs",
               "RelativeDocumentMoniker": "Models\\Subject.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Models\\Subject.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Models\\Subject.cs",
               "RelativeToolTip": "Models\\Subject.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -514,11 +504,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 31,
+              "DocumentIndex": 30,
               "Title": "Attendance.cs",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Models\\Attendance.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Models\\Attendance.cs",
               "RelativeDocumentMoniker": "Models\\Attendance.cs",
-              "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Models\\Attendance.cs",
+              "ToolTip": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Models\\Attendance.cs",
               "RelativeToolTip": "Models\\Attendance.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -526,24 +516,23 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 29,
+              "DocumentIndex": 28,
               "Title": "AdminSubjectManagement.cs [Design]",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\AdminSubjectManagement.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\AdminSubjectManagement.cs",
               "RelativeDocumentMoniker": "Forms\\AdminSubjectManagement.cs",
               "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\AdminSubjectManagement.cs [Design]",
-              "RelativeToolTip": "Forms\\AdminSubjectManagement.cs [Design]",
+              "RelativeToolTip": "..\\..\\..\\Documents\\StudentReportSystem\\Forms\\AdminSubjectManagement.cs [Design]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-14T08:43:40.192Z",
-              "EditorCaption": " [Design]"
+              "WhenOpened": "2025-09-14T08:43:40.192Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 32,
+              "DocumentIndex": 31,
               "Title": "AdminStudentManagement.cs [Design]",
-              "DocumentMoniker": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\Forms\\AdminStudentManagement.cs",
+              "DocumentMoniker": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\Forms\\AdminStudentManagement.cs",
               "RelativeDocumentMoniker": "Forms\\AdminStudentManagement.cs",
               "ToolTip": "C:\\Users\\JamesWindell\\Documents\\StudentReportInitial\\Forms\\AdminStudentManagement.cs [Design]",
-              "RelativeToolTip": "..\\StudentReportInitial\\Forms\\AdminStudentManagement.cs [Design]",
+              "RelativeToolTip": "..\\..\\..\\Documents\\StudentReportInitial\\Forms\\AdminStudentManagement.cs [Design]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-09-14T08:02:17.581Z"
             }

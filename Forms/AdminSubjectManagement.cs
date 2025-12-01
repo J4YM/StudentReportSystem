@@ -561,7 +561,46 @@ namespace StudentReportInitial.Forms
                 await connection.OpenAsync();
 
                 var query = "SELECT Id, FirstName + ' ' + LastName as FullName FROM Users WHERE Role = 2 AND IsActive = 1";
+                
+                // Add branch filter
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (branchId > 0)
+                        {
+                            query += " AND BranchId = @branchId";
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        // Super Admin with branch filter selected
+                        query += " AND BranchId = @branchId";
+                    }
+                }
+
                 using var command = new SqlCommand(query, connection);
+                
+                // Add branch parameter if needed
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (branchId > 0)
+                        {
+                            command.Parameters.AddWithValue("@branchId", branchId);
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        command.Parameters.AddWithValue("@branchId", branchFilterId.Value);
+                    }
+                }
+
                 using var adapter = new SqlDataAdapter(command);
                 var dataTable = new DataTable();
                 adapter.Fill(dataTable);
@@ -674,6 +713,41 @@ namespace StudentReportInitial.Forms
             using var connection = DatabaseHelper.GetConnection();
             await connection.OpenAsync();
 
+            // Validate branch access before updating
+            if (currentUser != null)
+            {
+                var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                if (!isSuperAdmin)
+                {
+                    // Check if subject being updated belongs to current admin's branch
+                    var checkQuery = "SELECT BranchId FROM Subjects WHERE Id = @id";
+                    using var checkCommand = new SqlCommand(checkQuery, connection);
+                    checkCommand.Parameters.AddWithValue("@id", subject.Id);
+                    var subjectBranchId = await checkCommand.ExecuteScalarAsync();
+                    
+                    var adminBranchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                    if (subjectBranchId == null || subjectBranchId == DBNull.Value || 
+                        Convert.ToInt32(subjectBranchId) != adminBranchId)
+                    {
+                        throw new UnauthorizedAccessException("You can only update subjects from your own branch.");
+                    }
+                }
+                else if (branchFilterId.HasValue)
+                {
+                    // Super Admin with branch filter - ensure subject belongs to selected branch
+                    var checkQuery = "SELECT BranchId FROM Subjects WHERE Id = @id";
+                    using var checkCommand = new SqlCommand(checkQuery, connection);
+                    checkCommand.Parameters.AddWithValue("@id", subject.Id);
+                    var subjectBranchId = await checkCommand.ExecuteScalarAsync();
+                    
+                    if (subjectBranchId == null || subjectBranchId == DBNull.Value || 
+                        Convert.ToInt32(subjectBranchId) != branchFilterId.Value)
+                    {
+                        throw new UnauthorizedAccessException("Subject does not belong to the selected branch.");
+                    }
+                }
+            }
+
             var query = @"
                 UPDATE Subjects 
                 SET Name = @name, Code = @code, Description = @description, 
@@ -696,6 +770,41 @@ namespace StudentReportInitial.Forms
         {
             using var connection = DatabaseHelper.GetConnection();
             await connection.OpenAsync();
+
+            // Validate branch access before deleting
+            if (currentUser != null)
+            {
+                var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                if (!isSuperAdmin)
+                {
+                    // Check if subject being deleted belongs to current admin's branch
+                    var checkQuery = "SELECT BranchId FROM Subjects WHERE Id = @id";
+                    using var checkCommand = new SqlCommand(checkQuery, connection);
+                    checkCommand.Parameters.AddWithValue("@id", subjectId);
+                    var subjectBranchId = await checkCommand.ExecuteScalarAsync();
+                    
+                    var adminBranchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                    if (subjectBranchId == null || subjectBranchId == DBNull.Value || 
+                        Convert.ToInt32(subjectBranchId) != adminBranchId)
+                    {
+                        throw new UnauthorizedAccessException("You can only delete subjects from your own branch.");
+                    }
+                }
+                else if (branchFilterId.HasValue)
+                {
+                    // Super Admin with branch filter - ensure subject belongs to selected branch
+                    var checkQuery = "SELECT BranchId FROM Subjects WHERE Id = @id";
+                    using var checkCommand = new SqlCommand(checkQuery, connection);
+                    checkCommand.Parameters.AddWithValue("@id", subjectId);
+                    var subjectBranchId = await checkCommand.ExecuteScalarAsync();
+                    
+                    if (subjectBranchId == null || subjectBranchId == DBNull.Value || 
+                        Convert.ToInt32(subjectBranchId) != branchFilterId.Value)
+                    {
+                        throw new UnauthorizedAccessException("Subject does not belong to the selected branch.");
+                    }
+                }
+            }
 
             var query = "UPDATE Subjects SET IsActive = 0 WHERE Id = @id";
             using var command = new SqlCommand(query, connection);

@@ -264,6 +264,11 @@ namespace StudentReportInitial.Forms
                 {
                     LoadAdminPanel("enrollment");
                 }
+                else
+                {
+                    // Reload reports panel if it's currently displayed (no specific control type)
+                    LoadAdminPanel("reports");
+                }
             }
         }
 
@@ -557,8 +562,8 @@ namespace StudentReportInitial.Forms
             // Refresh the panel to show loading
             mainContentPanel.Refresh();
 
-            // Load statistics asynchronously
-            var stats = await StatisticsHelper.GetSystemStatisticsAsync(currentUser?.Id);
+            // Load statistics asynchronously with branch filter
+            var stats = await StatisticsHelper.GetSystemStatisticsAsync(currentUser?.Id, selectedBranchId);
 
             // Remove loading label
             mainContentPanel.Controls.Remove(lblLoading);
@@ -1088,7 +1093,8 @@ namespace StudentReportInitial.Forms
         {
             if (mainContentPanel != null)
                 mainContentPanel.Controls.Clear();
-            var enrollmentPanel = new StudentSubjectEnrollment();
+            var branchId = GetSelectedBranchId();
+            var enrollmentPanel = new StudentSubjectEnrollment(currentUser, branchId);
             enrollmentPanel.Dock = DockStyle.Fill;
             if (mainContentPanel != null)
                 mainContentPanel.Controls.Add(enrollmentPanel);

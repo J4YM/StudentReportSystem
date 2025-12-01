@@ -14,10 +14,18 @@ namespace StudentReportInitial.Forms
         private Button btnEditStudent = null!;
         private Button btnDeleteStudent = null!;
         private Panel pnlStudentForm = null!;
+        private Panel? pnlStudentFilters;
         private bool isEditMode = false;
         private int selectedStudentId = -1;
         private User? currentUser;
         private int? branchFilterId = null;
+        private ComboBox? cmbStudentSectionFilter;
+        private ComboBox? cmbStudentCourseFilter;
+        private ComboBox? cmbStudentYearFilter;
+        private Button? btnStudentClearFilters;
+        private Label? lblStudentActiveFilters;
+        private DataTable? studentsTable;
+        private const string FilterAllLabel = "All";
 
         public AdminStudentManagement(User? user = null, int? branchId = null)
         {
@@ -89,6 +97,8 @@ namespace StudentReportInitial.Forms
 
             pnlActions.Controls.AddRange(new Control[] { btnAddStudent, btnEditStudent, btnDeleteStudent });
 
+            var pnlFilters = BuildStudentFiltersPanel();
+
             // Data grid view
             dgvStudents = new DataGridView
             {
@@ -114,8 +124,11 @@ namespace StudentReportInitial.Forms
                 Padding = new Padding(20)
             };
 
+            pnlStudentFilters = pnlFilters;
+
             this.Controls.Add(dgvStudents);
             this.Controls.Add(pnlStudentForm);
+            this.Controls.Add(pnlFilters);
             this.Controls.Add(pnlActions);
 
             UIStyleHelper.ApplyRoundedButton(btnAddStudent, 10);
@@ -123,6 +136,125 @@ namespace StudentReportInitial.Forms
             UIStyleHelper.ApplyRoundedButton(btnDeleteStudent, 10);
 
             this.ResumeLayout(false);
+        }
+
+        private Panel BuildStudentFiltersPanel()
+        {
+            var panel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 95,
+                BackColor = Color.White,
+                Padding = new Padding(20, 8, 20, 8)
+            };
+
+            var flow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoSize = false,
+                WrapContents = false,
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoScroll = true
+            };
+
+            cmbStudentSectionFilter = CreateFilterComboBox();
+            cmbStudentCourseFilter = CreateFilterComboBox();
+            cmbStudentYearFilter = CreateFilterComboBox();
+
+            btnStudentClearFilters = new Button
+            {
+                Text = "Clear Filters",
+                Width = 120,
+                Height = 32,
+                BackColor = Color.FromArgb(241, 245, 249),
+                ForeColor = Color.FromArgb(51, 65, 85),
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Enabled = false
+            };
+            btnStudentClearFilters.FlatAppearance.BorderColor = Color.FromArgb(226, 232, 240);
+            btnStudentClearFilters.Click += BtnStudentClearFilters_Click;
+
+            flow.Controls.Add(CreateFilterGroup("Section", cmbStudentSectionFilter));
+            flow.Controls.Add(CreateFilterGroup("Course", cmbStudentCourseFilter));
+            flow.Controls.Add(CreateFilterGroup("Year Level", cmbStudentYearFilter));
+            flow.Controls.Add(btnStudentClearFilters);
+
+            lblStudentActiveFilters = new Label
+            {
+                Dock = DockStyle.Bottom,
+                Height = 20,
+                Text = "Active filters: None",
+                ForeColor = Color.FromArgb(100, 116, 139)
+            };
+
+            panel.Controls.Add(flow);
+            panel.Controls.Add(lblStudentActiveFilters);
+
+            InitializeFilterCombo(cmbStudentSectionFilter);
+            InitializeFilterCombo(cmbStudentCourseFilter);
+            InitializeFilterCombo(cmbStudentYearFilter);
+
+            return panel;
+        }
+
+        private static ComboBox CreateFilterComboBox()
+        {
+            return new ComboBox
+            {
+                Width = 170,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 9)
+            };
+        }
+
+        private Control CreateFilterGroup(string labelText, ComboBox? comboBox)
+        {
+            var wrapper = new Panel
+            {
+                Width = 190,
+                Height = 60,
+                Margin = new Padding(0, 0, 16, 0)
+            };
+
+            var label = new Label
+            {
+                Text = labelText,
+                Dock = DockStyle.Top,
+                Height = 18,
+                ForeColor = Color.FromArgb(71, 85, 105)
+            };
+
+            if (comboBox != null)
+            {
+                comboBox.Location = new Point(0, 25);
+                comboBox.Width = wrapper.Width;
+                comboBox.SelectedIndexChanged += (s, e) => ApplyStudentFilters();
+            }
+
+            wrapper.Controls.Add(comboBox ?? new ComboBox());
+            wrapper.Controls.Add(label);
+
+            return wrapper;
+        }
+
+        private void InitializeFilterCombo(ComboBox? comboBox)
+        {
+            if (comboBox == null)
+            {
+                return;
+            }
+
+            comboBox.Items.Clear();
+            comboBox.Items.Add(FilterAllLabel);
+            comboBox.SelectedIndex = 0;
+        }
+
+        private void BtnStudentClearFilters_Click(object? sender, EventArgs e)
+        {
+            if (cmbStudentSectionFilter != null) cmbStudentSectionFilter.SelectedIndex = 0;
+            if (cmbStudentCourseFilter != null) cmbStudentCourseFilter.SelectedIndex = 0;
+            if (cmbStudentYearFilter != null) cmbStudentYearFilter.SelectedIndex = 0;
         }
 
 
@@ -153,6 +285,153 @@ namespace StudentReportInitial.Forms
             dgvStudents.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
             dgvStudents.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(51, 65, 85);
             dgvStudents.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
+        }
+
+        private void EnhanceStudentsDataTable(DataTable dataTable)
+        {
+            if (!dataTable.Columns.Contains("Course"))
+            {
+                dataTable.Columns.Add("Course", typeof(string));
+            }
+
+            foreach (DataRow row in dataTable.Rows)
+            {
+                row["Course"] = ExtractCourseFromSection(row["Section"]?.ToString());
+            }
+        }
+
+        private void PopulateStudentFilterOptions()
+        {
+            if (studentsTable == null)
+            {
+                return;
+            }
+
+            PopulateComboFromColumn(cmbStudentSectionFilter, studentsTable, "Section");
+            PopulateComboFromColumn(cmbStudentCourseFilter, studentsTable, "Course");
+            PopulateComboFromColumn(cmbStudentYearFilter, studentsTable, "GradeLevel");
+        }
+
+        private void PopulateComboFromColumn(ComboBox? comboBox, DataTable table, string columnName)
+        {
+            if (comboBox == null || !table.Columns.Contains(columnName))
+            {
+                return;
+            }
+
+            var currentValue = comboBox.SelectedItem?.ToString();
+            comboBox.Items.Clear();
+            comboBox.Items.Add(FilterAllLabel);
+
+            var values = table.AsEnumerable()
+                .Select(row => row[columnName]?.ToString() ?? string.Empty)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct()
+                .OrderBy(value => value)
+                .ToList();
+
+            foreach (var value in values)
+            {
+                comboBox.Items.Add(value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(currentValue) && comboBox.Items.Contains(currentValue))
+            {
+                comboBox.SelectedItem = currentValue;
+            }
+            else
+            {
+                comboBox.SelectedIndex = 0;
+            }
+        }
+
+        private void ApplyStudentFilters()
+        {
+            if (studentsTable == null)
+            {
+                return;
+            }
+
+            var filterParts = new List<string>();
+
+            if (cmbStudentSectionFilter != null && cmbStudentSectionFilter.SelectedIndex > 0)
+            {
+                filterParts.Add($"Section = '{EscapeRowFilterValue(cmbStudentSectionFilter.SelectedItem?.ToString())}'");
+            }
+
+            if (cmbStudentCourseFilter != null && cmbStudentCourseFilter.SelectedIndex > 0)
+            {
+                filterParts.Add($"Course = '{EscapeRowFilterValue(cmbStudentCourseFilter.SelectedItem?.ToString())}'");
+            }
+
+            if (cmbStudentYearFilter != null && cmbStudentYearFilter.SelectedIndex > 0)
+            {
+                filterParts.Add($"GradeLevel = '{EscapeRowFilterValue(cmbStudentYearFilter.SelectedItem?.ToString())}'");
+            }
+
+            studentsTable.DefaultView.RowFilter = filterParts.Count > 0
+                ? string.Join(" AND ", filterParts)
+                : string.Empty;
+
+            UpdateStudentFilterState(filterParts.Count > 0);
+        }
+
+        private void UpdateStudentFilterState(bool hasFilters)
+        {
+            var activeFilters = new List<string>();
+
+            if (cmbStudentSectionFilter != null && cmbStudentSectionFilter.SelectedIndex > 0)
+            {
+                activeFilters.Add($"Section={cmbStudentSectionFilter.SelectedItem}");
+            }
+
+            if (cmbStudentCourseFilter != null && cmbStudentCourseFilter.SelectedIndex > 0)
+            {
+                activeFilters.Add($"Course={cmbStudentCourseFilter.SelectedItem}");
+            }
+
+            if (cmbStudentYearFilter != null && cmbStudentYearFilter.SelectedIndex > 0)
+            {
+                activeFilters.Add($"Year={cmbStudentYearFilter.SelectedItem}");
+            }
+
+            if (lblStudentActiveFilters != null)
+            {
+                lblStudentActiveFilters.Text = activeFilters.Count == 0
+                    ? "Active filters: None"
+                    : $"Active filters: {string.Join(" | ", activeFilters)}";
+            }
+
+            if (btnStudentClearFilters != null)
+            {
+                btnStudentClearFilters.Enabled = hasFilters;
+            }
+        }
+
+        private static string EscapeRowFilterValue(string? value)
+        {
+            return (value ?? string.Empty).Replace("'", "''");
+        }
+
+        private void SetStudentFormVisibility(bool showForm)
+        {
+            pnlStudentForm.Visible = showForm;
+            dgvStudents.Visible = !showForm;
+            if (pnlStudentFilters != null)
+            {
+                pnlStudentFilters.Visible = !showForm;
+            }
+        }
+
+        private static string ExtractCourseFromSection(string? sectionValue)
+        {
+            if (string.IsNullOrWhiteSpace(sectionValue))
+            {
+                return string.Empty;
+            }
+
+            var parts = sectionValue.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length > 0 ? parts[0] : sectionValue;
         }
 
         private async Task LoadStudentsAsync()
@@ -217,7 +496,11 @@ namespace StudentReportInitial.Forms
                 var dataTable = new DataTable();
                 adapter.Fill(dataTable);
 
-                dgvStudents.DataSource = dataTable;
+                EnhanceStudentsDataTable(dataTable);
+                studentsTable = dataTable;
+                dgvStudents.DataSource = studentsTable;
+                PopulateStudentFilterOptions();
+                ApplyStudentFilters();
 
                 // Format columns
                 if (dgvStudents.Columns.Count > 0)
@@ -244,11 +527,6 @@ namespace StudentReportInitial.Forms
                     dgvStudents.Columns["EnrollmentDate"].DefaultCellStyle.Format = "MM/dd/yyyy";
                 }
 
-                // Clear any existing filters
-                if (dataTable.DefaultView.RowFilter != "")
-                {
-                    dataTable.DefaultView.RowFilter = "";
-                }
             }
             catch (Exception ex)
             {
@@ -342,8 +620,7 @@ namespace StudentReportInitial.Forms
         private async void ShowStudentForm(int studentId = -1)
         {
             pnlStudentForm.Controls.Clear();
-            pnlStudentForm.Visible = true;
-            dgvStudents.Visible = false;
+            SetStudentFormVisibility(true);
 
             isEditMode = studentId > 0;
             selectedStudentId = studentId;
@@ -587,8 +864,7 @@ namespace StudentReportInitial.Forms
             };
 
             btnCancel.Click += (s, e) => {
-                pnlStudentForm.Visible = false;
-                dgvStudents.Visible = true;
+                SetStudentFormVisibility(false);
             };
             btnSave.Click += async (s, e) =>
             {
@@ -709,8 +985,7 @@ namespace StudentReportInitial.Forms
                         await AddStudentAsync(student);
                     }
 
-                    pnlStudentForm.Visible = false;
-                    dgvStudents.Visible = true;
+                    SetStudentFormVisibility(false);
                     await LoadStudentsAsync();
                 }
                 catch (Exception ex)
@@ -829,8 +1104,38 @@ namespace StudentReportInitial.Forms
 
             try
             {
-                // Generate student credentials
-                var studentUsername = GenerateStudentUsername(student);
+                // Ensure student has branch assigned
+                if (student.BranchId == 0)
+                {
+                    // Get branch from current user or use default
+                    if (currentUser != null)
+                    {
+                        var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                        if (!isSuperAdmin)
+                        {
+                            student.BranchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        }
+                        else if (branchFilterId.HasValue)
+                        {
+                            student.BranchId = branchFilterId.Value;
+                        }
+                    }
+                    
+                    // Default to Baliuag if still 0
+                    if (student.BranchId == 0)
+                    {
+                        var defaultBranchQuery = "SELECT TOP 1 Id FROM Branches WHERE Code = 'BALIUAG'";
+                        using var defaultBranchCommand = new SqlCommand(defaultBranchQuery, connection, transaction);
+                        var defaultBranchResult = await defaultBranchCommand.ExecuteScalarAsync();
+                        if (defaultBranchResult != null)
+                        {
+                            student.BranchId = Convert.ToInt32(defaultBranchResult);
+                        }
+                    }
+                }
+
+                // Generate student credentials with branch-specific email
+                var studentUsername = await GenerateStudentUsernameAsync(student);
                 var studentPassword = GenerateStudentPassword(student);
                 PasswordHasher.CreatePasswordHash(studentPassword, out string studentPasswordHash, out string studentPasswordSalt);
 
@@ -845,7 +1150,7 @@ namespace StudentReportInitial.Forms
                 if (guardianId == 0)
                 {
                     guardianId = await CreateGuardianAccountAsync(connection, transaction, student);
-                    guardianUsername = GenerateGuardianUsername(student);
+                    guardianUsername = await GenerateGuardianUsernameAsync(student);
                     guardianPassword = GenerateGuardianPassword(student);
                 }
                 else
@@ -922,7 +1227,42 @@ namespace StudentReportInitial.Forms
             using var connection = DatabaseHelper.GetConnection();
             await connection.OpenAsync();
 
-                var query = @"
+            // Validate branch access before updating
+            if (currentUser != null)
+            {
+                var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                if (!isSuperAdmin)
+                {
+                    // Check if student being updated belongs to current admin's branch
+                    var checkQuery = "SELECT BranchId FROM Students WHERE Id = @id";
+                    using var checkCommand = new SqlCommand(checkQuery, connection);
+                    checkCommand.Parameters.AddWithValue("@id", student.Id);
+                    var studentBranchId = await checkCommand.ExecuteScalarAsync();
+                    
+                    var adminBranchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                    if (studentBranchId == null || studentBranchId == DBNull.Value || 
+                        Convert.ToInt32(studentBranchId) != adminBranchId)
+                    {
+                        throw new UnauthorizedAccessException("You can only update students from your own branch.");
+                    }
+                }
+                else if (branchFilterId.HasValue)
+                {
+                    // Super Admin with branch filter - ensure student belongs to selected branch
+                    var checkQuery = "SELECT BranchId FROM Students WHERE Id = @id";
+                    using var checkCommand = new SqlCommand(checkQuery, connection);
+                    checkCommand.Parameters.AddWithValue("@id", student.Id);
+                    var studentBranchId = await checkCommand.ExecuteScalarAsync();
+                    
+                    if (studentBranchId == null || studentBranchId == DBNull.Value || 
+                        Convert.ToInt32(studentBranchId) != branchFilterId.Value)
+                    {
+                        throw new UnauthorizedAccessException("Student does not belong to the selected branch.");
+                    }
+                }
+            }
+
+            var query = @"
                 UPDATE Students 
                 SET StudentId = @studentId, FirstName = @firstName, LastName = @lastName, 
                     DateOfBirth = @dateOfBirth, Gender = @gender, GradeLevel = @gradeLevel,
@@ -953,6 +1293,43 @@ namespace StudentReportInitial.Forms
 
             try
             {
+                // Validate branch access before deleting
+                if (currentUser != null)
+                {
+                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    if (!isSuperAdmin)
+                    {
+                        // Check if student being deleted belongs to current admin's branch
+                        var checkQuery = "SELECT BranchId FROM Students WHERE Id = @id";
+                        using var checkCommand = new SqlCommand(checkQuery, connection, transaction);
+                        checkCommand.Parameters.AddWithValue("@id", studentId);
+                        var studentBranchId = await checkCommand.ExecuteScalarAsync();
+                        
+                        var adminBranchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                        if (studentBranchId == null || studentBranchId == DBNull.Value || 
+                            Convert.ToInt32(studentBranchId) != adminBranchId)
+                        {
+                            transaction.Rollback();
+                            throw new UnauthorizedAccessException("You can only delete students from your own branch.");
+                        }
+                    }
+                    else if (branchFilterId.HasValue)
+                    {
+                        // Super Admin with branch filter - ensure student belongs to selected branch
+                        var checkQuery = "SELECT BranchId FROM Students WHERE Id = @id";
+                        using var checkCommand = new SqlCommand(checkQuery, connection, transaction);
+                        checkCommand.Parameters.AddWithValue("@id", studentId);
+                        var studentBranchId = await checkCommand.ExecuteScalarAsync();
+                        
+                        if (studentBranchId == null || studentBranchId == DBNull.Value || 
+                            Convert.ToInt32(studentBranchId) != branchFilterId.Value)
+                        {
+                            transaction.Rollback();
+                            throw new UnauthorizedAccessException("Student does not belong to the selected branch.");
+                        }
+                    }
+                }
+
                 // Get student info to find associated user account
                 var studentQuery = "SELECT StudentId, Email FROM Students WHERE Id = @id";
                 using var studentCommand = new SqlCommand(studentQuery, connection, transaction);
@@ -1003,19 +1380,19 @@ namespace StudentReportInitial.Forms
 
         private async Task<int> CreateGuardianAccountAsync(SqlConnection connection, SqlTransaction transaction, Student student)
         {
-            var guardianUsername = GenerateGuardianUsername(student);
+            var guardianUsername = await GenerateGuardianUsernameAsync(student);
             var guardianPassword = GenerateGuardianPassword(student);
             var guardianFirstName = $"Guardian of {student.FirstName}";
             var guardianLastName = student.LastName;
-            var guardianEmail = $"guardian.{student.StudentId.ToLower()}@school.com";
+            var guardianEmail = await EmailDomainHelper.GenerateGuardianEmailAsync(student.StudentId, student.BranchId);
 
             // Hash the password
             string passwordHash, passwordSalt;
             PasswordHasher.CreatePasswordHash(guardianPassword, out passwordHash, out passwordSalt);
 
             var query = @"
-                INSERT INTO Users (Username, PasswordHash, PasswordSalt, FirstName, LastName, Email, Phone, Role, CreatedDate, IsActive)
-                VALUES (@username, @passwordHash, @passwordSalt, @firstName, @lastName, @email, @phone, @role, @createdDate, @isActive);
+                INSERT INTO Users (Username, PasswordHash, PasswordSalt, FirstName, LastName, Email, Phone, Role, BranchId, CreatedDate, IsActive)
+                VALUES (@username, @passwordHash, @passwordSalt, @firstName, @lastName, @email, @phone, @role, @branchId, @createdDate, @isActive);
                 SELECT SCOPE_IDENTITY();";
 
             using var command = new SqlCommand(query, connection, transaction);
@@ -1027,6 +1404,7 @@ namespace StudentReportInitial.Forms
             command.Parameters.AddWithValue("@email", guardianEmail);
             command.Parameters.AddWithValue("@phone", student.Phone);
             command.Parameters.AddWithValue("@role", 3); // Guardian
+            command.Parameters.AddWithValue("@branchId", student.BranchId); // Assign guardian to same branch as student
             command.Parameters.AddWithValue("@createdDate", DateTime.Now);
             command.Parameters.AddWithValue("@isActive", true);
 
@@ -1035,11 +1413,10 @@ namespace StudentReportInitial.Forms
         }
 
 
-        private string GenerateGuardianUsername(Student student)
+        private async Task<string> GenerateGuardianUsernameAsync(Student student)
         {
-            // Generate username like: guardian_STU001
-            var studentId = student.StudentId.Replace(" ", "").ToLower();
-            return $"guardian_{studentId}";
+            // Generate username like: guardian.[studentID]@[branch-domain].sti.edu.ph
+            return await EmailDomainHelper.GenerateGuardianEmailAsync(student.StudentId, student.BranchId);
         }
 
         private string GenerateGuardianPassword(Student student)
@@ -1050,11 +1427,12 @@ namespace StudentReportInitial.Forms
             return $"Guardian@{studentId}!{year}";
         }
 
-        private string GenerateStudentUsername(Student student)
+        private async Task<string> GenerateStudentUsernameAsync(Student student)
         {
-            // Format: studentnumber@baliuag.sti.edu.ph
+            // Format: studentnumber@[branch-domain].sti.edu.ph
             var studentNumber = student.StudentId.Replace("-", ""); // Remove dashes from student ID
-            return $"{studentNumber}@baliuag.sti.edu.ph";
+            var email = await EmailDomainHelper.GenerateStudentEmailAsync(studentNumber, student.BranchId);
+            return email;
         }
 
         private string GenerateStudentPassword(Student student)

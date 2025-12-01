@@ -15,7 +15,7 @@ namespace StudentReportInitial.Data
 
     public static class StatisticsHelper
     {
-        public static async Task<SystemStatistics> GetSystemStatisticsAsync(int? userId = null)
+        public static async Task<SystemStatistics> GetSystemStatisticsAsync(int? userId = null, int? branchFilterId = null)
         {
             var stats = new SystemStatistics();
 
@@ -32,12 +32,20 @@ namespace StudentReportInitial.Data
                     var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(userId.Value);
                     if (!isSuperAdmin)
                     {
+                        // Branch admin - only see their branch
                         branchId = await BranchHelper.GetUserBranchIdAsync(userId.Value);
                         if (branchId > 0)
                         {
                             branchFilter = " AND BranchId = @branchId";
                         }
                     }
+                    else if (branchFilterId.HasValue && branchFilterId > 0)
+                    {
+                        // Super Admin with branch filter selected
+                        branchId = branchFilterId.Value;
+                        branchFilter = " AND BranchId = @branchId";
+                    }
+                    // If Super Admin and no branch filter, see all (branchFilter remains empty)
                 }
 
                 // Get total students (exclude deleted/inactive)

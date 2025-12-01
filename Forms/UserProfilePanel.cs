@@ -365,8 +365,10 @@ namespace StudentReportInitial.Forms
                     return;
                 }
 
-                var storedHash = reader.GetString(reader.GetOrdinal("PasswordHash"));
-                var storedSalt = reader.GetString(reader.GetOrdinal("PasswordSalt"));
+                var hashOrdinal = reader.GetOrdinal("PasswordHash");
+                var saltOrdinal = reader.GetOrdinal("PasswordSalt");
+                var storedHash = reader.GetString(hashOrdinal);
+                var storedSalt = reader.GetString(saltOrdinal);
                 reader.Close();
 
                 if (!PasswordHasher.VerifyPasswordHash(currentPassword, storedHash, storedSalt))

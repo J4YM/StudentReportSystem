@@ -19,6 +19,7 @@ namespace StudentReportInitial.Forms
         private Panel pnlEnrolledSubjects = null!;
         private DataGridView dgvEnrolledSubjects = null!;
         private int selectedStudentId = -1;
+        private int? selectedStudentBranchId = null;
         private User? currentUser;
         private int? branchFilterId = null;
 
@@ -267,49 +268,23 @@ namespace StudentReportInitial.Forms
                 await connection.OpenAsync();
 
                 var query = @"
-                    SELECT s.Id, s.StudentId, s.FirstName, s.LastName, s.GradeLevel, s.Section
+                    SELECT s.Id, s.StudentId, s.FirstName, s.LastName, s.GradeLevel, s.Section, s.BranchId
                     FROM Students s
                     WHERE s.IsActive = 1";
 
-                // Add branch filter if not Super Admin
-                if (currentUser != null)
+                var branchFilter = await ResolveBranchFilterAsync();
+                if (branchFilter.HasValue)
                 {
-                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
-                    if (!isSuperAdmin)
-                    {
-                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
-                        if (branchId > 0)
-                        {
-                            query += " AND s.BranchId = @branchId";
-                        }
-                    }
-                    else if (branchFilterId.HasValue)
-                    {
-                        // Super Admin with branch filter selected
-                        query += " AND s.BranchId = @branchId";
-                    }
+                    query += " AND s.BranchId = @branchId";
                 }
 
                 query += " ORDER BY s.LastName, s.FirstName";
 
                 using var command = new SqlCommand(query, connection);
-                
-                // Add branch parameter if needed
-                if (currentUser != null)
+
+                if (branchFilter.HasValue)
                 {
-                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
-                    if (!isSuperAdmin)
-                    {
-                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
-                        if (branchId > 0)
-                        {
-                            command.Parameters.AddWithValue("@branchId", branchId);
-                        }
-                    }
-                    else if (branchFilterId.HasValue)
-                    {
-                        command.Parameters.AddWithValue("@branchId", branchFilterId.Value);
-                    }
+                    command.Parameters.AddWithValue("@branchId", branchFilter.Value);
                 }
 
                 using var adapter = new SqlDataAdapter(command);
@@ -326,6 +301,10 @@ namespace StudentReportInitial.Forms
                     dgvStudents.Columns["LastName"].HeaderText = "Last Name";
                     dgvStudents.Columns["GradeLevel"].HeaderText = "Grade";
                     dgvStudents.Columns["Section"].HeaderText = "Section";
+                    if (dgvStudents.Columns.Contains("BranchId"))
+                    {
+                        dgvStudents.Columns["BranchId"].Visible = false;
+                    }
                 }
             }
             catch (Exception ex)
@@ -360,23 +339,12 @@ namespace StudentReportInitial.Forms
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@gradeLevel", gradeLevel);
                 command.Parameters.AddWithValue("@studentId", selectedStudentId);
-                
-                // Add branch parameter if needed
-                if (currentUser != null)
+
+                var branchFilter = selectedStudentBranchId ?? await ResolveBranchFilterAsync();
+                if (branchFilter.HasValue)
                 {
-                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
-                    if (!isSuperAdmin)
-                    {
-                        var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
-                        if (branchId > 0)
-                        {
-                            command.Parameters.AddWithValue("@branchId", branchId);
-                        }
-                    }
-                    else if (branchFilterId.HasValue)
-                    {
-                        command.Parameters.AddWithValue("@branchId", branchFilterId.Value);
-                    }
+                    command.CommandText += " AND s.BranchId = @branchId";
+                    command.Parameters.AddWithValue("@branchId", branchFilter.Value);
                 }
 
                 using var adapter = new SqlDataAdapter(command);
@@ -420,11 +388,19 @@ namespace StudentReportInitial.Forms
                     FROM Subjects s
                     INNER JOIN StudentSubjects ss ON s.Id = ss.SubjectId
                     LEFT JOIN Users u ON s.ProfessorId = u.Id
-                    WHERE ss.StudentId = @studentId AND s.IsActive = 1
-                    ORDER BY s.Name";
+                    WHERE ss.StudentId = @studentId AND s.IsActive = 1";
 
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@studentId", studentId);
+
+                var branchFilter = selectedStudentBranchId ?? await ResolveBranchFilterAsync();
+                if (branchFilter.HasValue)
+                {
+                    command.CommandText += " AND s.BranchId = @branchId";
+                    command.Parameters.AddWithValue("@branchId", branchFilter.Value);
+                }
+
+                command.CommandText += " ORDER BY s.Name";
 
                 using var adapter = new SqlDataAdapter(command);
                 var dataTable = new DataTable();
@@ -451,6 +427,30 @@ namespace StudentReportInitial.Forms
                 MessageBox.Show($"Error loading enrolled subjects: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private async Task<int?> ResolveBranchFilterAsync()
+        {
+            // Branch selector on super admin takes precedence
+            if (branchFilterId.HasValue)
+            {
+                return branchFilterId.Value;
+            }
+
+            if (currentUser == null)
+            {
+                return null;
+            }
+
+            var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+            if (isSuperAdmin)
+            {
+                // Super admins without a filter can view all branches
+                return null;
+            }
+
+            var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+            return branchId > 0 ? branchId : (int?)null;
         }
 
         private void TxtSearch_TextChanged(object sender, EventArgs e)
@@ -494,6 +494,14 @@ namespace StudentReportInitial.Forms
             {
                 var row = dgvStudents.SelectedRows[0];
                 selectedStudentId = Convert.ToInt32(row.Cells["Id"].Value);
+                if (row.Cells["BranchId"] != null && row.Cells["BranchId"].Value != null && row.Cells["BranchId"].Value != DBNull.Value)
+                {
+                    selectedStudentBranchId = Convert.ToInt32(row.Cells["BranchId"].Value);
+                }
+                else
+                {
+                    selectedStudentBranchId = null;
+                }
                 var studentName = $"{row.Cells["FirstName"].Value} {row.Cells["LastName"].Value}";
                 var gradeLevel = row.Cells["GradeLevel"].Value.ToString();
 
@@ -506,6 +514,7 @@ namespace StudentReportInitial.Forms
             else
             {
                 selectedStudentId = -1;
+                selectedStudentBranchId = null;
                 lblSelectedStudent.Text = "Select a student to manage subjects";
                 dgvSubjects.DataSource = null;
                 dgvEnrolledSubjects.DataSource = null;
@@ -529,7 +538,8 @@ namespace StudentReportInitial.Forms
             try
             {
                 var subjectId = Convert.ToInt32(dgvSubjects.SelectedRows[0].Cells["Id"].Value);
-                await SubjectEnrollmentHelper.EnrollStudentInSubjectAsync(selectedStudentId, subjectId);
+                var branchFilter = selectedStudentBranchId ?? await ResolveBranchFilterAsync();
+                await SubjectEnrollmentHelper.EnrollStudentInSubjectAsync(selectedStudentId, subjectId, branchFilter);
 
                 MessageBox.Show("Student enrolled successfully!", "Success",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -565,7 +575,8 @@ namespace StudentReportInitial.Forms
                 try
                 {
                     var subjectId = Convert.ToInt32(dgvEnrolledSubjects.SelectedRows[0].Cells["Id"].Value);
-                    await SubjectEnrollmentHelper.UnenrollStudentFromSubjectAsync(selectedStudentId, subjectId);
+                    var branchFilter = selectedStudentBranchId ?? await ResolveBranchFilterAsync();
+                    await SubjectEnrollmentHelper.UnenrollStudentFromSubjectAsync(selectedStudentId, subjectId, branchFilter);
 
                     MessageBox.Show("Student unenrolled successfully!", "Success",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);

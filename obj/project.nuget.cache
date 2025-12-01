@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "i9qaPvIC3OM=",
+  "dgSpecHash": "iv6m8x/xhYs=",
   "success": true,
-  "projectFilePath": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\StudentReportInitial.csproj",
+  "projectFilePath": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\StudentReportInitial.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\JamesWindell\\.nuget\\packages\\microsoft.csharp\\4.5.0\\microsoft.csharp.4.5.0.nupkg.sha512",
     "C:\\Users\\JamesWindell\\.nuget\\packages\\microsoft.identitymodel.abstractions\\6.19.0\\microsoft.identitymodel.abstractions.6.19.0.nupkg.sha512",

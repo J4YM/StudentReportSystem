@@ -15,12 +15,22 @@ namespace StudentReportInitial.Forms
         private Button btnAddUser;
         private Button btnEditUser;
         private Button btnDeleteUser;
-        private ComboBox cmbRoleFilter;
+        private ComboBox? cmbRoleFilter;
+        private ComboBox? cmbSectionFilter;
+        private ComboBox? cmbCourseFilter;
+        private ComboBox? cmbYearFilter;
+        private Button? btnClearFilters;
+        private Label? lblActiveFilters;
+        private Button? btnRequestAdmin;
         private Panel pnlUserForm;
+        private Panel? pnlUserFilters;
         private bool isEditMode = false;
         private int selectedUserId = -1;
         private User? currentUser;
         private int? branchFilterId = null;
+        private DataTable? usersTable;
+        private bool? isCurrentUserSuperAdmin;
+        private const string FilterAllLabel = "All";
 
         public AdminUserManagement(User? user = null, int? branchId = null)
         {
@@ -29,6 +39,263 @@ namespace StudentReportInitial.Forms
             InitializeComponent();
             ApplyModernStyling();
             LoadUsersAsync();
+        }
+
+        private void EnhanceUsersDataTable(DataTable dataTable)
+        {
+            if (!dataTable.Columns.Contains("Course"))
+            {
+                dataTable.Columns.Add("Course", typeof(string));
+            }
+
+            foreach (DataRow row in dataTable.Rows)
+            {
+                var sectionValue = row.Table.Columns.Contains("StudentSection")
+                    ? row["StudentSection"]?.ToString()
+                    : string.Empty;
+                row["Course"] = ExtractCourseFromSection(sectionValue);
+            }
+        }
+
+        private void PopulateUserFilterOptions()
+        {
+            if (usersTable == null)
+            {
+                return;
+            }
+
+            PopulateComboFromColumn(cmbSectionFilter, usersTable, "StudentSection");
+            PopulateComboFromColumn(cmbCourseFilter, usersTable, "Course");
+            PopulateComboFromColumn(cmbYearFilter, usersTable, "StudentYearLevel");
+        }
+
+        private void PopulateComboFromColumn(ComboBox? comboBox, DataTable source, string columnName)
+        {
+            if (comboBox == null || !source.Columns.Contains(columnName))
+            {
+                return;
+            }
+
+            var currentValue = comboBox.SelectedItem?.ToString();
+            comboBox.Items.Clear();
+            comboBox.Items.Add(FilterAllLabel);
+
+            var values = source.AsEnumerable()
+                .Select(row => row[columnName]?.ToString() ?? string.Empty)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct()
+                .OrderBy(value => value)
+                .ToList();
+
+            foreach (var value in values)
+            {
+                comboBox.Items.Add(value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(currentValue) && comboBox.Items.Contains(currentValue))
+            {
+                comboBox.SelectedItem = currentValue;
+            }
+            else
+            {
+                comboBox.SelectedIndex = 0;
+            }
+        }
+
+        private void ApplyUserFilters()
+        {
+            if (usersTable == null)
+            {
+                return;
+            }
+
+            var filterParts = new List<string>();
+
+            if (cmbRoleFilter != null && cmbRoleFilter.SelectedIndex > 0)
+            {
+                var roleValue = MapRoleNameToValue(cmbRoleFilter.SelectedItem?.ToString());
+                if (roleValue.HasValue)
+                {
+                    filterParts.Add($"Role = {roleValue.Value}");
+                }
+            }
+
+            if (cmbSectionFilter != null && cmbSectionFilter.SelectedIndex > 0)
+            {
+                var value = EscapeRowFilterValue(cmbSectionFilter.SelectedItem?.ToString());
+                filterParts.Add($"StudentSection = '{value}'");
+            }
+
+            if (cmbCourseFilter != null && cmbCourseFilter.SelectedIndex > 0)
+            {
+                var value = EscapeRowFilterValue(cmbCourseFilter.SelectedItem?.ToString());
+                filterParts.Add($"Course = '{value}'");
+            }
+
+            if (cmbYearFilter != null && cmbYearFilter.SelectedIndex > 0)
+            {
+                var value = EscapeRowFilterValue(cmbYearFilter.SelectedItem?.ToString());
+                filterParts.Add($"StudentYearLevel = '{value}'");
+            }
+
+            usersTable.DefaultView.RowFilter = filterParts.Count > 0
+                ? string.Join(" AND ", filterParts)
+                : string.Empty;
+
+            UpdateUserFilterState();
+        }
+
+        private void UpdateUserFilterState()
+        {
+            var activeFilters = new List<string>();
+
+            if (cmbRoleFilter != null && cmbRoleFilter.SelectedIndex > 0)
+            {
+                activeFilters.Add($"Role={cmbRoleFilter.SelectedItem}");
+            }
+
+            if (cmbSectionFilter != null && cmbSectionFilter.SelectedIndex > 0)
+            {
+                activeFilters.Add($"Section={cmbSectionFilter.SelectedItem}");
+            }
+
+            if (cmbCourseFilter != null && cmbCourseFilter.SelectedIndex > 0)
+            {
+                activeFilters.Add($"Course={cmbCourseFilter.SelectedItem}");
+            }
+
+            if (cmbYearFilter != null && cmbYearFilter.SelectedIndex > 0)
+            {
+                activeFilters.Add($"Year={cmbYearFilter.SelectedItem}");
+            }
+
+            if (lblActiveFilters != null)
+            {
+                lblActiveFilters.Text = activeFilters.Count == 0
+                    ? "Active filters: None"
+                    : $"Active filters: {string.Join(" | ", activeFilters)}";
+            }
+
+            if (btnClearFilters != null)
+            {
+                btnClearFilters.Enabled = activeFilters.Count > 0;
+            }
+        }
+
+        private static string EscapeRowFilterValue(string? value)
+        {
+            return (value ?? string.Empty).Replace("'", "''");
+        }
+
+        private static string ExtractCourseFromSection(string? sectionValue)
+        {
+            if (string.IsNullOrWhiteSpace(sectionValue))
+            {
+                return string.Empty;
+            }
+
+            var parts = sectionValue.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length > 0 ? parts[0] : sectionValue;
+        }
+
+        private static int? MapRoleNameToValue(string? roleName)
+        {
+            return roleName switch
+            {
+                "Super Admin" => (int)UserRole.SuperAdmin,
+                "Admin" => (int)UserRole.Admin,
+                "Professor" => (int)UserRole.Professor,
+                "Guardian" => (int)UserRole.Guardian,
+                "Student" => (int)UserRole.Student,
+                _ => null
+            };
+        }
+
+        private static void ConfigureRoleComboBox(ComboBox comboBox, bool canManageAdmins)
+        {
+            var roles = new List<UserRole>();
+            if (canManageAdmins)
+            {
+                roles.Add(UserRole.Admin);
+            }
+            roles.Add(UserRole.Professor);
+            roles.Add(UserRole.Guardian);
+            roles.Add(UserRole.Student);
+
+            comboBox.Items.Clear();
+            comboBox.Tag = roles;
+
+            foreach (var role in roles)
+            {
+                comboBox.Items.Add(GetRoleDisplayName(role));
+            }
+
+            if (comboBox.Items.Count > 0)
+            {
+                comboBox.SelectedIndex = 0;
+            }
+        }
+
+        private static UserRole? GetComboSelectedRole(ComboBox comboBox)
+        {
+            if (comboBox.Tag is List<UserRole> roles &&
+                comboBox.SelectedIndex >= 0 &&
+                comboBox.SelectedIndex < roles.Count)
+            {
+                return roles[comboBox.SelectedIndex];
+            }
+
+            return null;
+        }
+
+        private static void SetComboSelectedRole(ComboBox comboBox, UserRole role)
+        {
+            if (comboBox.Tag is List<UserRole> roles)
+            {
+                var index = roles.FindIndex(r => r == role);
+                if (index >= 0)
+                {
+                    comboBox.SelectedIndex = index;
+                }
+            }
+        }
+
+        private static string GetRoleDisplayName(UserRole role)
+        {
+            return role switch
+            {
+                UserRole.SuperAdmin => "Super Admin",
+                UserRole.Admin => "Admin",
+                UserRole.Professor => "Professor",
+                UserRole.Guardian => "Guardian",
+                UserRole.Student => "Student",
+                _ => role.ToString()
+            };
+        }
+
+        private void SetUserFormVisibility(bool showForm)
+        {
+            pnlUserForm.Visible = showForm;
+            dgvUsers.Visible = !showForm;
+            if (pnlUserFilters != null)
+            {
+                pnlUserFilters.Visible = !showForm;
+            }
+        }
+
+        private async Task<bool> IsCurrentUserSuperAdminAsync()
+        {
+            if (currentUser == null)
+            {
+                return true;
+            }
+
+            if (!isCurrentUserSuperAdmin.HasValue)
+            {
+                isCurrentUserSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+            }
+
+            return isCurrentUserSuperAdmin.Value;
         }
 
         private void InitializeComponent()
@@ -89,7 +356,24 @@ namespace StudentReportInitial.Forms
             };
             btnDeleteUser.Click += BtnDeleteUser_Click;
 
-            pnlActions.Controls.AddRange(new Control[] { btnAddUser, btnEditUser, btnDeleteUser });
+            btnRequestAdmin = new Button
+            {
+                Text = "Request Admin Access",
+                Size = new Size(170, 28),
+                Location = new Point(315, 10),
+                BackColor = Color.FromArgb(248, 250, 252),
+                ForeColor = Color.FromArgb(51, 65, 85),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9),
+                Cursor = Cursors.Hand,
+                Visible = currentUser != null && currentUser.Role != UserRole.SuperAdmin
+            };
+            btnRequestAdmin.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+            btnRequestAdmin.Click += BtnRequestAdmin_Click;
+
+            pnlActions.Controls.AddRange(new Control[] { btnAddUser, btnEditUser, btnDeleteUser, btnRequestAdmin });
+
+            var pnlFilters = BuildUserFiltersPanel();
 
             // Data grid view
             dgvUsers = new DataGridView
@@ -116,8 +400,11 @@ namespace StudentReportInitial.Forms
                 Padding = new Padding(20)
             };
 
+            pnlUserFilters = pnlFilters;
+
             this.Controls.Add(dgvUsers);
             this.Controls.Add(pnlUserForm);
+            this.Controls.Add(pnlFilters);
             this.Controls.Add(pnlActions);
 
             UIStyleHelper.ApplyRoundedButton(btnAddUser, 10);
@@ -125,6 +412,151 @@ namespace StudentReportInitial.Forms
             UIStyleHelper.ApplyRoundedButton(btnDeleteUser, 10);
 
             this.ResumeLayout(false);
+        }
+
+        private Panel BuildUserFiltersPanel()
+        {
+            var panel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 95,
+                BackColor = Color.White,
+                Padding = new Padding(20, 8, 20, 8)
+            };
+
+            var flow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoSize = false,
+                WrapContents = false,
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoScroll = true
+            };
+
+            cmbRoleFilter = CreateFilterComboBox();
+            cmbSectionFilter = CreateFilterComboBox();
+            cmbCourseFilter = CreateFilterComboBox();
+            cmbYearFilter = CreateFilterComboBox();
+            btnClearFilters = new Button
+            {
+                Text = "Clear Filters",
+                Width = 120,
+                Height = 32,
+                BackColor = Color.FromArgb(241, 245, 249),
+                ForeColor = Color.FromArgb(51, 65, 85),
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Enabled = false
+            };
+            btnClearFilters.FlatAppearance.BorderColor = Color.FromArgb(226, 232, 240);
+            btnClearFilters.Click += BtnClearUserFilters_Click;
+
+            flow.Controls.Add(CreateFilterGroup("Role", cmbRoleFilter));
+            flow.Controls.Add(CreateFilterGroup("Section", cmbSectionFilter));
+            flow.Controls.Add(CreateFilterGroup("Course", cmbCourseFilter));
+            flow.Controls.Add(CreateFilterGroup("Year Level", cmbYearFilter));
+            flow.Controls.Add(btnClearFilters);
+
+            lblActiveFilters = new Label
+            {
+                Dock = DockStyle.Bottom,
+                Height = 20,
+                Text = "Active filters: None",
+                ForeColor = Color.FromArgb(100, 116, 139)
+            };
+
+            panel.Controls.Add(flow);
+            panel.Controls.Add(lblActiveFilters);
+
+            InitializeFilterCombo(cmbRoleFilter);
+            InitializeFilterCombo(cmbSectionFilter);
+            InitializeFilterCombo(cmbCourseFilter);
+            InitializeFilterCombo(cmbYearFilter);
+            PopulateRoleFilterItems();
+
+            return panel;
+        }
+
+        private static ComboBox CreateFilterComboBox()
+        {
+            return new ComboBox
+            {
+                Width = 170,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 9)
+            };
+        }
+
+        private Control CreateFilterGroup(string labelText, ComboBox? comboBox)
+        {
+            var wrapper = new Panel
+            {
+                Width = 190,
+                Height = 60,
+                Margin = new Padding(0, 0, 16, 0)
+            };
+
+            var label = new Label
+            {
+                Text = labelText,
+                Dock = DockStyle.Top,
+                Height = 18,
+                ForeColor = Color.FromArgb(71, 85, 105)
+            };
+
+            if (comboBox != null)
+            {
+                comboBox.SelectedIndexChanged += HandleUserFilterChanged;
+                comboBox.Location = new Point(0, 25);
+                comboBox.Width = wrapper.Width;
+            }
+
+            wrapper.Controls.Add(comboBox ?? new ComboBox());
+            wrapper.Controls.Add(label);
+
+            return wrapper;
+        }
+
+        private void InitializeFilterCombo(ComboBox? comboBox)
+        {
+            if (comboBox == null)
+            {
+                return;
+            }
+
+            comboBox.Items.Clear();
+            comboBox.Items.Add(FilterAllLabel);
+            comboBox.SelectedIndex = 0;
+        }
+
+        private void PopulateRoleFilterItems()
+        {
+            if (cmbRoleFilter == null)
+            {
+                return;
+            }
+
+            cmbRoleFilter.Items.Clear();
+            cmbRoleFilter.Items.Add(FilterAllLabel);
+            cmbRoleFilter.Items.Add("Super Admin");
+            cmbRoleFilter.Items.Add("Admin");
+            cmbRoleFilter.Items.Add("Professor");
+            cmbRoleFilter.Items.Add("Guardian");
+            cmbRoleFilter.Items.Add("Student");
+            cmbRoleFilter.SelectedIndex = 0;
+        }
+
+        private void BtnClearUserFilters_Click(object? sender, EventArgs e)
+        {
+            if (cmbRoleFilter != null) cmbRoleFilter.SelectedIndex = 0;
+            if (cmbSectionFilter != null) cmbSectionFilter.SelectedIndex = 0;
+            if (cmbCourseFilter != null) cmbCourseFilter.SelectedIndex = 0;
+            if (cmbYearFilter != null) cmbYearFilter.SelectedIndex = 0;
+        }
+
+        private void HandleUserFilterChanged(object? sender, EventArgs e)
+        {
+            ApplyUserFilters();
         }
 
 
@@ -167,15 +599,18 @@ namespace StudentReportInitial.Forms
 
                 var query = @"
                     SELECT u.Id, u.Username, u.FirstName, u.LastName, u.Email, u.Phone, u.Role, u.CreatedDate, u.IsActive,
-                           b.Name as BranchName
+                           b.Name as BranchName,
+                           s.Section as StudentSection,
+                           s.GradeLevel as StudentYearLevel
                     FROM Users u
                     LEFT JOIN Branches b ON u.BranchId = b.Id
+                    LEFT JOIN Students s ON s.Username = u.Username AND s.IsActive = 1
                     WHERE u.IsActive = 1";
 
                 // Add branch filter if not Super Admin
                 if (currentUser != null)
                 {
-                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    var isSuperAdmin = await IsCurrentUserSuperAdminAsync();
                     if (!isSuperAdmin)
                     {
                         var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
@@ -198,7 +633,7 @@ namespace StudentReportInitial.Forms
                 // Add branch parameter if needed
                 if (currentUser != null)
                 {
-                    var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                    var isSuperAdmin = await IsCurrentUserSuperAdminAsync();
                     if (!isSuperAdmin)
                     {
                         var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
@@ -217,7 +652,11 @@ namespace StudentReportInitial.Forms
                 var dataTable = new DataTable();
                 adapter.Fill(dataTable);
 
-                dgvUsers.DataSource = dataTable;
+                EnhanceUsersDataTable(dataTable);
+                usersTable = dataTable;
+                dgvUsers.DataSource = usersTable;
+                PopulateUserFilterOptions();
+                ApplyUserFilters();
 
                 // Format columns
                 if (dgvUsers.Columns.Count > 0)
@@ -231,6 +670,18 @@ namespace StudentReportInitial.Forms
                     dgvUsers.Columns["Role"].HeaderText = "Role";
                     dgvUsers.Columns["CreatedDate"].HeaderText = "Created Date";
                     dgvUsers.Columns["IsActive"].HeaderText = "Active";
+                    if (dgvUsers.Columns.Contains("StudentSection"))
+                    {
+                        dgvUsers.Columns["StudentSection"].HeaderText = "Section";
+                    }
+                    if (dgvUsers.Columns.Contains("StudentYearLevel"))
+                    {
+                        dgvUsers.Columns["StudentYearLevel"].HeaderText = "Year Level";
+                    }
+                    if (dgvUsers.Columns.Contains("Course"))
+                    {
+                        dgvUsers.Columns["Course"].HeaderText = "Course";
+                    }
 
                     // Format role column
                     dgvUsers.Columns["Role"].DefaultCellStyle.Format = "0";
@@ -244,37 +695,20 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private void CmbRoleFilter_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            ApplyFilters();
-        }
-
-        private void ApplyFilters()
-        {
-            if (dgvUsers.DataSource is DataTable dataTable)
-            {
-                var filterParts = new List<string>();
-                
-                if (cmbRoleFilter.SelectedIndex > 0)
-                {
-                    filterParts.Add($"Role = {cmbRoleFilter.SelectedIndex}");
-                }
-
-                dataTable.DefaultView.RowFilter = filterParts.Count > 0 ? string.Join(" AND ", filterParts) : "";
-            }
-        }
-
-
         private async void DgvUsers_SelectionChanged(object sender, EventArgs e)
         {
-            btnEditUser.Enabled = dgvUsers.SelectedRows.Count > 0;
+            var hasSelection = dgvUsers.SelectedRows.Count > 0;
+            btnEditUser.Enabled = hasSelection;
             
-            if (dgvUsers.SelectedRows.Count > 0)
+            if (hasSelection)
             {
                 var selectedRow = dgvUsers.SelectedRows[0];
                 var userId = Convert.ToInt32(selectedRow.Cells["Id"].Value);
                 var userRole = Convert.ToInt32(selectedRow.Cells["Role"].Value);
                 var username = selectedRow.Cells["Username"].Value?.ToString() ?? "";
+                bool isAdminAccount = userRole == (int)UserRole.Admin || userRole == (int)UserRole.SuperAdmin;
+                bool canManageAdmins = await IsCurrentUserSuperAdminAsync();
+                btnEditUser.Enabled = hasSelection && (!isAdminAccount || canManageAdmins);
                 
                 // Check if this is the primary admin account
                 bool isPrimaryAdmin = await IsPrimaryAdminAccountAsync(userId, username);
@@ -369,11 +803,31 @@ namespace StudentReportInitial.Forms
             await ShowUserForm();
         }
 
+        private void BtnRequestAdmin_Click(object? sender, EventArgs e)
+        {
+            if (currentUser == null)
+            {
+                MessageBox.Show("Please sign in to submit a request.", "Authentication Required",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using var requestForm = new AdminRequestForm(currentUser);
+            requestForm.ShowDialog();
+        }
+
         private async void BtnEditUser_Click(object sender, EventArgs e)
         {
             if (dgvUsers.SelectedRows.Count > 0)
             {
                 selectedUserId = Convert.ToInt32(dgvUsers.SelectedRows[0].Cells["Id"].Value);
+                var selectedRole = Convert.ToInt32(dgvUsers.SelectedRows[0].Cells["Role"].Value);
+                if (selectedRole == (int)UserRole.Admin && !await IsCurrentUserSuperAdminAsync())
+                {
+                    MessageBox.Show("Only Super Admin can modify admin accounts.", "Access Restricted",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
                 await ShowUserForm(selectedUserId);
             }
         }
@@ -443,12 +897,13 @@ namespace StudentReportInitial.Forms
         {
             try
             {
-                pnlUserForm.Controls.Clear();
-                pnlUserForm.Visible = true;
-                dgvUsers.Visible = false;
+            pnlUserForm.Controls.Clear();
+            SetUserFormVisibility(true);
 
-                isEditMode = userId > 0;
+            isEditMode = userId > 0;
                 selectedUserId = userId;
+            var canManageAdmins = await IsCurrentUserSuperAdminAsync();
+            var editedUserIsAdmin = false;
 
             var lblTitle = new Label
             {
@@ -558,7 +1013,7 @@ namespace StudentReportInitial.Forms
             // Role
             var lblRole = new Label { Text = "Role:", Location = new Point(20, yPos), AutoSize = true };
             var cmbRole = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), DropDownStyle = ComboBoxStyle.DropDownList };
-            cmbRole.Items.AddRange(new[] { "Admin", "Professor", "Guardian", "Student" });
+            ConfigureRoleComboBox(cmbRole, canManageAdmins);
             var lblRoleWarning = new Label 
             { 
                 Text = "", 
@@ -572,8 +1027,8 @@ namespace StudentReportInitial.Forms
             // Function to show/hide phone field based on role
             Action updatePhoneFieldVisibility = () =>
             {
-                var selectedRole = cmbRole.SelectedIndex; // Admin = 0, Professor = 1, Guardian = 2, Student = 3
-                bool showPhone = selectedRole != 0; // Hide for Admin (index 0)
+                var selectedRole = GetComboSelectedRole(cmbRole);
+                bool showPhone = selectedRole != UserRole.Admin;
                 
                 lblPhone.Visible = showPhone;
                 txtPhone.Visible = showPhone;
@@ -595,64 +1050,50 @@ namespace StudentReportInitial.Forms
             // Branch selection (only for Super Admin creating Admin users, or when creating users that need branch assignment)
             ComboBox? cmbBranch = null;
             Label? lblBranch = null;
-            if (currentUser != null)
+            if (currentUser != null && canManageAdmins)
             {
-                var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
-                if (isSuperAdmin || (!isEditMode && cmbRole.SelectedIndex == 0)) // Show for Super Admin or when creating Admin
+                lblBranch = new Label { Text = "Branch:", Location = new Point(20, yPos), AutoSize = true };
+                cmbBranch = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+                
+                var branches = await BranchHelper.GetAllBranchesAsync();
+                if (branches.Count > 0)
                 {
-                    lblBranch = new Label { Text = "Branch:", Location = new Point(20, yPos), AutoSize = true };
-                    cmbBranch = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), DropDownStyle = ComboBoxStyle.DropDownList };
-                    
-                    var branches = await BranchHelper.GetAllBranchesAsync();
-                    if (branches.Count > 0)
+                    foreach (var branch in branches)
                     {
-                        // Add branches - ToString() will display the Name
-                        foreach (var branch in branches)
-                        {
-                            cmbBranch.Items.Add(branch);
-                        }
-                        if (cmbBranch.Items.Count > 0)
-                        {
-                            cmbBranch.SelectedIndex = 0;
-                        }
+                        cmbBranch.Items.Add(branch);
                     }
-                    
-                    // Update branch visibility when role changes
-                    cmbRole.SelectedIndexChanged += (s, e) =>
+                    if (cmbBranch.Items.Count > 0)
                     {
-                        if (lblBranch != null && cmbBranch != null)
-                        {
-                            var selectedRole = cmbRole.SelectedIndex + 1; // Admin = 1
-                            // Show branch for Admin, Professor, Guardian, and Student when Super Admin manages all branches
-                            var showBranch = isSuperAdmin && !branchFilterId.HasValue && 
-                                           (selectedRole == (int)UserRole.Admin || 
-                                            selectedRole == (int)UserRole.Professor ||
-                                            selectedRole == (int)UserRole.Guardian ||
-                                            selectedRole == (int)UserRole.Student);
-                            lblBranch.Visible = showBranch;
-                            cmbBranch.Visible = showBranch;
-                            if (!showBranch && cmbBranch.Items.Count > 0)
-                            {
-                                cmbBranch.SelectedIndex = 0; // Reset selection
-                            }
-                        }
-                    };
-                    
-                    // Initial visibility
+                        cmbBranch.SelectedIndex = 0;
+                    }
+                }
+                
+                // Update branch visibility when role changes
+                cmbRole.SelectedIndexChanged += (s, e) =>
+                {
                     if (lblBranch != null && cmbBranch != null)
                     {
-                        var selectedRole = cmbRole.SelectedIndex + 1;
-                        var showBranch = isSuperAdmin && !branchFilterId.HasValue && 
-                                       (selectedRole == (int)UserRole.Admin || 
-                                        selectedRole == (int)UserRole.Professor ||
-                                        selectedRole == (int)UserRole.Guardian ||
-                                        selectedRole == (int)UserRole.Student);
+                        var selectedRole = GetComboSelectedRole(cmbRole);
+                        var showBranch = !branchFilterId.HasValue && selectedRole.HasValue;
                         lblBranch.Visible = showBranch;
                         cmbBranch.Visible = showBranch;
+                        if (!showBranch && cmbBranch.Items.Count > 0)
+                        {
+                            cmbBranch.SelectedIndex = 0; // Reset selection
+                        }
                     }
-                    
-                    yPos += spacing;
+                };
+                
+                // Initial visibility
+                if (lblBranch != null && cmbBranch != null)
+                {
+                    var selectedRole = GetComboSelectedRole(cmbRole);
+                    var showBranch = !branchFilterId.HasValue && selectedRole.HasValue;
+                    lblBranch.Visible = showBranch;
+                    cmbBranch.Visible = showBranch;
                 }
+                
+                yPos += spacing;
             }
 
             // Student selection for Guardian role
@@ -740,8 +1181,8 @@ namespace StudentReportInitial.Forms
             // Show student selection when Guardian role is selected
             cmbRole.SelectedIndexChanged += async (s, e) =>
             {
-                var selectedRole = cmbRole.SelectedIndex + 1; // Guardian = 3
-                var isGuardian = selectedRole == (int)UserRole.Guardian;
+                var selectedRole = GetComboSelectedRole(cmbRole);
+                var isGuardian = selectedRole == UserRole.Guardian;
                 
                 if (lblStudents != null && clbStudents != null && lblStudentsError != null)
                 {
@@ -813,8 +1254,7 @@ namespace StudentReportInitial.Forms
             };
 
             btnCancel.Click += (s, e) => {
-                pnlUserForm.Visible = false;
-                dgvUsers.Visible = true;
+                SetUserFormVisibility(false);
             };
 
             btnSave.Click += async (s, e) =>
@@ -860,8 +1300,14 @@ namespace StudentReportInitial.Forms
 
                     // Validate phone number (not required for Admin)
                     string phone = "";
-                    var selectedRole = (UserRole)(cmbRole.SelectedIndex + 1);
+                    var selectedRole = GetComboSelectedRole(cmbRole) ?? UserRole.Professor;
                     bool isAdmin = selectedRole == UserRole.Admin;
+                    if (isAdmin && !canManageAdmins)
+                    {
+                        MessageBox.Show("Only the Super Admin can create new admin accounts. Please submit a request instead.",
+                            "Access Restricted", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
                     
                     if (!isAdmin)
                     {
@@ -1005,12 +1451,12 @@ namespace StudentReportInitial.Forms
                     }
                     
                     // Prevent role downgrade for admin accounts
-                    var newRole = (UserRole)(cmbRole.SelectedIndex + 1);
+                    var newRole = GetComboSelectedRole(cmbRole) ?? UserRole.Student;
                     if (isEditMode && isEditingAdmin && newRole != UserRole.Admin)
                     {
                         MessageBox.Show("Cannot change Admin role to a lower permission level. This is a security restriction.",
                             "Role Change Restricted", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        cmbRole.SelectedIndex = 0; // Reset to Admin
+                        SetComboSelectedRole(cmbRole, UserRole.Admin);
                         return;
                     }
 
@@ -1065,7 +1511,7 @@ namespace StudentReportInitial.Forms
                         LastName = txtLastName.Text,
                         Email = email,
                         Phone = phone,
-                        Role = (UserRole)(cmbRole.SelectedIndex + 1),
+                        Role = GetComboSelectedRole(cmbRole) ?? UserRole.Student,
                         BranchId = assignedBranchId,
                         IsActive = true,
                     };
@@ -1125,8 +1571,7 @@ namespace StudentReportInitial.Forms
                         await AddUserAsync(user, selectedStudentIds);
                     }
 
-                    pnlUserForm.Visible = false;
-                    dgvUsers.Visible = true;
+                    SetUserFormVisibility(false);
                     await LoadUsersAsync();
                 }
                 catch (Exception ex)
@@ -1157,7 +1602,7 @@ namespace StudentReportInitial.Forms
             pnlUserForm.Controls.AddRange(controlsList.ToArray());
 
             // Set initial phone field visibility based on role
-            if (cmbRole.SelectedIndex >= 0)
+            if (GetComboSelectedRole(cmbRole).HasValue)
             {
                 updatePhoneFieldVisibility();
             }
@@ -1170,8 +1615,9 @@ namespace StudentReportInitial.Forms
                 updatePhoneFieldVisibility();
                 
                 // Check if editing admin account
-                var currentRole = cmbRole.SelectedIndex + 1;
-                if (currentRole == 1) // Admin role
+                var currentRole = GetComboSelectedRole(cmbRole);
+                editedUserIsAdmin = currentRole == UserRole.Admin;
+                if (currentRole == UserRole.Admin) // Admin role
                 {
                     // Disable role change for admin accounts (prevent downgrade)
                     cmbRole.Enabled = false;
@@ -1183,11 +1629,12 @@ namespace StudentReportInitial.Forms
             // Monitor role changes to prevent admin downgrade
             cmbRole.SelectedIndexChanged += (s, e) =>
             {
-                if (isEditMode && cmbRole.SelectedIndex + 1 < 1) // Trying to change from Admin
+                var newSelection = GetComboSelectedRole(cmbRole);
+                if (isEditMode && editedUserIsAdmin && newSelection != UserRole.Admin)
                 {
                     MessageBox.Show("Cannot change Admin role to a lower permission level. This is a security restriction.",
                         "Role Change Restricted", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    cmbRole.SelectedIndex = 0; // Reset to Admin
+                    SetComboSelectedRole(cmbRole, UserRole.Admin);
                 }
             };
             }
@@ -1221,8 +1668,8 @@ namespace StudentReportInitial.Forms
                     txtLastName.Text = reader.GetString("LastName");
                     txtEmail.Text = reader.GetString("Email");
                     txtPhone.Text = reader.IsDBNull("Phone") ? "" : reader.GetString("Phone");
-                    var role = reader.GetInt32("Role");
-                    cmbRole.SelectedIndex = role - 1;
+                    var role = (UserRole)reader.GetInt32("Role");
+                    SetComboSelectedRole(cmbRole, role);
                     
                     // Load branch if available
                     if (cmbBranch != null && !reader.IsDBNull("BranchId"))
@@ -1248,7 +1695,7 @@ namespace StudentReportInitial.Forms
                     }
                     
                     // Check if this is an admin account
-                    if (role == 1) // Admin
+                    if (role == UserRole.Admin) // Admin
                     {
                         var username = reader.GetString("Username");
                         bool isPrimaryAdmin = await IsPrimaryAdminAccountAsync(userId, username);
@@ -1331,6 +1778,41 @@ namespace StudentReportInitial.Forms
             using var connection = DatabaseHelper.GetConnection();
             await connection.OpenAsync();
 
+            // Validate branch access before updating
+            if (currentUser != null)
+            {
+                var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                if (!isSuperAdmin)
+                {
+                    // Check if user being updated belongs to current admin's branch
+                    var checkQuery = "SELECT BranchId FROM Users WHERE Id = @id";
+                    using var checkCommand = new SqlCommand(checkQuery, connection);
+                    checkCommand.Parameters.AddWithValue("@id", user.Id);
+                    var userBranchId = await checkCommand.ExecuteScalarAsync();
+                    
+                    var adminBranchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                    if (userBranchId == null || userBranchId == DBNull.Value || 
+                        Convert.ToInt32(userBranchId) != adminBranchId)
+                    {
+                        throw new UnauthorizedAccessException("You can only update users from your own branch.");
+                    }
+                }
+                else if (branchFilterId.HasValue)
+                {
+                    // Super Admin with branch filter - ensure user belongs to selected branch
+                    var checkQuery = "SELECT BranchId FROM Users WHERE Id = @id";
+                    using var checkCommand = new SqlCommand(checkQuery, connection);
+                    checkCommand.Parameters.AddWithValue("@id", user.Id);
+                    var userBranchId = await checkCommand.ExecuteScalarAsync();
+                    
+                    if (userBranchId == null || userBranchId == DBNull.Value || 
+                        Convert.ToInt32(userBranchId) != branchFilterId.Value)
+                    {
+                        throw new UnauthorizedAccessException("User does not belong to the selected branch.");
+                    }
+                }
+            }
+
             // Check if password was changed
             bool passwordChanged = !string.IsNullOrWhiteSpace(user.Password);
             
@@ -1340,7 +1822,7 @@ namespace StudentReportInitial.Forms
                 query = @"
                     UPDATE Users 
                     SET Username = @username, PasswordHash = @passwordHash, PasswordSalt = @passwordSalt,
-                        FirstName = @firstName, LastName = @lastName, Email = @email, Phone = @phone, Role = @role
+                        FirstName = @firstName, LastName = @lastName, Email = @email, Phone = @phone, Role = @role, BranchId = @branchId
                     WHERE Id = @id";
             }
             else
@@ -1348,7 +1830,7 @@ namespace StudentReportInitial.Forms
                 query = @"
                     UPDATE Users 
                     SET Username = @username, FirstName = @firstName, 
-                        LastName = @lastName, Email = @email, Phone = @phone, Role = @role
+                        LastName = @lastName, Email = @email, Phone = @phone, Role = @role, BranchId = @branchId
                     WHERE Id = @id";
             }
 
@@ -1360,6 +1842,7 @@ namespace StudentReportInitial.Forms
             command.Parameters.AddWithValue("@email", user.Email);
             command.Parameters.AddWithValue("@phone", user.Phone);
             command.Parameters.AddWithValue("@role", (int)user.Role);
+            command.Parameters.AddWithValue("@branchId", user.BranchId.HasValue ? (object)user.BranchId.Value : DBNull.Value);
             
             if (passwordChanged)
             {
@@ -1376,6 +1859,41 @@ namespace StudentReportInitial.Forms
         {
             using var connection = DatabaseHelper.GetConnection();
             await connection.OpenAsync();
+
+            // Validate branch access before deleting
+            if (currentUser != null)
+            {
+                var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
+                if (!isSuperAdmin)
+                {
+                    // Check if user being deleted belongs to current admin's branch
+                    var checkQuery = "SELECT BranchId FROM Users WHERE Id = @id";
+                    using var checkCommand = new SqlCommand(checkQuery, connection);
+                    checkCommand.Parameters.AddWithValue("@id", userId);
+                    var userBranchId = await checkCommand.ExecuteScalarAsync();
+                    
+                    var adminBranchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
+                    if (userBranchId == null || userBranchId == DBNull.Value || 
+                        Convert.ToInt32(userBranchId) != adminBranchId)
+                    {
+                        throw new UnauthorizedAccessException("You can only delete users from your own branch.");
+                    }
+                }
+                else if (branchFilterId.HasValue)
+                {
+                    // Super Admin with branch filter - ensure user belongs to selected branch
+                    var checkQuery = "SELECT BranchId FROM Users WHERE Id = @id";
+                    using var checkCommand = new SqlCommand(checkQuery, connection);
+                    checkCommand.Parameters.AddWithValue("@id", userId);
+                    var userBranchId = await checkCommand.ExecuteScalarAsync();
+                    
+                    if (userBranchId == null || userBranchId == DBNull.Value || 
+                        Convert.ToInt32(userBranchId) != branchFilterId.Value)
+                    {
+                        throw new UnauthorizedAccessException("User does not belong to the selected branch.");
+                    }
+                }
+            }
 
             var query = "UPDATE Users SET IsActive = 0 WHERE Id = @id";
             using var command = new SqlCommand(query, connection);

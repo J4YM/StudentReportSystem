@@ -1,5 +1,6 @@
 using StudentReportInitial.Data;
 using StudentReportInitial.Models;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Data;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ namespace StudentReportInitial.Forms
     {
         private User currentUser;
         private DataGridView dgvGrades;
+        private ComboBox cmbStudent;
         private ComboBox cmbSubject;
         private ComboBox cmbQuarter;
         private Button btnRefresh;
@@ -18,8 +20,11 @@ namespace StudentReportInitial.Forms
         private Label lblCurrentGWA;
         private Label lblCumulativeGWA;
         private Panel pnlSummary;
+        private Label? lblStudentInfo;
         private Student? linkedStudent;
         private bool studentContextResolved;
+        private readonly List<Student> guardianStudents = new();
+        private bool guardianStudentSelectorInitialized = false;
 
         public ViewerGradesPanel(User user)
         {
@@ -50,7 +55,20 @@ namespace StudentReportInitial.Forms
             }
 
             studentContextResolved = true;
-            linkedStudent = await UserContextHelper.GetLinkedStudentAsync(currentUser);
+
+            if (currentUser.Role == UserRole.Guardian)
+            {
+                var students = await UserContextHelper.GetGuardianStudentsAsync(currentUser);
+                guardianStudents.Clear();
+                guardianStudents.AddRange(students);
+                linkedStudent = guardianStudents.FirstOrDefault();
+                InitializeGuardianStudentSelector();
+            }
+            else
+            {
+                linkedStudent = await UserContextHelper.GetLinkedStudentAsync(currentUser);
+            }
+
             return linkedStudent != null;
         }
 
@@ -91,18 +109,37 @@ namespace StudentReportInitial.Forms
                 Location = new Point(20, 20)
             };
 
+            // Student selector (for guardians)
+            lblStudentInfo = new Label
+            {
+                Text = "Student:",
+                Location = new Point(20, 50),
+                AutoSize = true,
+                Visible = false
+            };
+
+            cmbStudent = new ComboBox
+            {
+                Location = new Point(90, 48),
+                Size = new Size(220, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                FormattingEnabled = true,
+                Visible = false
+            };
+            cmbStudent.SelectedIndexChanged += CmbStudent_SelectedIndexChanged;
+
             // Subject filter
             var lblSubject = new Label
             {
                 Text = "Subject:",
-                Location = new Point(20, 50),
+                Location = new Point(330, 50),
                 AutoSize = true
             };
 
             cmbSubject = new ComboBox
             {
-                Location = new Point(80, 48),
-                Size = new Size(200, 25),
+                Location = new Point(390, 48),
+                Size = new Size(180, 25),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
             cmbSubject.Items.Add("All Subjects");
@@ -113,14 +150,14 @@ namespace StudentReportInitial.Forms
             var lblQuarter = new Label
             {
                 Text = "Quarter:",
-                Location = new Point(300, 50),
+                Location = new Point(590, 50),
                 AutoSize = true
             };
 
             cmbQuarter = new ComboBox
             {
-                Location = new Point(360, 48),
-                Size = new Size(120, 25),
+                Location = new Point(650, 48),
+                Size = new Size(130, 25),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
             cmbQuarter.Items.AddRange(new[] { "All Quarters", "Prelim", "Midterm", "PreFinal", "Final" });
@@ -130,8 +167,8 @@ namespace StudentReportInitial.Forms
             btnRefresh = new Button
             {
                 Text = "Refresh",
-                Location = new Point(480, 47),
-                Size = new Size(80, 27),
+                Location = new Point(800, 47),
+                Size = new Size(90, 27),
                 BackColor = Color.FromArgb(59, 130, 246),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -141,7 +178,11 @@ namespace StudentReportInitial.Forms
             btnRefresh.Click += BtnRefresh_Click;
 
             pnlHeader.Controls.AddRange(new Control[] {
-                lblTitle, lblSubject, cmbSubject, lblQuarter, cmbQuarter, btnRefresh
+                lblTitle,
+                lblStudentInfo!, cmbStudent,
+                lblSubject, cmbSubject,
+                lblQuarter, cmbQuarter,
+                btnRefresh
             });
 
             // Summary panel
@@ -228,6 +269,62 @@ namespace StudentReportInitial.Forms
             dgvGrades.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
             dgvGrades.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(51, 65, 85);
             dgvGrades.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
+        }
+
+        private void InitializeGuardianStudentSelector()
+        {
+            if (currentUser.Role != UserRole.Guardian || cmbStudent == null || lblStudentInfo == null)
+            {
+                return;
+            }
+
+            if (guardianStudentSelectorInitialized)
+            {
+                // Just refresh items
+                cmbStudent.Items.Clear();
+            }
+            else
+            {
+                // Configure formatting once
+                cmbStudent.Format += (s, e) =>
+                {
+                    if (e.ListItem is Student sItem)
+                    {
+                        e.Value = $"{sItem.FirstName} {sItem.LastName} ({sItem.StudentId})";
+                    }
+                };
+                guardianStudentSelectorInitialized = true;
+            }
+
+            foreach (var student in guardianStudents)
+            {
+                cmbStudent.Items.Add(student);
+            }
+
+            bool hasStudents = guardianStudents.Count > 0;
+            cmbStudent.Visible = hasStudents;
+            lblStudentInfo.Visible = hasStudents;
+
+            if (hasStudents)
+            {
+                // Select the current linked student if present
+                var index = guardianStudents.FindIndex(s => linkedStudent != null && s.Id == linkedStudent.Id);
+                if (index >= 0 && index < cmbStudent.Items.Count)
+                {
+                    cmbStudent.SelectedIndex = index;
+                }
+                else
+                {
+                    cmbStudent.SelectedIndex = 0;
+                    linkedStudent = guardianStudents[0];
+                }
+
+                lblStudentInfo.Text = $"Parent of: {linkedStudent!.FirstName} {linkedStudent.LastName} ({linkedStudent.StudentId})";
+            }
+            else
+            {
+                lblStudentInfo.Text = "No linked students found";
+            }
         }
 
         private async Task LoadSubjectsAsync()
@@ -507,6 +604,22 @@ namespace StudentReportInitial.Forms
         private async void BtnRefresh_Click(object sender, EventArgs e)
         {
             await LoadGradesAsync();
+        }
+
+        private async void CmbStudent_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (cmbStudent?.SelectedItem is Student selected)
+            {
+                linkedStudent = selected;
+                if (lblStudentInfo != null)
+                {
+                    lblStudentInfo.Text = $"Parent of: {selected.FirstName} {selected.LastName} ({selected.StudentId})";
+                }
+
+                await LoadSubjectsAsync();
+                await LoadGradesAsync();
+                await CalculateGWAAsync();
+            }
         }
 
         private async Task CalculateGWAAsync()

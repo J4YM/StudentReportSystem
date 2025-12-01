@@ -19,16 +19,17 @@ namespace StudentReportInitial.Data
 
         public static async Task<int> CreateStudentAccountAsync(SqlConnection connection, SqlTransaction transaction, Student student)
         {
-            var studentUsername = GenerateStudentUsername(student);
+            // Use branch-specific email generation
+            var studentUsername = await EmailDomainHelper.GenerateStudentEmailAsync(student.StudentId, student.BranchId);
             var studentPassword = GenerateStudentPassword(student);
-            var studentEmail = GenerateStudentEmail(student);
+            var studentEmail = await EmailDomainHelper.GenerateStudentEmailAsync(student.StudentId, student.BranchId);
 
             // Hash the password
             PasswordHasher.CreatePasswordHash(studentPassword, out string passwordHash, out string passwordSalt);
 
             var query = @"
-                INSERT INTO Users (Username, PasswordHash, PasswordSalt, FirstName, LastName, Email, Phone, Role, CreatedDate, IsActive)
-                VALUES (@username, @passwordHash, @passwordSalt, @firstName, @lastName, @email, @phone, @role, @createdDate, @isActive);
+                INSERT INTO Users (Username, PasswordHash, PasswordSalt, FirstName, LastName, Email, Phone, Role, BranchId, CreatedDate, IsActive)
+                VALUES (@username, @passwordHash, @passwordSalt, @firstName, @lastName, @email, @phone, @role, @branchId, @createdDate, @isActive);
                 SELECT SCOPE_IDENTITY();";
 
             using var command = new SqlCommand(query, connection, transaction);
@@ -40,6 +41,7 @@ namespace StudentReportInitial.Data
             command.Parameters.AddWithValue("@email", studentEmail);
             command.Parameters.AddWithValue("@phone", student.Phone ?? "");
             command.Parameters.AddWithValue("@role", (int)UserRole.Student);
+            command.Parameters.AddWithValue("@branchId", student.BranchId);
             command.Parameters.AddWithValue("@createdDate", DateTime.Now);
             command.Parameters.AddWithValue("@isActive", true);
 
@@ -47,23 +49,10 @@ namespace StudentReportInitial.Data
             return Convert.ToInt32(result);
         }
 
-        public static string GenerateStudentUsername(Student student)
-        {
-            // Format: studentnumber@baliuag.sti.edu.ph
-            var studentNumber = student.StudentId.Replace("-", ""); // Remove dashes from student ID
-            return $"{studentNumber}@baliuag.sti.edu.ph";
-        }
-
         public static string GenerateStudentPassword(Student student)
         {
             // Format: studentnumber@LastName
             return $"{student.StudentId}@{student.LastName}";
-        }
-
-        public static string GenerateStudentEmail(Student student)
-        {
-            // Format: firstname.lastname@school.com
-            return $"{student.FirstName.ToLower()}.{student.LastName.ToLower()}@school.com";
         }
 
         public static string GetAccountCredentialsMessage(string username, string password)

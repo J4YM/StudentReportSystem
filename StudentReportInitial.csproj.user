@@ -7,6 +7,9 @@
     <Compile Update="Forms\AddAdminForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="Forms\AdminRequestForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="Forms\AdminStudentManagement.cs">
       <SubType>UserControl</SubType>
     </Compile>

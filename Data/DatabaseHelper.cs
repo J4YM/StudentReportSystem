@@ -126,6 +126,27 @@ namespace StudentReportInitial.Data
                     );
                 END
 
+                -- AdminRequests table to capture branch admin escalation
+                IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='AdminRequests' AND xtype='U')
+                BEGIN
+                    CREATE TABLE AdminRequests (
+                        Id INT IDENTITY(1,1) PRIMARY KEY,
+                        RequestedByUserId INT NOT NULL,
+                        BranchId INT NULL,
+                        RequestedRole INT NOT NULL,
+                        FullName NVARCHAR(200) NOT NULL,
+                        Email NVARCHAR(150) NOT NULL,
+                        Reason NVARCHAR(500),
+                        Status NVARCHAR(20) NOT NULL DEFAULT 'Pending',
+                        CreatedDate DATETIME2 DEFAULT GETDATE(),
+                        ReviewedByUserId INT NULL,
+                        ReviewedDate DATETIME2 NULL,
+                        Notes NVARCHAR(500) NULL,
+                        FOREIGN KEY (RequestedByUserId) REFERENCES Users(Id),
+                        FOREIGN KEY (BranchId) REFERENCES Branches(Id)
+                    );
+                END
+
                 -- Students table
                 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Students' AND xtype='U')
                 BEGIN

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\StudentReportInitial.csproj": {}
+    "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\StudentReportInitial.csproj": {}
   },
   "projects": {
-    "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\StudentReportInitial.csproj": {
+    "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\StudentReportInitial.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\StudentReportInitial.csproj",
+        "projectUniqueName": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\StudentReportInitial.csproj",
         "projectName": "StudentReportInitial",
-        "projectPath": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\StudentReportInitial.csproj",
+        "projectPath": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\StudentReportInitial.csproj",
         "packagesPath": "C:\\Users\\JamesWindell\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\JamesWindell\\Documents\\StudentReportSystem\\obj\\",
+        "outputPath": "C:\\Users\\JamesWindell\\Downloads\\StudentReportSystem-init(1)\\StudentReportSystem-init\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\JamesWindell\\AppData\\Roaming\\NuGet\\NuGet.Config",
