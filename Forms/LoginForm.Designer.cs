@@ -34,6 +34,7 @@ namespace StudentReportInitial.Forms
             lblTitle = new Label();
             pnlLogin = new Panel();
             pnlLoginCard = new Panel();
+            lnkForgotPassword = new LinkLabel();
             btnTogglePassword = new Button();
             lblError = new Label();
             btnLogin = new Button();
@@ -101,6 +102,7 @@ namespace StudentReportInitial.Forms
             // 
             pnlLoginCard.Anchor = AnchorStyles.None;
             pnlLoginCard.BackColor = Color.White;
+            pnlLoginCard.Controls.Add(lnkForgotPassword);
             pnlLoginCard.Controls.Add(btnTogglePassword);
             pnlLoginCard.Controls.Add(lblError);
             pnlLoginCard.Controls.Add(btnLogin);
@@ -154,6 +156,20 @@ namespace StudentReportInitial.Forms
             btnLogin.Text = "Login";
             btnLogin.UseVisualStyleBackColor = false;
             btnLogin.Click += btnLogin_Click;
+            // 
+            // lnkForgotPassword
+            // 
+            lnkForgotPassword.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            lnkForgotPassword.AutoSize = false;
+            lnkForgotPassword.LinkColor = Color.FromArgb(37, 99, 235);
+            lnkForgotPassword.Location = new Point(50, 370);
+            lnkForgotPassword.Name = "lnkForgotPassword";
+            lnkForgotPassword.Size = new Size(450, 23);
+            lnkForgotPassword.TabIndex = 9;
+            lnkForgotPassword.TabStop = true;
+            lnkForgotPassword.Text = "Forgot Password?";
+            lnkForgotPassword.TextAlign = ContentAlignment.MiddleRight;
+            lnkForgotPassword.LinkClicked += lnkForgotPassword_LinkClicked;
             // 
             // txtPassword
             // 
@@ -259,5 +275,6 @@ namespace StudentReportInitial.Forms
         private System.Windows.Forms.Label lblLoginHeading;
         private System.Windows.Forms.Label lblHeroSubtitle;
         private System.Windows.Forms.Button btnTogglePassword;
+        private System.Windows.Forms.LinkLabel lnkForgotPassword;
     }
 }

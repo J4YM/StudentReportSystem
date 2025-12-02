@@ -6,6 +6,8 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
 using StudentReportInitial.Theming;
+using System;
+using System.Threading.Tasks;
 
 namespace StudentReportInitial.Forms
 {
@@ -362,6 +364,366 @@ namespace StudentReportInitial.Forms
                 txtPassword.PasswordChar = '*';
                 btnTogglePassword.Text = "Show";
             }
+        }
+
+        private async void lnkForgotPassword_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            // Forgot Password flow restricted to non-admin roles with OTP verification
+            try
+            {
+                var identifier = PromptForUsernameOrEmail();
+                if (string.IsNullOrWhiteSpace(identifier))
+                {
+                    return;
+                }
+
+                int userId = 0;
+                string? username = null;
+                string? roleName = null;
+                string? phone = null;
+                UserRole? role = null;
+
+                using var connection = DatabaseHelper.GetConnection();
+                await connection.OpenAsync();
+
+                var lookupQuery = @"
+                    SELECT Id, Username, Email, Phone, Role
+                    FROM Users
+                    WHERE (Username = @identifier OR Email = @identifier) AND IsActive = 1";
+
+                using (var lookupCommand = new SqlCommand(lookupQuery, connection))
+                {
+                    lookupCommand.Parameters.AddWithValue("@identifier", identifier);
+
+                    using var reader = await lookupCommand.ExecuteReaderAsync();
+                    if (!await reader.ReadAsync())
+                    {
+                        await SecurityAuditLogger.LogSuperAdminChangeAsync(
+                            0,
+                            "Password Reset Attempt (Unknown User)",
+                            "Forgot Password",
+                            $"Identifier={identifier}");
+
+                        MessageBox.Show(
+                            "Account not found. If you believe this is an error, please contact the system administrator.",
+                            "Account Not Found",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    userId = reader.GetInt32(reader.GetOrdinal("Id"));
+                    username = reader.GetString(reader.GetOrdinal("Username"));
+                    phone = reader.IsDBNull(reader.GetOrdinal("Phone"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("Phone"));
+                    var roleValue = reader.GetInt32(reader.GetOrdinal("Role"));
+                    role = (UserRole)roleValue;
+                    roleName = role.ToString();
+                }
+
+                bool isAdminRole = role == UserRole.Admin || role == UserRole.SuperAdmin;
+                if (isAdminRole)
+                {
+                    await SecurityAuditLogger.LogSuperAdminChangeAsync(
+                        userId,
+                        "Password Reset Attempt (Blocked - Admin Role)",
+                        "Forgot Password",
+                        $"Username={username}; Identifier={identifier}; Role={roleName}");
+
+                    MessageBox.Show(
+                        "Admin password reset not allowed. Contact system administrator.",
+                        "Not Allowed",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(phone))
+                {
+                    await SecurityAuditLogger.LogSuperAdminChangeAsync(
+                        userId,
+                        "Password Reset Attempt (Failed - Missing Phone)",
+                        "Forgot Password",
+                        $"Username={username}; Identifier={identifier}; Role={roleName}");
+
+                    MessageBox.Show(
+                        "Phone number is required for password reset. Please contact system administrator.",
+                        "Verification Required",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Send OTP using existing SMS service
+                string otpCode = SmsService.GenerateOtp();
+                bool otpSent = await SmsService.SendOtpAsync(phone, otpCode);
+
+                if (!otpSent)
+                {
+                    await SecurityAuditLogger.LogSuperAdminChangeAsync(
+                        userId,
+                        "Password Reset Attempt (Failed - OTP Send)",
+                        "Forgot Password",
+                        $"Username={username}; Identifier={identifier}; Role={roleName}");
+
+                    MessageBox.Show(
+                        "Failed to send verification code. Please try again later.",
+                        "Verification Failed",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    return;
+                }
+
+                using (var otpForm = new OtpVerificationForm(phone!, otpCode))
+                {
+                    if (otpForm.ShowDialog(this) != DialogResult.OK || !otpForm.IsVerified)
+                    {
+                        await SecurityAuditLogger.LogSuperAdminChangeAsync(
+                            userId,
+                            "Password Reset Attempt (Failed - OTP Verification)",
+                            "Forgot Password + OTP",
+                            $"Username={username}; Identifier={identifier}; Role={roleName}");
+
+                        MessageBox.Show(
+                            "OTP verification is required to reset password.",
+                            "Verification Required",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                        return;
+                    }
+                }
+
+                var newPassword = PromptForNewPassword();
+                if (string.IsNullOrWhiteSpace(newPassword))
+                {
+                    await SecurityAuditLogger.LogSuperAdminChangeAsync(
+                        userId,
+                        "Password Reset Attempt (Cancelled - New Password Entry)",
+                        "Forgot Password + OTP",
+                        $"Username={username}; Identifier={identifier}; Role={roleName}");
+                    return;
+                }
+
+                PasswordHasher.CreatePasswordHash(newPassword, out string newPasswordHash, out string newPasswordSalt);
+
+                var updateQuery = @"
+                    UPDATE Users
+                    SET PasswordHash = @passwordHash,
+                        PasswordSalt = @passwordSalt
+                    WHERE Id = @id";
+
+                using (var updateCommand = new SqlCommand(updateQuery, connection))
+                {
+                    updateCommand.Parameters.AddWithValue("@passwordHash", newPasswordHash);
+                    updateCommand.Parameters.AddWithValue("@passwordSalt", newPasswordSalt);
+                    updateCommand.Parameters.AddWithValue("@id", userId);
+                    await updateCommand.ExecuteNonQueryAsync();
+                }
+
+                await SecurityAuditLogger.LogSuperAdminChangeAsync(
+                    userId,
+                    "Password Reset Attempt (Success)",
+                    "Forgot Password + OTP",
+                    $"Username={username}; Identifier={identifier}; Role={roleName}");
+
+                MessageBox.Show(
+                    "Your password has been reset successfully. You can now log in with your new password.",
+                    "Password Reset Successful",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Error processing password reset: {ex.Message}",
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        private string? PromptForUsernameOrEmail()
+        {
+            using var form = new Form();
+            form.Text = "Forgot Password";
+            form.StartPosition = FormStartPosition.CenterParent;
+            form.FormBorderStyle = FormBorderStyle.FixedDialog;
+            form.MaximizeBox = false;
+            form.MinimizeBox = false;
+            form.ClientSize = new Size(420, 170);
+            form.BackColor = Color.FromArgb(248, 250, 252);
+
+            var lbl = new Label
+            {
+                Text = "Enter your username or email:",
+                AutoSize = false,
+                Location = new Point(20, 20),
+                Size = new Size(380, 20),
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(51, 65, 85)
+            };
+
+            var txt = new TextBox
+            {
+                Location = new Point(20, 50),
+                Size = new Size(380, 25)
+            };
+
+            var btnOk = new Button
+            {
+                Text = "Continue",
+                DialogResult = DialogResult.OK,
+                Location = new Point(210, 100),
+                Size = new Size(90, 30),
+                BackColor = Color.FromArgb(37, 99, 235),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            var btnCancel = new Button
+            {
+                Text = "Cancel",
+                DialogResult = DialogResult.Cancel,
+                Location = new Point(310, 100),
+                Size = new Size(90, 30),
+                BackColor = Color.FromArgb(107, 114, 128),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+
+            btnOk.FlatAppearance.BorderSize = 0;
+            btnCancel.FlatAppearance.BorderSize = 0;
+            UIStyleHelper.ApplyRoundedButton(btnOk, 8);
+            UIStyleHelper.ApplyRoundedButton(btnCancel, 8);
+
+            form.Controls.Add(lbl);
+            form.Controls.Add(txt);
+            form.Controls.Add(btnOk);
+            form.Controls.Add(btnCancel);
+
+            form.AcceptButton = btnOk;
+            form.CancelButton = btnCancel;
+
+            var result = form.ShowDialog(this);
+            if (result == DialogResult.OK)
+            {
+                return txt.Text.Trim();
+            }
+
+            return null;
+        }
+
+        private string? PromptForNewPassword()
+        {
+            using var form = new Form();
+            form.Text = "Reset Password";
+            form.StartPosition = FormStartPosition.CenterParent;
+            form.FormBorderStyle = FormBorderStyle.FixedDialog;
+            form.MaximizeBox = false;
+            form.MinimizeBox = false;
+            form.ClientSize = new Size(420, 220);
+            form.BackColor = Color.FromArgb(248, 250, 252);
+
+            var lblNew = new Label
+            {
+                Text = "New Password",
+                AutoSize = false,
+                Location = new Point(20, 20),
+                Size = new Size(380, 20),
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(51, 65, 85)
+            };
+            var txtNew = new TextBox
+            {
+                Location = new Point(20, 40),
+                Size = new Size(380, 25),
+                UseSystemPasswordChar = true
+            };
+
+            var lblConfirm = new Label
+            {
+                Text = "Confirm Password",
+                AutoSize = false,
+                Location = new Point(20, 80),
+                Size = new Size(380, 20),
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(51, 65, 85)
+            };
+            var txtConfirm = new TextBox
+            {
+                Location = new Point(20, 100),
+                Size = new Size(380, 25),
+                UseSystemPasswordChar = true
+            };
+
+            string? passwordToReturn = null;
+
+            var btnOk = new Button
+            {
+                Text = "Reset Password",
+                Location = new Point(190, 150),
+                Size = new Size(120, 30),
+                BackColor = Color.FromArgb(34, 197, 94),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            var btnCancel = new Button
+            {
+                Text = "Cancel",
+                DialogResult = DialogResult.Cancel,
+                Location = new Point(320, 150),
+                Size = new Size(80, 30),
+                BackColor = Color.FromArgb(107, 114, 128),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+
+            btnOk.FlatAppearance.BorderSize = 0;
+            btnCancel.FlatAppearance.BorderSize = 0;
+            UIStyleHelper.ApplyRoundedButton(btnOk, 8);
+            UIStyleHelper.ApplyRoundedButton(btnCancel, 8);
+
+            btnOk.Click += (s, e) =>
+            {
+                var newPassword = txtNew.Text;
+                var confirmPassword = txtConfirm.Text;
+
+                if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
+                {
+                    MessageBox.Show(
+                        "New password must be at least 6 characters long.",
+                        "Validation",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    form.DialogResult = DialogResult.None;
+                    return;
+                }
+
+                if (newPassword != confirmPassword)
+                {
+                    MessageBox.Show(
+                        "New password and confirm password do not match.",
+                        "Validation",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    form.DialogResult = DialogResult.None;
+                    return;
+                }
+
+                passwordToReturn = newPassword;
+                form.DialogResult = DialogResult.OK;
+            };
+
+            form.Controls.AddRange(new Control[]
+            {
+                lblNew, txtNew, lblConfirm, txtConfirm, btnOk, btnCancel
+            });
+
+            form.AcceptButton = btnOk;
+            form.CancelButton = btnCancel;
+
+            var result = form.ShowDialog(this);
+            return result == DialogResult.OK ? passwordToReturn : null;
         }
 
         private void lblHeroSubtitle_Click(object sender, EventArgs e)
