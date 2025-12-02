@@ -40,6 +40,9 @@
     <Compile Update="Forms\ProfessorPastRecordsPanel.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Update="Forms\StudentSelectionForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="Forms\StudentSubjectEnrollment.cs">
       <SubType>UserControl</SubType>
     </Compile>

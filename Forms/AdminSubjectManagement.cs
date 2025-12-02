@@ -3,6 +3,7 @@ using StudentReportInitial.Data;
 using System.Data.SqlClient;
 using System.Data;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace StudentReportInitial.Forms
 {
@@ -18,6 +19,7 @@ namespace StudentReportInitial.Forms
         private int selectedSubjectId = -1;
 		private ComboBox? cmbSubjectsGradeFilter;
 		private ComboBox? cmbSubjectsSectionFilter;
+		private ComboBox? cmbSubjectsCourseFilter;
         private User? currentUser;
         private int? branchFilterId = null;
 
@@ -113,7 +115,13 @@ namespace StudentReportInitial.Forms
 			cmbSubjectsSectionFilter.SelectedIndex = 0;
 			cmbSubjectsSectionFilter.SelectedIndexChanged += (s, e) => ApplySubjectsGridFilter();
 
-			pnlActions.Controls.AddRange(new Control[] { btnAddSubject, btnEditSubject, btnDeleteSubject, btnRefresh, lblFilterGrade, cmbSubjectsGradeFilter, lblFilterSection, cmbSubjectsSectionFilter });
+			var lblFilterCourse = new Label { Text = "Course:", Location = new Point(880, 15), AutoSize = true };
+			cmbSubjectsCourseFilter = new ComboBox { Location = new Point(940, 12), Size = new Size(120, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+			cmbSubjectsCourseFilter.Items.Add("All");
+			cmbSubjectsCourseFilter.SelectedIndex = 0;
+			cmbSubjectsCourseFilter.SelectedIndexChanged += (s, e) => ApplySubjectsGridFilter();
+
+			pnlActions.Controls.AddRange(new Control[] { btnAddSubject, btnEditSubject, btnDeleteSubject, btnRefresh, lblFilterGrade, cmbSubjectsGradeFilter, lblFilterSection, cmbSubjectsSectionFilter, lblFilterCourse, cmbSubjectsCourseFilter });
 
             // Data grid view
             dgvSubjects = new DataGridView
@@ -229,6 +237,9 @@ namespace StudentReportInitial.Forms
                 var dataTable = new DataTable();
                 adapter.Fill(dataTable);
 
+                // Enhance data table with Course column
+                EnhanceSubjectsDataTable(dataTable);
+
                 dgvSubjects.DataSource = dataTable;
 
                 // Format columns
@@ -246,7 +257,14 @@ namespace StudentReportInitial.Forms
                     {
                         dgvSubjects.Columns["BranchName"].HeaderText = "Branch";
                     }
+                    if (dgvSubjects.Columns.Contains("Course"))
+                    {
+                        dgvSubjects.Columns["Course"].Visible = false; // Hidden column for filtering
+                    }
                 }
+
+                // Populate Course filter
+                PopulateCourseFilter();
             }
             catch (Exception ex)
             {
@@ -666,6 +684,68 @@ namespace StudentReportInitial.Forms
             }
         }
 
+		private void EnhanceSubjectsDataTable(DataTable dataTable)
+		{
+			if (!dataTable.Columns.Contains("Course"))
+			{
+				dataTable.Columns.Add("Course", typeof(string));
+			}
+
+			foreach (DataRow row in dataTable.Rows)
+			{
+				row["Course"] = ExtractCourseFromSection(row["Section"]?.ToString());
+			}
+		}
+
+		private static string ExtractCourseFromSection(string? sectionValue)
+		{
+			if (string.IsNullOrWhiteSpace(sectionValue))
+			{
+				return string.Empty;
+			}
+
+			var parts = sectionValue.Split('-', StringSplitOptions.RemoveEmptyEntries);
+			return parts.Length > 0 ? parts[0] : sectionValue;
+		}
+
+		private void PopulateCourseFilter()
+		{
+			if (cmbSubjectsCourseFilter == null || dgvSubjects.DataSource is not DataTable dataTable)
+			{
+				return;
+			}
+
+			if (!dataTable.Columns.Contains("Course"))
+			{
+				return;
+			}
+
+			var currentValue = cmbSubjectsCourseFilter.SelectedItem?.ToString();
+			cmbSubjectsCourseFilter.Items.Clear();
+			cmbSubjectsCourseFilter.Items.Add("All");
+
+			var courses = dataTable.AsEnumerable()
+				.Select(row => row["Course"]?.ToString() ?? string.Empty)
+				.Where(course => !string.IsNullOrWhiteSpace(course))
+				.Distinct()
+				.OrderBy(course => course)
+				.ToList();
+
+			foreach (var course in courses)
+			{
+				cmbSubjectsCourseFilter.Items.Add(course);
+			}
+
+			if (!string.IsNullOrWhiteSpace(currentValue) && cmbSubjectsCourseFilter.Items.Contains(currentValue))
+			{
+				cmbSubjectsCourseFilter.SelectedItem = currentValue;
+			}
+			else
+			{
+				cmbSubjectsCourseFilter.SelectedIndex = 0;
+			}
+		}
+
 		private void ApplySubjectsGridFilter()
 		{
 			if (dgvSubjects.DataSource is DataTable dataTable)
@@ -681,6 +761,11 @@ namespace StudentReportInitial.Forms
 					var sectionCode = cmbSubjectsSectionFilter.SelectedItem?.ToString() ?? string.Empty;
 					// Section stored like COURSE-1A, so match endswith section code
 					filters.Add($"Section LIKE '%-{sectionCode.Replace("'", "''")}'");
+				}
+				if (cmbSubjectsCourseFilter != null && cmbSubjectsCourseFilter.SelectedIndex > 0)
+				{
+					var course = cmbSubjectsCourseFilter.SelectedItem?.ToString() ?? string.Empty;
+					filters.Add($"Course = '{course.Replace("'", "''")}'");
 				}
 				dataTable.DefaultView.RowFilter = string.Join(" AND ", filters);
 			}

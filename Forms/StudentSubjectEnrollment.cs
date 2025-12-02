@@ -3,6 +3,7 @@ using StudentReportInitial.Data;
 using System.Data.SqlClient;
 using System.Data;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace StudentReportInitial.Forms
 {
@@ -15,7 +16,11 @@ namespace StudentReportInitial.Forms
         private Button btnRefresh = null!;
         private TextBox txtSearch = null!;
         private ComboBox cmbGradeFilter = null!;
+        private ComboBox cmbSectionFilter = null!;
+        private ComboBox cmbCourseFilter = null!;
+        private Button btnClearFilters = null!;
         private Label lblSelectedStudent = null!;
+        private DataTable? studentsTable = null;
         private Panel pnlEnrolledSubjects = null!;
         private DataGridView dgvEnrolledSubjects = null!;
         private int selectedStudentId = -1;
@@ -57,28 +62,71 @@ namespace StudentReportInitial.Forms
                 Location = new Point(10, 10)
             };
 
+            // Filter panel
+            var pnlFilters = new Panel
+            {
+                Location = new Point(10, 40),
+                Size = new Size(380, 100),
+                BackColor = Color.FromArgb(248, 250, 252)
+            };
+
             txtSearch = new TextBox
             {
                 PlaceholderText = "Search students...",
-                Size = new Size(200, 30),
-                Location = new Point(10, 40)
+                Size = new Size(180, 30),
+                Location = new Point(0, 0)
             };
             txtSearch.TextChanged += TxtSearch_TextChanged;
 
             cmbGradeFilter = new ComboBox
             {
-                Size = new Size(150, 30),
-                Location = new Point(220, 40),
+                Size = new Size(120, 30),
+                Location = new Point(190, 0),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
-            cmbGradeFilter.Items.AddRange(new[] { "All Grades", "1st Year", "2nd Year", "3rd Year", "4th Year" });
+            cmbGradeFilter.Items.Add("All Grades");
             cmbGradeFilter.SelectedIndex = 0;
             cmbGradeFilter.SelectedIndexChanged += CmbGradeFilter_SelectedIndexChanged;
 
+            cmbSectionFilter = new ComboBox
+            {
+                Size = new Size(120, 30),
+                Location = new Point(0, 35),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            cmbSectionFilter.Items.Add("All Sections");
+            cmbSectionFilter.SelectedIndex = 0;
+            cmbSectionFilter.SelectedIndexChanged += (s, e) => ApplyFilters();
+
+            cmbCourseFilter = new ComboBox
+            {
+                Size = new Size(120, 30),
+                Location = new Point(130, 35),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            cmbCourseFilter.Items.Add("All Courses");
+            cmbCourseFilter.SelectedIndex = 0;
+            cmbCourseFilter.SelectedIndexChanged += (s, e) => ApplyFilters();
+
+            btnClearFilters = new Button
+            {
+                Text = "Clear Filters",
+                Size = new Size(100, 30),
+                Location = new Point(260, 35),
+                BackColor = Color.FromArgb(241, 245, 249),
+                ForeColor = Color.FromArgb(51, 65, 85),
+                FlatStyle = FlatStyle.Flat,
+                Enabled = false,
+                Cursor = Cursors.Hand
+            };
+            btnClearFilters.Click += BtnClearFilters_Click;
+
+            pnlFilters.Controls.AddRange(new Control[] { txtSearch, cmbGradeFilter, cmbSectionFilter, cmbCourseFilter, btnClearFilters });
+
             dgvStudents = new DataGridView
             {
-                Location = new Point(10, 80),
-                Size = new Size(380, 300),
+                Location = new Point(10, 145),
+                Size = new Size(380, 235),
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
@@ -91,7 +139,7 @@ namespace StudentReportInitial.Forms
             };
             dgvStudents.SelectionChanged += DgvStudents_SelectionChanged;
 
-            pnlLeft.Controls.AddRange(new Control[] { lblStudents, txtSearch, cmbGradeFilter, dgvStudents });
+            pnlLeft.Controls.AddRange(new Control[] { lblStudents, pnlFilters, dgvStudents });
 
             // Right panel - Subject management
             var pnlRight = new Panel
@@ -291,6 +339,10 @@ namespace StudentReportInitial.Forms
                 var dataTable = new DataTable();
                 adapter.Fill(dataTable);
 
+                // Enhance data table with Course column
+                EnhanceStudentsDataTable(dataTable);
+                studentsTable = dataTable;
+
                 dgvStudents.DataSource = dataTable;
 
                 if (dgvStudents.Columns.Count > 0)
@@ -305,7 +357,14 @@ namespace StudentReportInitial.Forms
                     {
                         dgvStudents.Columns["BranchId"].Visible = false;
                     }
+                    if (dgvStudents.Columns.Contains("Course"))
+                    {
+                        dgvStudents.Columns["Course"].Visible = false; // Hidden column for filtering
+                    }
                 }
+
+                // Populate filter options
+                PopulateFilterOptions();
             }
             catch (Exception ex)
             {
@@ -458,6 +517,72 @@ namespace StudentReportInitial.Forms
             ApplyFilters();
         }
 
+        private void EnhanceStudentsDataTable(DataTable dataTable)
+        {
+            if (!dataTable.Columns.Contains("Course"))
+            {
+                dataTable.Columns.Add("Course", typeof(string));
+            }
+
+            foreach (DataRow row in dataTable.Rows)
+            {
+                row["Course"] = ExtractCourseFromSection(row["Section"]?.ToString());
+            }
+        }
+
+        private static string ExtractCourseFromSection(string? sectionValue)
+        {
+            if (string.IsNullOrWhiteSpace(sectionValue))
+            {
+                return string.Empty;
+            }
+
+            var parts = sectionValue.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length > 0 ? parts[0] : sectionValue;
+        }
+
+        private void PopulateFilterOptions()
+        {
+            if (studentsTable == null) return;
+
+            PopulateComboFromColumn(cmbSectionFilter, studentsTable, "Section");
+            PopulateComboFromColumn(cmbCourseFilter, studentsTable, "Course");
+            PopulateComboFromColumn(cmbGradeFilter, studentsTable, "GradeLevel", "All Grades");
+        }
+
+        private void PopulateComboFromColumn(ComboBox? comboBox, DataTable source, string columnName, string allLabel = "All")
+        {
+            if (comboBox == null || !source.Columns.Contains(columnName))
+            {
+                return;
+            }
+
+            var currentValue = comboBox.SelectedItem?.ToString();
+            comboBox.Items.Clear();
+            comboBox.Items.Add($"{allLabel} {(allLabel.Contains("All") ? columnName.Replace("GradeLevel", "Grades") : "")}");
+
+            var values = source.AsEnumerable()
+                .Select(row => row[columnName]?.ToString() ?? string.Empty)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct()
+                .OrderBy(value => value)
+                .ToList();
+
+            foreach (var value in values)
+            {
+                comboBox.Items.Add(value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(currentValue) && comboBox.Items.Contains(currentValue))
+            {
+                comboBox.SelectedItem = currentValue;
+            }
+            else
+            {
+                comboBox.SelectedIndex = 0;
+            }
+        }
+
         private void ApplyFilters()
         {
             if (dgvStudents.DataSource is DataTable dataTable)
@@ -470,7 +595,7 @@ namespace StudentReportInitial.Forms
                     filterParts.Add($"(FirstName LIKE '%{searchText}%' OR LastName LIKE '%{searchText}%' OR StudentId LIKE '%{searchText}%')");
                 }
 
-                if (cmbGradeFilter.SelectedIndex > 0)
+                if (cmbGradeFilter != null && cmbGradeFilter.SelectedIndex > 0)
                 {
                     var grade = cmbGradeFilter.SelectedItem?.ToString()?.Replace("'", "''");
                     if (!string.IsNullOrEmpty(grade))
@@ -479,8 +604,40 @@ namespace StudentReportInitial.Forms
                     }
                 }
 
+                if (cmbSectionFilter != null && cmbSectionFilter.SelectedIndex > 0)
+                {
+                    var section = cmbSectionFilter.SelectedItem?.ToString()?.Replace("'", "''");
+                    if (!string.IsNullOrEmpty(section))
+                    {
+                        filterParts.Add($"Section = '{section}'");
+                    }
+                }
+
+                if (cmbCourseFilter != null && cmbCourseFilter.SelectedIndex > 0)
+                {
+                    var course = cmbCourseFilter.SelectedItem?.ToString()?.Replace("'", "''");
+                    if (!string.IsNullOrEmpty(course))
+                    {
+                        filterParts.Add($"Course = '{course}'");
+                    }
+                }
+
                 dataTable.DefaultView.RowFilter = filterParts.Count > 0 ? string.Join(" AND ", filterParts) : "";
+                
+                // Update Clear Filters button state
+                if (btnClearFilters != null)
+                {
+                    btnClearFilters.Enabled = filterParts.Count > 0;
+                }
             }
+        }
+
+        private void BtnClearFilters_Click(object? sender, EventArgs e)
+        {
+            txtSearch.Text = string.Empty;
+            if (cmbGradeFilter != null) cmbGradeFilter.SelectedIndex = 0;
+            if (cmbSectionFilter != null) cmbSectionFilter.SelectedIndex = 0;
+            if (cmbCourseFilter != null) cmbCourseFilter.SelectedIndex = 0;
         }
 
         private void CmbGradeFilter_SelectedIndexChanged(object sender, EventArgs e)

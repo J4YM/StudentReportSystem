@@ -5,18 +5,28 @@ A comprehensive Windows Forms application built with .NET 8 for managing student
 ## Features
 
 ### User Roles
-- **Admin**: Full system access - manage users, students, and subjects
+- **Super Admin**: Global access across all branches, manages admins, security policies, and theme preferences
+- **Branch Admin**: Full access scoped to their assigned branch – manage users, students, and subjects (except Super Admin accounts)
 - **Professor**: Record attendance and grades for assigned subjects
 - **Guardian**: View child's grades and attendance reports
 - **Student**: View own grades and attendance reports
 
 ### Core Functionality
 
-#### Admin Features
-- **User Management**: Add, edit, and manage all system users
-- **Student Management**: Add, edit, and manage student records
-- **Subject Management**: Create and assign subjects to professors
-- **System Reports**: View comprehensive system statistics
+#### Admin / Super Admin Features
+- **Advanced User Management**
+  - Dynamic filtering by role, section, course, and year level
+  - Guardian creation wizard with student-selection dialog (course/year/section filters)
+  - Super Admin credential editing protected by dual password bypass + account verification
+  - Admin request escalation workflow for branch admins
+- **Student Management**: Add, edit, filter (section/course/year) and auto-link guardians
+- **Subject Management**
+  - Course-aware creation (course + section code)
+  - Filter subjects by grade, section, and course
+- **Security Console**
+  - Dark/Light theme toggle (persisted)
+  - Security audit logging for privileged Super Admin changes
+- **Branch Isolation**: Non-Super Admins automatically scoped to their branch data
 
 #### Professor Features
 - **Attendance Recording**: Record daily attendance for students
@@ -33,21 +43,25 @@ A comprehensive Windows Forms application built with .NET 8 for managing student
 
 ### Database
 - **SQL Server LocalDB** for data storage
-- **Entity Framework** for data access
-- **Automatic database initialization** on first run
+- **Ado.NET** / `SqlClient` data access with async operations
+- **Automatic database initialization** on first run (tables, seed Super Admin, security logs)
+- **SecurityAuditLogs** table tracking Super Admin credential updates
 
 ### Architecture
-- **Windows Forms** with modern UI design
-- **Role-based authentication** system
-- **Modular panel-based interface**
+- **Windows Forms** with custom-painted modern UI
+- **ThemeManager** with Light/Dark palettes and persisted settings
+- **Role-based authentication** system with OTP fallback and admin password bypass
+- **Modular panel-based interface with reusable filter components**
 - **Async/await** for database operations
+- **Security helper utilities** (password hashing, phone validation, audit logging)
 
-### Database Schema
-- **Users**: System users with role-based access
-- **Students**: Student information and enrollment data
-- **Subjects**: Course and subject management
+- **Users**: System users with role-based access (includes Super Admin flag)
+- **Students**: Student information, branch, guardians, computed courses
+- **Subjects**: Course-aware scheduling with professor assignment
 - **Attendance**: Daily attendance records
 - **Grades**: Assignment and exam grades
+- **AdminRequests**: Branch admin escalation requests
+- **SecurityAuditLogs**: Trace privileged Super Admin actions
 
 ## Getting Started
 
@@ -69,16 +83,17 @@ A comprehensive Windows Forms application built with .NET 8 for managing student
 ## Usage
 
 ### First Time Setup
-1. Login as admin
-2. Create professor accounts
-3. Create guardian accounts
-4. Add students and assign guardians
-5. Create subjects and assign to professors
+1. Login as Super Admin (default account)
+2. Configure branches (optional filters) and toggle preferred theme
+3. Create branch admin / professor accounts (admin-password bypass enforced for admins)
+4. Import/add students and use guardian selection dialog to link responsible parties
+5. Create subjects (course + section aware) and assign to professors
 
 ### Daily Operations
-1. **Professors**: Record attendance and input grades
-2. **Guardians/Students**: View reports and progress
-3. **Admin**: Manage users and system settings
+1. **Super Admin**: Oversees security logs, admin requests, and multi-branch data
+2. **Branch Admin**: Manages users/students/subjects within branch, uses filtering to locate records quickly
+3. **Professors**: Record attendance and input grades per assigned subjects
+4. **Guardians/Students**: View reports and progress through Viewer panels
 
 ## File Structure
 
@@ -107,19 +122,25 @@ StudentReportInitial/
 
 ## Modern UI Features
 
-- **Clean, modern design** with consistent color scheme
-- **Responsive layout** that adapts to different screen sizes
-- **Intuitive navigation** with sidebar menus
-- **Color-coded status indicators** for attendance and grades
+- **Clean, modern design** with custom gradient login, curved buttons, and iconography
+- **Centered login layout** with envelope/lock indicators and themed accents
+- **Intuitive navigation** with sidebar menus and dynamic content panels
+- **Reusable filter toolbars** above data grids (role/section/course/year)
+- **Guardian student picker** modal with inline filters
+- **Dark/Light mode toggle** (persisted per user) via `ThemeManager`
 - **Professional typography** using Segoe UI font
-- **Smooth user experience** with proper loading states
+- **Smooth user experience** with double-buffered forms and custom painting
 
 ## Security Features
 
-- **Role-based access control** ensuring users only see relevant data
-- **Password authentication** for all user types
-- **Data validation** on all input forms
+- **Role-based access control** scoped by branch with Super Admin overrides
+- **Dual-step Super Admin edits** (Admin Password Bypass + account password) with audit logging
+- **Admin password bypass** required for creating/editing admin-level accounts
+- **OTP verification** for phone-bound operations (non-admin scenarios)
+- **Security audit logs** stored in `SecurityAuditLogs`
+- **Data validation** on all input forms (email, phone, OTP, guardian assignments)
 - **SQL injection protection** using parameterized queries
+- **Theme-aware UI** ensures consistent visibility/security prompts in both modes
 
 ## Future Enhancements
 

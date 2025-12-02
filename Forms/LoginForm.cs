@@ -38,6 +38,8 @@ namespace StudentReportInitial.Forms
             lblTitle.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
             lblTitle.Text = "STI College Login Portal";
             lblTitle.ForeColor = Color.White;
+            lblTitle.TextAlign = ContentAlignment.MiddleCenter;
+            lblTitle.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             lblHeroSubtitle.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             lblHeroSubtitle.ForeColor = Color.White;
             lblHeroSubtitle.Text = string.Empty;
@@ -73,9 +75,11 @@ namespace StudentReportInitial.Forms
 
             btnTogglePassword.FlatStyle = FlatStyle.Flat;
             btnTogglePassword.FlatAppearance.BorderSize = 0;
-            btnTogglePassword.BackColor = Color.Transparent;
-            btnTogglePassword.ForeColor = Color.FromArgb(0, 116, 204);
+            btnTogglePassword.BackColor = Color.FromArgb(241, 245, 249);
+            btnTogglePassword.ForeColor = Color.FromArgb(51, 65, 85);
             btnTogglePassword.Cursor = Cursors.Hand;
+            btnTogglePassword.Font = new Font("Segoe UI", 9F);
+            UIStyleHelper.ApplyRoundedButton(btnTogglePassword, 10);
 
             btnLogin.BackColor = ColorTranslator.FromHtml("#FFDD00");
             btnLogin.ForeColor = ColorTranslator.FromHtml("#002B5C");
@@ -83,9 +87,7 @@ namespace StudentReportInitial.Forms
             btnLogin.FlatStyle = FlatStyle.Flat;
             btnLogin.FlatAppearance.BorderSize = 0;
             btnLogin.Cursor = Cursors.Hand;
-            btnLogin.FlatAppearance.MouseOverBackColor = ColorTranslator.FromHtml("#FFE866");
-            btnLogin.FlatAppearance.MouseDownBackColor = ColorTranslator.FromHtml("#E5C800");
-            UIStyleHelper.ApplyRoundedButton(btnLogin, 18);
+            UIStyleHelper.ApplyRoundedButton(btnLogin, 10);
 
             lblError.ForeColor = Color.FromArgb(239, 68, 68);
             lblError.Font = new Font("Segoe UI", 9F);
@@ -210,11 +212,11 @@ namespace StudentReportInitial.Forms
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
             // Email icon near username textbox
-            var centerEmail = new Point(txtUsername.Left - 26, txtUsername.Top + txtUsername.Height / 2);
+            var centerEmail = new Point(txtUsername.Left - 30, txtUsername.Top + txtUsername.Height / 2);
             DrawEnvelopeIcon(g, centerEmail);
 
             // Lock icon near password textbox
-            var centerLock = new Point(txtPassword.Left - 26, txtPassword.Top + txtPassword.Height / 2);
+            var centerLock = new Point(txtPassword.Left - 30, txtPassword.Top + txtPassword.Height / 2);
             DrawLockIcon(g, centerLock);
         }
 

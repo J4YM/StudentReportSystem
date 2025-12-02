@@ -147,6 +147,20 @@ namespace StudentReportInitial.Data
                     );
                 END
 
+                -- Security audit log for privileged actions
+                IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='SecurityAuditLogs' AND xtype='U')
+                BEGIN
+                    CREATE TABLE SecurityAuditLogs (
+                        Id INT IDENTITY(1,1) PRIMARY KEY,
+                        UserId INT NOT NULL,
+                        Action NVARCHAR(150) NOT NULL,
+                        Details NVARCHAR(500),
+                        VerificationMethod NVARCHAR(100) NOT NULL,
+                        LoggedDate DATETIME2 DEFAULT GETDATE(),
+                        FOREIGN KEY (UserId) REFERENCES Users(Id)
+                    );
+                END
+
                 -- Students table
                 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Students' AND xtype='U')
                 BEGIN

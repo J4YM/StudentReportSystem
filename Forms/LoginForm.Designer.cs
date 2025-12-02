@@ -67,39 +67,39 @@ namespace StudentReportInitial.Forms
             pnlHero.BackColor = Color.Transparent;
             pnlHero.Controls.Add(lblHeroSubtitle);
             pnlHero.Controls.Add(lblTitle);
-            pnlHero.Dock = DockStyle.Left;
-            pnlHero.Location = new Point(0, 0);
+            pnlHero.Anchor = AnchorStyles.None;
+            pnlHero.Location = new Point(50, 50);
             pnlHero.Name = "pnlHero";
-            pnlHero.Size = new Size(450, 650);
+            pnlHero.Size = new Size(450, 550);
             pnlHero.TabIndex = 0;
             pnlHero.Paint += pnlHero_Paint;
             // 
             // lblTitle
             // 
             lblTitle.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            lblTitle.AutoSize = true;
+            lblTitle.AutoSize = false;
             lblTitle.ForeColor = Color.White;
-            lblTitle.Location = new Point(32, 56);
-            lblTitle.MaximumSize = new Size(196, 0);
+            lblTitle.Location = new Point(0, 50);
             lblTitle.Name = "lblTitle";
-            lblTitle.Size = new Size(73, 15);
+            lblTitle.Size = new Size(450, 40);
             lblTitle.TabIndex = 0;
-            lblTitle.Text = "STI BALIUAG";
+            lblTitle.Text = "STI College Login Portal";
+            lblTitle.TextAlign = ContentAlignment.MiddleCenter;
             // 
             // pnlLogin
             // 
             pnlLogin.BackColor = Color.Transparent;
             pnlLogin.Controls.Add(pnlLoginCard);
-            pnlLogin.Dock = DockStyle.Fill;
-            pnlLogin.Location = new Point(450, 0);
+            pnlLogin.Anchor = AnchorStyles.None;
+            pnlLogin.Location = new Point(500, 50);
             pnlLogin.Name = "pnlLogin";
-            pnlLogin.Padding = new Padding(60, 80, 80, 80);
-            pnlLogin.Size = new Size(650, 650);
+            pnlLogin.Padding = new Padding(0);
+            pnlLogin.Size = new Size(550, 550);
             pnlLogin.TabIndex = 1;
             // 
             // pnlLoginCard
             // 
-            pnlLoginCard.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            pnlLoginCard.Anchor = AnchorStyles.None;
             pnlLoginCard.BackColor = Color.White;
             pnlLoginCard.Controls.Add(btnTogglePassword);
             pnlLoginCard.Controls.Add(lblError);
@@ -110,18 +110,19 @@ namespace StudentReportInitial.Forms
             pnlLoginCard.Controls.Add(lblUsername);
             pnlLoginCard.Controls.Add(lblSubtitle);
             pnlLoginCard.Controls.Add(lblLoginHeading);
-            pnlLoginCard.Location = new Point(63, 83);
+            pnlLoginCard.Location = new Point(0, 0);
             pnlLoginCard.Name = "pnlLoginCard";
-            pnlLoginCard.Padding = new Padding(28, 32, 28, 32);
-            pnlLoginCard.Size = new Size(500, 360);
+            pnlLoginCard.Padding = new Padding(50, 50, 50, 50);
+            pnlLoginCard.Size = new Size(550, 550);
             pnlLoginCard.TabIndex = 0;
             pnlLoginCard.Paint += pnlLoginCard_Paint;
             // 
             // btnTogglePassword
             // 
-            btnTogglePassword.Location = new Point(302, 230);
+            btnTogglePassword.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnTogglePassword.Location = new Point(440, 245);
             btnTogglePassword.Name = "btnTogglePassword";
-            btnTogglePassword.Size = new Size(58, 23);
+            btnTogglePassword.Size = new Size(60, 23);
             btnTogglePassword.TabIndex = 8;
             btnTogglePassword.Text = "Show";
             btnTogglePassword.UseVisualStyleBackColor = true;
@@ -129,23 +130,26 @@ namespace StudentReportInitial.Forms
             // 
             // lblError
             // 
-            lblError.AutoSize = true;
+            lblError.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            lblError.AutoSize = false;
             lblError.ForeColor = Color.FromArgb(239, 68, 68);
-            lblError.Location = new Point(28, 267);
+            lblError.Location = new Point(50, 280);
             lblError.Name = "lblError";
-            lblError.Size = new Size(81, 15);
+            lblError.Size = new Size(450, 20);
             lblError.TabIndex = 7;
             lblError.Text = "Error message";
+            lblError.TextAlign = ContentAlignment.MiddleLeft;
             lblError.Visible = false;
             // 
             // btnLogin
             // 
+            btnLogin.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             btnLogin.BackColor = Color.FromArgb(37, 99, 235);
             btnLogin.FlatStyle = FlatStyle.Flat;
             btnLogin.ForeColor = Color.White;
-            btnLogin.Location = new Point(28, 285);
+            btnLogin.Location = new Point(50, 320);
             btnLogin.Name = "btnLogin";
-            btnLogin.Size = new Size(320, 40);
+            btnLogin.Size = new Size(450, 40);
             btnLogin.TabIndex = 6;
             btnLogin.Text = "Login";
             btnLogin.UseVisualStyleBackColor = false;
@@ -153,57 +157,67 @@ namespace StudentReportInitial.Forms
             // 
             // txtPassword
             // 
-            txtPassword.Location = new Point(56, 230);
+            txtPassword.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            txtPassword.Location = new Point(50, 245);
             txtPassword.Name = "txtPassword";
             txtPassword.PasswordChar = '*';
-            txtPassword.Size = new Size(240, 23);
+            txtPassword.Size = new Size(380, 23);
             txtPassword.TabIndex = 5;
             txtPassword.KeyPress += txtPassword_KeyPress;
             // 
             // lblPassword
             // 
-            lblPassword.AutoSize = true;
-            lblPassword.Location = new Point(56, 212);
+            lblPassword.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            lblPassword.AutoSize = false;
+            lblPassword.Location = new Point(50, 220);
             lblPassword.Name = "lblPassword";
-            lblPassword.Size = new Size(57, 15);
+            lblPassword.Size = new Size(450, 20);
             lblPassword.TabIndex = 4;
             lblPassword.Text = "Password";
+            lblPassword.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // txtUsername
             // 
-            txtUsername.Location = new Point(56, 170);
+            txtUsername.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            txtUsername.Location = new Point(50, 175);
             txtUsername.Name = "txtUsername";
-            txtUsername.Size = new Size(304, 23);
+            txtUsername.Size = new Size(450, 23);
             txtUsername.TabIndex = 3;
             // 
             // lblUsername
             // 
-            lblUsername.AutoSize = true;
-            lblUsername.Location = new Point(56, 152);
+            lblUsername.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            lblUsername.AutoSize = false;
+            lblUsername.Location = new Point(50, 150);
             lblUsername.Name = "lblUsername";
-            lblUsername.Size = new Size(60, 15);
+            lblUsername.Size = new Size(450, 20);
             lblUsername.TabIndex = 2;
             lblUsername.Text = "Username";
+            lblUsername.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // lblSubtitle
             // 
-            lblSubtitle.AutoSize = true;
+            lblSubtitle.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            lblSubtitle.AutoSize = false;
             lblSubtitle.ForeColor = Color.FromArgb(100, 116, 139);
-            lblSubtitle.Location = new Point(28, 90);
+            lblSubtitle.Location = new Point(50, 90);
             lblSubtitle.Name = "lblSubtitle";
-            lblSubtitle.Size = new Size(165, 15);
+            lblSubtitle.Size = new Size(450, 20);
             lblSubtitle.TabIndex = 1;
             lblSubtitle.Text = "Please sign in to your account";
+            lblSubtitle.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // lblLoginHeading
             // 
-            lblLoginHeading.AutoSize = true;
+            lblLoginHeading.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            lblLoginHeading.AutoSize = false;
             lblLoginHeading.ForeColor = Color.FromArgb(51, 65, 85);
-            lblLoginHeading.Location = new Point(28, 50);
+            lblLoginHeading.Location = new Point(50, 50);
             lblLoginHeading.Name = "lblLoginHeading";
-            lblLoginHeading.Size = new Size(118, 15);
+            lblLoginHeading.Size = new Size(450, 30);
             lblLoginHeading.TabIndex = 0;
-            lblLoginHeading.Text = "Welcome back, login";
+            lblLoginHeading.Text = "STI Student Portal Login";
+            lblLoginHeading.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // timerError
             // 

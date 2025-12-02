@@ -222,7 +222,7 @@ namespace StudentReportInitial.Forms
             }
             roles.Add(UserRole.Professor);
             roles.Add(UserRole.Guardian);
-            roles.Add(UserRole.Student);
+            //roles.Add(UserRole.Student);
 
             comboBox.Items.Clear();
             comboBox.Tag = roles;
@@ -918,6 +918,8 @@ namespace StudentReportInitial.Forms
                 selectedUserId = userId;
             var canManageAdmins = await IsCurrentUserSuperAdminAsync();
             var editedUserIsAdmin = false;
+            var editedUserIsSuperAdmin = false;
+            var editingOwnSuperAdmin = false;
 
             var lblTitle = new Label
             {
@@ -1064,10 +1066,20 @@ namespace StudentReportInitial.Forms
             // Branch selection (only for Super Admin creating Admin users, or when creating users that need branch assignment)
             ComboBox? cmbBranch = null;
             Label? lblBranch = null;
+            bool allowBranchSelection = true;
+            var editingOwnSuperAdminCandidate = isEditMode && currentUser != null && currentUser.Id == userId && currentUser.Role == UserRole.SuperAdmin;
             if (currentUser != null && canManageAdmins)
             {
                 lblBranch = new Label { Text = "Branch:", Location = new Point(20, yPos), AutoSize = true };
                 cmbBranch = new ComboBox { Location = new Point(20, yPos + 20), Size = new Size(250, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+
+                if (editingOwnSuperAdminCandidate)
+                {
+                    allowBranchSelection = false;
+                    lblBranch.Visible = false;
+                    cmbBranch.Visible = false;
+                    cmbBranch.Enabled = false;
+                }
                 
                 var branches = await BranchHelper.GetAllBranchesAsync();
                 if (branches.Count > 0)
@@ -1087,6 +1099,14 @@ namespace StudentReportInitial.Forms
                 {
                     if (lblBranch != null && cmbBranch != null)
                     {
+                        if (!allowBranchSelection)
+                        {
+                            lblBranch.Visible = false;
+                            cmbBranch.Visible = false;
+                            cmbBranch.Enabled = false;
+                            return;
+                        }
+
                         var selectedRole = GetComboSelectedRole(cmbRole);
                         var showBranch = !branchFilterId.HasValue && selectedRole.HasValue;
                         lblBranch.Visible = showBranch;
@@ -1101,112 +1121,53 @@ namespace StudentReportInitial.Forms
                 // Initial visibility
                 if (lblBranch != null && cmbBranch != null)
                 {
-                    var selectedRole = GetComboSelectedRole(cmbRole);
-                    var showBranch = !branchFilterId.HasValue && selectedRole.HasValue;
-                    lblBranch.Visible = showBranch;
-                    cmbBranch.Visible = showBranch;
+                    if (!allowBranchSelection)
+                    {
+                        lblBranch.Visible = false;
+                        cmbBranch.Visible = false;
+                        cmbBranch.Enabled = false;
+                    }
+                    else
+                    {
+                        var selectedRole = GetComboSelectedRole(cmbRole);
+                        var showBranch = !branchFilterId.HasValue && selectedRole.HasValue;
+                        lblBranch.Visible = showBranch;
+                        cmbBranch.Visible = showBranch;
+                    }
                 }
                 
                 yPos += spacing;
             }
 
             // Student selection for Guardian role
-            CheckedListBox? clbStudents = null;
+            Button? btnSelectStudents = null;
             Label? lblStudents = null;
+            Label? lblSelectedStudents = null;
             Label? lblStudentsError = null;
-            
-            // Function to load students for the checked list box
-            async Task LoadStudentsForGuardian()
-            {
-                if (clbStudents == null) return;
-                
-                clbStudents.Items.Clear();
-                try
-                {
-                    using var connection = DatabaseHelper.GetConnection();
-                    await connection.OpenAsync();
-                    
-                    var query = @"
-                        SELECT s.Id, s.StudentId, s.FirstName, s.LastName, s.GradeLevel, s.Section
-                        FROM Students s
-                        WHERE s.IsActive = 1";
-                    
-                    // Add branch filter if not Super Admin
-                    if (currentUser != null)
-                    {
-                        var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
-                        if (!isSuperAdmin)
-                        {
-                            var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
-                            if (branchId > 0)
-                            {
-                                query += " AND s.BranchId = @branchId";
-                            }
-                        }
-                        else if (branchFilterId.HasValue)
-                        {
-                            query += " AND s.BranchId = @branchId";
-                        }
-                    }
-                    
-                    query += " ORDER BY s.LastName, s.FirstName";
-                    
-                    using var command = new SqlCommand(query, connection);
-                    
-                    if (currentUser != null)
-                    {
-                        var isSuperAdmin = await BranchHelper.IsSuperAdminAsync(currentUser.Id);
-                        if (!isSuperAdmin)
-                        {
-                            var branchId = await BranchHelper.GetUserBranchIdAsync(currentUser.Id);
-                            if (branchId > 0)
-                            {
-                                command.Parameters.AddWithValue("@branchId", branchId);
-                            }
-                        }
-                        else if (branchFilterId.HasValue)
-                        {
-                            command.Parameters.AddWithValue("@branchId", branchFilterId.Value);
-                        }
-                    }
-                    
-                    var studentIdMap = new Dictionary<int, int>();
-                    int index = 0;
-                    using var reader = await command.ExecuteReaderAsync();
-                    while (await reader.ReadAsync())
-                    {
-                        var studentId = reader.GetInt32("Id");
-                        var displayText = $"{reader.GetString("FirstName")} {reader.GetString("LastName")} - {reader.GetString("StudentId")} ({reader.GetString("GradeLevel")})";
-                        clbStudents.Items.Add(displayText);
-                        clbStudents.SetItemChecked(clbStudents.Items.Count - 1, false);
-                        studentIdMap[index] = studentId;
-                        index++;
-                    }
-                    
-                    // Store the mapping in the Tag property
-                    clbStudents.Tag = studentIdMap;
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error loading students: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
+            List<int> selectedStudentIds = new List<int>();
+            Dictionary<int, string> studentIdToNameMap = new Dictionary<int, string>();
             
             // Show student selection when Guardian role is selected
-            cmbRole.SelectedIndexChanged += async (s, e) =>
+            cmbRole.SelectedIndexChanged += (s, e) =>
             {
                 var selectedRole = GetComboSelectedRole(cmbRole);
                 var isGuardian = selectedRole == UserRole.Guardian;
                 
-                if (lblStudents != null && clbStudents != null && lblStudentsError != null)
+                if (lblStudents != null && btnSelectStudents != null && lblSelectedStudents != null && lblStudentsError != null)
                 {
                     lblStudents.Visible = isGuardian && !isEditMode;
-                    clbStudents.Visible = isGuardian && !isEditMode;
+                    btnSelectStudents.Visible = isGuardian && !isEditMode;
+                    lblSelectedStudents.Visible = isGuardian && !isEditMode;
                     lblStudentsError.Visible = false;
                     
-                    if (isGuardian && !isEditMode)
+                    if (!isGuardian)
                     {
-                        await LoadStudentsForGuardian();
+                        selectedStudentIds.Clear();
+                        studentIdToNameMap.Clear();
+                        if (lblSelectedStudents != null)
+                        {
+                            lblSelectedStudents.Text = "No students selected";
+                        }
                     }
                 }
             };
@@ -1221,25 +1182,101 @@ namespace StudentReportInitial.Forms
                     Visible = false
                 };
                 
-                clbStudents = new CheckedListBox
+                btnSelectStudents = new Button
                 {
+                    Text = "Select Existing Student(s)",
                     Location = new Point(20, yPos + 20),
-                    Size = new Size(500, 150),
-                    Visible = false,
-                    CheckOnClick = true
+                    Size = new Size(200, 30),
+                    BackColor = Color.FromArgb(59, 130, 246),
+                    ForeColor = Color.White,
+                    FlatStyle = FlatStyle.Flat,
+                    Cursor = Cursors.Hand,
+                    Visible = false
+                };
+                btnSelectStudents.Click += async (s, e) =>
+                {
+                    using var selectionForm = new StudentSelectionForm(currentUser, branchFilterId);
+                    if (selectionForm.ShowDialog() == DialogResult.OK)
+                    {
+                        selectedStudentIds = selectionForm.SelectedStudentIds.ToList();
+                        
+                        // Load student names for display
+                        studentIdToNameMap.Clear();
+                        if (selectedStudentIds.Count > 0)
+                        {
+                            try
+                            {
+                                using var connection = DatabaseHelper.GetConnection();
+                                await connection.OpenAsync();
+                                
+                                var ids = string.Join(",", selectedStudentIds);
+                                var query = $@"
+                                    SELECT Id, FirstName, LastName, StudentId, GradeLevel
+                                    FROM Students
+                                    WHERE Id IN ({ids}) AND IsActive = 1";
+                                
+                                using var command = new SqlCommand(query, connection);
+                                using var reader = await command.ExecuteReaderAsync();
+                                while (await reader.ReadAsync())
+                                {
+                                    var id = reader.GetInt32("Id");
+                                    var name = $"{reader.GetString("FirstName")} {reader.GetString("LastName")} ({reader.GetString("StudentId")}) - {reader.GetString("GradeLevel")}";
+                                    studentIdToNameMap[id] = name;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show($"Error loading student names: {ex.Message}", "Error",
+                                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+                        }
+                        
+                        // Update display
+                        if (lblSelectedStudents != null)
+                        {
+                            if (selectedStudentIds.Count == 0)
+                            {
+                                lblSelectedStudents.Text = "No students selected";
+                            }
+                            else
+                            {
+                                var names = selectedStudentIds
+                                    .Where(id => studentIdToNameMap.ContainsKey(id))
+                                    .Select(id => studentIdToNameMap[id])
+                                    .ToList();
+                                lblSelectedStudents.Text = $"Selected ({selectedStudentIds.Count}): {string.Join(", ", names)}";
+                            }
+                        }
+                        
+                        if (lblStudentsError != null)
+                        {
+                            lblStudentsError.Visible = false;
+                        }
+                    }
+                };
+                
+                lblSelectedStudents = new Label
+                {
+                    Text = "No students selected",
+                    Location = new Point(20, yPos + 55),
+                    Size = new Size(500, 40),
+                    AutoSize = false,
+                    ForeColor = Color.FromArgb(100, 116, 139),
+                    Font = new Font("Segoe UI", 9F),
+                    Visible = false
                 };
                 
                 lblStudentsError = new Label
                 {
                     Text = "At least one student must be selected",
-                    Location = new Point(20, yPos + 175),
+                    Location = new Point(20, yPos + 100),
                     AutoSize = true,
                     ForeColor = Color.FromArgb(239, 68, 68),
                     Font = new Font("Segoe UI", 8F),
                     Visible = false
                 };
                 
-                yPos += spacing + 160;
+                yPos += spacing + 100;
             }
 
             // Buttons
@@ -1357,7 +1394,7 @@ namespace StudentReportInitial.Forms
                         }
                     }
 
-                    // Check if editing an admin account
+            // Check if editing an admin account
                     bool isEditingAdmin = false;
                     UserRole originalRole = UserRole.Admin;
                     if (isEditMode)
@@ -1375,71 +1412,26 @@ namespace StudentReportInitial.Forms
                         }
                     }
 
-                    // For Admin creation, require admin password instead of phone verification
+                    string verificationMethodUsed = string.Empty;
+
+            bool isSuperAdminRole = selectedRole == UserRole.SuperAdmin;
+
+            // For Admin creation, require admin password instead of phone verification
                     if (!isEditMode && isAdmin)
                     {
-                        // Prompt for admin password
-                        using var passwordForm = new Form
-                        {
-                            Text = "Admin Account Creation - Security Verification",
-                            Size = new Size(400, 150),
-                            StartPosition = FormStartPosition.CenterParent,
-                            FormBorderStyle = FormBorderStyle.FixedDialog,
-                            MaximizeBox = false,
-                            MinimizeBox = false,
-                            ShowInTaskbar = false
-                        };
-
-                        var lblPrompt = new Label
-                        {
-                            Text = "Enter admin password to create an admin account:",
-                            Location = new Point(20, 20),
-                            AutoSize = true
-                        };
-
-                        var txtPassword = new TextBox
-                        {
-                            Location = new Point(20, 45),
-                            Size = new Size(340, 25),
-                            PasswordChar = '*',
-                            UseSystemPasswordChar = true
-                        };
-
-                        var btnOk = new Button
-                        {
-                            Text = "OK",
-                            Location = new Point(200, 80),
-                            Size = new Size(75, 30),
-                            DialogResult = DialogResult.OK
-                        };
-
-                        var btnCancel = new Button
-                        {
-                            Text = "Cancel",
-                            Location = new Point(285, 80),
-                            Size = new Size(75, 30),
-                            DialogResult = DialogResult.Cancel
-                        };
-
-                        passwordForm.Controls.AddRange(new Control[] { lblPrompt, txtPassword, btnOk, btnCancel });
-                        passwordForm.AcceptButton = btnOk;
-                        passwordForm.CancelButton = btnCancel;
-
-                        if (passwordForm.ShowDialog() != DialogResult.OK)
-                        {
-                            return; // User cancelled
-                        }
-
                         const string adminPassword = "admin@sti123";
-                        if (txtPassword.Text != adminPassword)
+                        var verified = await ShowAdminPasswordBypassDialogAsync(
+                            "Admin Account Creation - Security Verification",
+                            "Enter admin password to create an admin account:",
+                            input => Task.FromResult(input == adminPassword),
+                            "Invalid admin password. Admin account creation cancelled.");
+                        if (!verified)
                         {
-                            MessageBox.Show("Invalid admin password. Admin account creation cancelled.",
-                                "Authentication Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             return;
                         }
                     }
                     // For non-Admin users or editing admin accounts, verify phone number with OTP
-                    else if (!isAdmin || (isEditMode && isEditingAdmin))
+            else if (!isSuperAdminRole && (!isAdmin || (isEditMode && isEditingAdmin)))
                     {
                         string otpCode = SmsService.GenerateOtp();
                         bool otpSent = await SmsService.SendOtpAsync(phone, otpCode);
@@ -1463,6 +1455,37 @@ namespace StudentReportInitial.Forms
                             return;
                         }
                     }
+
+            if (isEditMode && editedUserIsSuperAdmin)
+            {
+                const string adminPassword = "admin@sti123";
+                var bypassVerified = await ShowAdminPasswordBypassDialogAsync(
+                    "Admin Password Bypass",
+                    "Enter the admin bypass password to modify Super Admin credentials:",
+                    input => Task.FromResult(input == adminPassword),
+                    "Invalid admin password. Super Admin update cancelled.");
+                if (!bypassVerified)
+                {
+                    return;
+                }
+
+                verificationMethodUsed = "Admin Password Bypass";
+
+                if (currentUser != null && currentUser.Id == selectedUserId)
+                {
+                    var accountVerified = await ShowAdminPasswordBypassDialogAsync(
+                        "Super Admin Security Verification",
+                        "Enter your current Super Admin password to confirm changes:",
+                        VerifyCurrentSuperAdminPasswordAsync,
+                        "Invalid password. Super Admin credentials were not updated.");
+                    if (!accountVerified)
+                    {
+                        return;
+                    }
+
+                    verificationMethodUsed = "Admin Password Bypass + Account Password";
+                }
+            }
                     
                     // Prevent role downgrade for admin accounts
                     var newRole = GetComboSelectedRole(cmbRole) ?? UserRole.Student;
@@ -1529,24 +1552,17 @@ namespace StudentReportInitial.Forms
                         BranchId = assignedBranchId,
                         IsActive = true,
                     };
+                    if (user.Role == UserRole.SuperAdmin)
+                    {
+                        user.BranchId = null;
+                    }
+
+                    var passwordChanged = !string.IsNullOrWhiteSpace(user.Password);
 
                     // Validate guardian student selection
-                    List<int> selectedStudentIds = new List<int>();
-                    if (user.Role == UserRole.Guardian && !isEditMode && clbStudents != null)
+                    if (user.Role == UserRole.Guardian && !isEditMode)
                     {
-                        var studentIdMap = clbStudents.Tag as Dictionary<int, int>;
-                        if (studentIdMap != null)
-                        {
-                            for (int i = 0; i < clbStudents.Items.Count; i++)
-                            {
-                                if (clbStudents.GetItemChecked(i) && studentIdMap.ContainsKey(i))
-                                {
-                                    selectedStudentIds.Add(studentIdMap[i]);
-                                }
-                            }
-                        }
-                        
-                        if (selectedStudentIds.Count == 0)
+                        if (selectedStudentIds == null || selectedStudentIds.Count == 0)
                         {
                             if (lblStudentsError != null)
                             {
@@ -1561,6 +1577,13 @@ namespace StudentReportInitial.Forms
                         {
                             lblStudentsError.Visible = false;
                         }
+                    }
+
+                    // Prepare student IDs for guardian
+                    List<int>? studentIdsForGuardian = null;
+                    if (user.Role == UserRole.Guardian && !isEditMode && selectedStudentIds != null && selectedStudentIds.Count > 0)
+                    {
+                        studentIdsForGuardian = selectedStudentIds;
                     }
 
                     if (isEditMode)
@@ -1579,10 +1602,18 @@ namespace StudentReportInitial.Forms
                         }
                         
                         await UpdateUserAsync(user);
+
+                        if (isEditMode && editedUserIsSuperAdmin && currentUser != null && !string.IsNullOrEmpty(verificationMethodUsed))
+                        {
+                            var details = $"PasswordChanged={passwordChanged}; Email={user.Email}; Phone={(string.IsNullOrWhiteSpace(user.Phone) ? "N/A" : user.Phone)}";
+                            await SecurityAuditLogger.LogSuperAdminChangeAsync(currentUser.Id, "Credential Update", verificationMethodUsed, details);
+                            MessageBox.Show("Super Admin credentials updated successfully.", "Success",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
                     }
                     else
                     {
-                        await AddUserAsync(user, selectedStudentIds);
+                        await AddUserAsync(user, studentIdsForGuardian);
                     }
 
                     SetUserFormVisibility(false);
@@ -1613,6 +1644,15 @@ namespace StudentReportInitial.Forms
                 controlsList.Add(cmbBranch);
             }
             
+            // Add student selection controls if they exist (for Guardian role)
+            if (!isEditMode && lblStudents != null && btnSelectStudents != null && lblSelectedStudents != null && lblStudentsError != null)
+            {
+                controlsList.Add(lblStudents);
+                controlsList.Add(btnSelectStudents);
+                controlsList.Add(lblSelectedStudents);
+                controlsList.Add(lblStudentsError);
+            }
+            
             pnlUserForm.Controls.AddRange(controlsList.ToArray());
 
             // Set initial phone field visibility based on role
@@ -1633,6 +1673,36 @@ namespace StudentReportInitial.Forms
                 // Check if editing admin account
                 var currentRole = GetComboSelectedRole(cmbRole);
                 editedUserIsAdmin = currentRole == UserRole.Admin;
+                editedUserIsSuperAdmin = currentRole == UserRole.SuperAdmin;
+                editingOwnSuperAdmin = editedUserIsSuperAdmin && currentUser != null && currentUser.Id == selectedUserId;
+                if (editedUserIsSuperAdmin)
+                {
+                    allowBranchSelection = false;
+                    if (lblBranch != null)
+                    {
+                        lblBranch.Visible = false;
+                    }
+                    if (cmbBranch != null)
+                    {
+                        cmbBranch.Visible = false;
+                        cmbBranch.Enabled = false;
+                    }
+                }
+                if (editingOwnSuperAdmin)
+                {
+                    if (lblBranch != null)
+                    {
+                        lblBranch.Visible = false;
+                    }
+                    if (cmbBranch != null)
+                    {
+                        cmbBranch.Visible = false;
+                        cmbBranch.Enabled = false;
+                    }
+                    cmbRole.Enabled = false;
+                    lblRoleWarning.Text = "Super Admin role cannot be changed.";
+                    lblRoleWarning.Visible = true;
+                }
                 if (currentRole == UserRole.Admin) // Admin role
                 {
                     // Disable role change for admin accounts (prevent downgrade)
@@ -1652,6 +1722,12 @@ namespace StudentReportInitial.Forms
                         "Role Change Restricted", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     SetComboSelectedRole(cmbRole, UserRole.Admin);
                 }
+                if (isEditMode && editedUserIsSuperAdmin && newSelection != UserRole.SuperAdmin)
+                {
+                    MessageBox.Show("Super Admin role cannot be changed.", "Role Change Restricted",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    SetComboSelectedRole(cmbRole, UserRole.SuperAdmin);
+                }
             };
             }
             catch (Exception ex)
@@ -1659,6 +1735,94 @@ namespace StudentReportInitial.Forms
                 MessageBox.Show($"Error showing user form: {ex.Message}", "Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private async Task<bool> ShowAdminPasswordBypassDialogAsync(string title, string promptMessage, Func<string, Task<bool>> validator, string failureMessage)
+        {
+            using var passwordForm = new Form
+            {
+                Text = title,
+                Size = new Size(420, 170),
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                ShowInTaskbar = false
+            };
+
+            var lblPrompt = new Label
+            {
+                Text = promptMessage,
+                Location = new Point(20, 20),
+                AutoSize = true
+            };
+
+            var txtPassword = new TextBox
+            {
+                Location = new Point(20, 45),
+                Size = new Size(360, 25),
+                PasswordChar = '*',
+                UseSystemPasswordChar = true
+            };
+
+            var btnOk = new Button
+            {
+                Text = "OK",
+                Location = new Point(220, 85),
+                Size = new Size(80, 30),
+                DialogResult = DialogResult.OK
+            };
+
+            var btnCancel = new Button
+            {
+                Text = "Cancel",
+                Location = new Point(310, 85),
+                Size = new Size(80, 30),
+                DialogResult = DialogResult.Cancel
+            };
+
+            passwordForm.Controls.AddRange(new Control[] { lblPrompt, txtPassword, btnOk, btnCancel });
+            passwordForm.AcceptButton = btnOk;
+            passwordForm.CancelButton = btnCancel;
+
+            if (passwordForm.ShowDialog() != DialogResult.OK)
+            {
+                return false;
+            }
+
+            var input = txtPassword.Text.Trim();
+            if (!await validator(input))
+            {
+                MessageBox.Show(failureMessage, "Authentication Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            return true;
+        }
+
+        private async Task<bool> VerifyCurrentSuperAdminPasswordAsync(string passwordInput)
+        {
+            if (currentUser == null || string.IsNullOrWhiteSpace(passwordInput))
+            {
+                return false;
+            }
+
+            using var connection = DatabaseHelper.GetConnection();
+            await connection.OpenAsync();
+
+            var query = "SELECT PasswordHash, PasswordSalt FROM Users WHERE Id = @id";
+            using var command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@id", currentUser.Id);
+
+            using var reader = await command.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                var hash = reader.GetString("PasswordHash");
+                var salt = reader.GetString("PasswordSalt");
+                return PasswordHasher.VerifyPasswordHash(passwordInput, hash, salt);
+            }
+
+            return false;
         }
 
         private async Task LoadUserDataAsync(int userId, TextBox txtUsername, TextBox txtPassword, TextBox txtConfirmPassword,
