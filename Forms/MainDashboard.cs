@@ -1063,7 +1063,18 @@ namespace StudentReportInitial.Forms
         private void LoadGradesPanel()
         {
             if (mainContentPanel != null)
+            {
+                // Clean up existing panel before clearing
+                foreach (Control ctrl in mainContentPanel.Controls)
+                {
+                    if (ctrl is ProfessorGradesPanel panel)
+                    {
+                        // Cleanup will be handled by the panel's own cleanup methods
+                        panel.Dispose();
+                    }
+                }
                 mainContentPanel.Controls.Clear();
+            }
             var gradesPanel = new ProfessorGradesPanel(currentUser);
             gradesPanel.Dock = DockStyle.Fill;
             if (mainContentPanel != null)

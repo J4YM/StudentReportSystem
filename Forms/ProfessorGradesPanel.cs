@@ -11,14 +11,11 @@ namespace StudentReportInitial.Forms
         private DataGridView dgvGrades;
         private ComboBox cmbSubject;
         private ComboBox cmbQuarter;
-        private ComboBox cmbComponentType;
         private TextBox txtAssignmentName;
         private DateTimePicker dtpDueDate;
         private NumericUpDown nudMaxScore;
-        private Button btnAddGrade;
         private Button btnSaveGrades;
         private Button btnRefresh;
-        private Button btnExportExcel;
         private Panel pnlGradeForm;
         private List<Student> currentStudents = new();
 
@@ -28,6 +25,15 @@ namespace StudentReportInitial.Forms
             InitializeComponent();
             ApplyModernStyling();
             LoadSubjects();
+            
+            // Handle cleanup when control is being removed from parent
+            this.ParentChanged += (s, e) =>
+            {
+                if (this.Parent == null)
+                {
+                    CleanupDataGridView();
+                }
+            };
         }
 
         private void InitializeComponent()
@@ -39,11 +45,11 @@ namespace StudentReportInitial.Forms
             this.AutoScroll = true;
             this.BackColor = Color.FromArgb(248, 250, 252);
 
-            // Header panel
+            // Header panel - simplified to Subject and Quarter only
             var pnlHeader = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 120,
+                Height = 100,
                 BackColor = Color.White,
                 Padding = new Padding(20)
             };
@@ -88,34 +94,19 @@ namespace StudentReportInitial.Forms
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
             cmbQuarter.Items.AddRange(new[] { "Prelim", "Midterm", "PreFinal", "Final" });
+            cmbQuarter.SelectedIndexChanged += CmbQuarter_SelectedIndexChanged;
 
-            // Component type
-            var lblComponentType = new Label
-            {
-                Text = "Component:",
-                Location = new Point(480, 50),
-                AutoSize = true
-            };
-
-            cmbComponentType = new ComboBox
-            {
-                Location = new Point(560, 48),
-                Size = new Size(150, 25),
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            cmbComponentType.Items.AddRange(new[] { "Quizzes", "PT/Activities", "Exam" });
-
-            // Assignment name
+            // Assignment settings panel (for all components)
             var lblAssignmentName = new Label
             {
-                Text = "Assignment:",
-                Location = new Point(730, 50),
+                Text = "Assignment Name:",
+                Location = new Point(480, 50),
                 AutoSize = true
             };
 
             txtAssignmentName = new TextBox
             {
-                Location = new Point(810, 48),
+                Location = new Point(600, 48),
                 Size = new Size(150, 25)
             };
 
@@ -123,13 +114,13 @@ namespace StudentReportInitial.Forms
             var lblDueDate = new Label
             {
                 Text = "Due Date:",
-                Location = new Point(20, 75),
+                Location = new Point(760, 50),
                 AutoSize = true
             };
 
             dtpDueDate = new DateTimePicker
             {
-                Location = new Point(90, 73),
+                Location = new Point(840, 48),
                 Size = new Size(120, 25),
                 Value = DateTime.Today
             };
@@ -138,49 +129,35 @@ namespace StudentReportInitial.Forms
             var lblMaxScore = new Label
             {
                 Text = "Max Score:",
-                Location = new Point(230, 75),
+                Location = new Point(970, 50),
                 AutoSize = true
             };
 
             nudMaxScore = new NumericUpDown
             {
-                Location = new Point(300, 73),
+                Location = new Point(1050, 48),
                 Size = new Size(80, 25),
                 Minimum = 1,
                 Maximum = 1000,
                 Value = 100
             };
 
-            btnAddGrade = new Button
-            {
-                Text = "Add Grade Entry",
-                Location = new Point(400, 72),
-                Size = new Size(120, 27),
-                BackColor = Color.FromArgb(34, 197, 94),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                
-                Cursor = Cursors.Hand
-            };
-            btnAddGrade.Click += BtnAddGrade_Click;
-
             btnRefresh = new Button
             {
                 Text = "Refresh",
-                Location = new Point(540, 72),
+                Location = new Point(1140, 47),
                 Size = new Size(80, 27),
                 BackColor = Color.FromArgb(59, 130, 246),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                
                 Cursor = Cursors.Hand
             };
             btnRefresh.Click += BtnRefresh_Click;
 
             pnlHeader.Controls.AddRange(new Control[] { 
                 lblTitle, lblSubject, cmbSubject, lblQuarter, cmbQuarter,
-                lblComponentType, cmbComponentType, lblAssignmentName, txtAssignmentName, 
-                lblDueDate, dtpDueDate, lblMaxScore, nudMaxScore, btnAddGrade, btnRefresh
+                lblAssignmentName, txtAssignmentName, 
+                lblDueDate, dtpDueDate, lblMaxScore, nudMaxScore, btnRefresh
             });
 
             // Grades grid (spreadsheet-like)
@@ -196,11 +173,15 @@ namespace StudentReportInitial.Forms
                 AllowUserToDeleteRows = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 RowHeadersVisible = true,
-                EditMode = DataGridViewEditMode.EditOnEnter
+                EditMode = DataGridViewEditMode.EditOnEnter,
+                AutoGenerateColumns = true
             };
             dgvGrades.CellValidating += DgvGrades_CellValidating;
             dgvGrades.CellEndEdit += DgvGrades_CellEndEdit;
-            dgvGrades.CellDoubleClick += DgvGrades_CellDoubleClick;
+            
+            // Handle cleanup when control is being removed
+            this.HandleDestroyed += (s, e) => CleanupDataGridView();
+            this.Disposed += (s, e) => CleanupDataGridView();
 
             // Core editable columns will be added dynamically along with the data source
 
@@ -226,27 +207,7 @@ namespace StudentReportInitial.Forms
             };
             btnSaveGrades.Click += BtnSaveGrades_Click;
 
-            btnExportExcel = new Button
-            {
-                Text = "Export to Excel",
-                Size = new Size(140, 35),
-                BackColor = Color.FromArgb(59, 130, 246),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            btnExportExcel.Click += BtnExportExcel_Click;
-
-            pnlActions.Resize += (_, _) =>
-            {
-                btnExportExcel.Left = pnlActions.ClientSize.Width - btnExportExcel.Width - 20;
-                btnExportExcel.Top = 12;
-            };
-
             pnlActions.Controls.Add(btnSaveGrades);
-            pnlActions.Controls.Add(btnExportExcel);
 
             this.Controls.Add(dgvGrades);
             this.Controls.Add(pnlActions);
@@ -383,10 +344,18 @@ namespace StudentReportInitial.Forms
                 var dataTable = new DataTable();
                 adapter.Fill(dataTable);
 
-                // Add grade columns
-                if (!dataTable.Columns.Contains("Score"))
+                // Add component grade columns (one per component type)
+                if (!dataTable.Columns.Contains("QuizzesActivities"))
                 {
-                    dataTable.Columns.Add("Score", typeof(decimal));
+                    dataTable.Columns.Add("QuizzesActivities", typeof(decimal));
+                }
+                if (!dataTable.Columns.Contains("PerformanceTask"))
+                {
+                    dataTable.Columns.Add("PerformanceTask", typeof(decimal));
+                }
+                if (!dataTable.Columns.Contains("Exam"))
+                {
+                    dataTable.Columns.Add("Exam", typeof(decimal));
                 }
                 if (!dataTable.Columns.Contains("Comments"))
                 {
@@ -396,41 +365,102 @@ namespace StudentReportInitial.Forms
                 // Set default values
                 foreach (DataRow row in dataTable.Rows)
                 {
-                    if (row["Score"] == DBNull.Value) row["Score"] = 0m;
+                    if (row["QuizzesActivities"] == DBNull.Value) row["QuizzesActivities"] = 0m;
+                    if (row["PerformanceTask"] == DBNull.Value) row["PerformanceTask"] = 0m;
+                    if (row["Exam"] == DBNull.Value) row["Exam"] = 0m;
                     if (row["Comments"] == DBNull.Value) row["Comments"] = "";
                 }
 
+                // Clear existing data source first to avoid column conflicts
+                dgvGrades.DataSource = null;
+                dgvGrades.Columns.Clear();
+
+                // Set data source
+                // Clear existing data source and unfreeze all columns first
+                CleanupDataGridView();
+                
+                // Set data source
                 dgvGrades.DataSource = dataTable;
 
-                // Ensure columns are configured in a spreadsheet-like order
-                if (dgvGrades.Columns.Count > 0)
+                // Configure columns in spreadsheet-like order
+                // Use BeginInvoke to ensure columns are fully generated
+                this.BeginInvoke(new Action(() =>
                 {
-                    dgvGrades.Columns["Id"].Visible = false;
-                    dgvGrades.Columns["StudentId"].HeaderText = "Student ID";
-                    dgvGrades.Columns["FirstName"].HeaderText = "First Name";
-                    dgvGrades.Columns["LastName"].HeaderText = "Last Name";
-                    dgvGrades.Columns["GradeLevel"].HeaderText = "Grade";
-                    dgvGrades.Columns["Section"].HeaderText = "Section";
+                    try
+                    {
+                        if (dgvGrades.Columns.Count > 0 && dgvGrades.DataSource != null)
+                        {
+                            // First, unfreeze all columns to avoid conflicts
+                            foreach (DataGridViewColumn col in dgvGrades.Columns)
+                            {
+                                col.Frozen = false;
+                            }
 
-                    dgvGrades.Columns["StudentId"].DisplayIndex = 0;
-                    dgvGrades.Columns["LastName"].DisplayIndex = 1;
-                    dgvGrades.Columns["FirstName"].DisplayIndex = 2;
-                    dgvGrades.Columns["GradeLevel"].DisplayIndex = 3;
-                    dgvGrades.Columns["Section"].DisplayIndex = 4;
+                            // Hide and configure all columns
+                            if (dgvGrades.Columns.Contains("Id"))
+                                dgvGrades.Columns["Id"].Visible = false;
+                            
+                            if (dgvGrades.Columns.Contains("StudentId"))
+                                dgvGrades.Columns["StudentId"].HeaderText = "Student ID";
+                            if (dgvGrades.Columns.Contains("FirstName"))
+                                dgvGrades.Columns["FirstName"].HeaderText = "First Name";
+                            if (dgvGrades.Columns.Contains("LastName"))
+                                dgvGrades.Columns["LastName"].HeaderText = "Last Name";
+                            if (dgvGrades.Columns.Contains("GradeLevel"))
+                                dgvGrades.Columns["GradeLevel"].HeaderText = "Grade";
+                            if (dgvGrades.Columns.Contains("Section"))
+                                dgvGrades.Columns["Section"].HeaderText = "Section";
 
-                    dgvGrades.Columns["Score"].HeaderText = "Score";
-                    dgvGrades.Columns["Comments"].HeaderText = "Comments";
-                    dgvGrades.Columns["Score"].DisplayIndex = 5;
-                    dgvGrades.Columns["Comments"].DisplayIndex = 6;
+                            // Component columns
+                            if (dgvGrades.Columns.Contains("QuizzesActivities"))
+                                dgvGrades.Columns["QuizzesActivities"].HeaderText = "Quizzes";
+                            if (dgvGrades.Columns.Contains("PerformanceTask"))
+                                dgvGrades.Columns["PerformanceTask"].HeaderText = "PT/Activities";
+                            if (dgvGrades.Columns.Contains("Exam"))
+                                dgvGrades.Columns["Exam"].HeaderText = "Exam";
+                            if (dgvGrades.Columns.Contains("Comments"))
+                                dgvGrades.Columns["Comments"].HeaderText = "Comments";
 
-                    dgvGrades.Columns["Score"].Width = 90;
-                    dgvGrades.Columns["Comments"].Width = 220;
+                            // Set column widths
+                            if (dgvGrades.Columns.Contains("QuizzesActivities"))
+                                dgvGrades.Columns["QuizzesActivities"].Width = 100;
+                            if (dgvGrades.Columns.Contains("PerformanceTask"))
+                                dgvGrades.Columns["PerformanceTask"].Width = 120;
+                            if (dgvGrades.Columns.Contains("Exam"))
+                                dgvGrades.Columns["Exam"].Width = 100;
+                            if (dgvGrades.Columns.Contains("Comments"))
+                                dgvGrades.Columns["Comments"].Width = 200;
 
-                    // Freeze identifying columns so they remain visible when scrolling horizontally
-                    dgvGrades.Columns["StudentId"].Frozen = true;
-                    dgvGrades.Columns["LastName"].Frozen = true;
-                    dgvGrades.Columns["FirstName"].Frozen = true;
-                }
+                            // Set display order
+                            if (dgvGrades.Columns.Contains("StudentId"))
+                                dgvGrades.Columns["StudentId"].DisplayIndex = 0;
+                            if (dgvGrades.Columns.Contains("LastName"))
+                                dgvGrades.Columns["LastName"].DisplayIndex = 1;
+                            if (dgvGrades.Columns.Contains("FirstName"))
+                                dgvGrades.Columns["FirstName"].DisplayIndex = 2;
+                            if (dgvGrades.Columns.Contains("GradeLevel"))
+                                dgvGrades.Columns["GradeLevel"].DisplayIndex = 3;
+                            if (dgvGrades.Columns.Contains("Section"))
+                                dgvGrades.Columns["Section"].DisplayIndex = 4;
+                            if (dgvGrades.Columns.Contains("QuizzesActivities"))
+                                dgvGrades.Columns["QuizzesActivities"].DisplayIndex = 5;
+                            if (dgvGrades.Columns.Contains("PerformanceTask"))
+                                dgvGrades.Columns["PerformanceTask"].DisplayIndex = 6;
+                            if (dgvGrades.Columns.Contains("Exam"))
+                                dgvGrades.Columns["Exam"].DisplayIndex = 7;
+                            if (dgvGrades.Columns.Contains("Comments"))
+                                dgvGrades.Columns["Comments"].DisplayIndex = 8;
+
+                            // Note: Removed column freezing to avoid conflicts when switching panels
+                            // Columns are still ordered correctly via DisplayIndex
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Silently handle column configuration errors
+                        System.Diagnostics.Debug.WriteLine($"Error configuring columns: {ex.Message}");
+                    }
+                }));
             }
             catch (Exception ex)
             {
@@ -441,40 +471,18 @@ namespace StudentReportInitial.Forms
 
         private void CmbSubject_SelectedIndexChanged(object sender, EventArgs e)
         {
-            LoadStudents();
+            if (cmbSubject.SelectedIndex >= 0 && cmbQuarter.SelectedIndex >= 0)
+            {
+                LoadStudents();
+            }
         }
 
-        private void BtnAddGrade_Click(object sender, EventArgs e)
+        private void CmbQuarter_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (cmbSubject.SelectedIndex == -1)
+            if (cmbSubject.SelectedIndex >= 0 && cmbQuarter.SelectedIndex >= 0)
             {
-                MessageBox.Show("Please select a subject first.", "Warning", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                LoadStudents();
             }
-
-            if (string.IsNullOrWhiteSpace(txtAssignmentName.Text))
-            {
-                MessageBox.Show("Please enter an assignment name.", "Warning", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (cmbQuarter.SelectedIndex == -1)
-            {
-                MessageBox.Show("Please select a quarter.", "Warning", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (cmbComponentType.SelectedIndex == -1)
-            {
-                MessageBox.Show("Please select a component type.", "Warning", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            LoadStudents();
         }
 
         private void BtnRefresh_Click(object sender, EventArgs e)
@@ -482,10 +490,55 @@ namespace StudentReportInitial.Forms
             LoadStudents();
         }
 
+        private void CleanupDataGridView()
+        {
+            try
+            {
+                if (dgvGrades != null && !dgvGrades.IsDisposed)
+                {
+                    // Unfreeze all columns before clearing to prevent conflicts
+                    if (dgvGrades.Columns.Count > 0)
+                    {
+                        foreach (DataGridViewColumn col in dgvGrades.Columns)
+                        {
+                            try
+                            {
+                                col.Frozen = false;
+                            }
+                            catch
+                            {
+                                // Ignore individual column errors
+                            }
+                        }
+                    }
+                    
+                    // Clear data source
+                    dgvGrades.DataSource = null;
+                    
+                    // Clear columns if needed
+                    if (dgvGrades.Columns.Count > 0)
+                    {
+                        dgvGrades.Columns.Clear();
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
+        }
+        
+        protected override void OnHandleDestroyed(EventArgs e)
+        {
+            CleanupDataGridView();
+            base.OnHandleDestroyed(e);
+        }
+
         private void DgvGrades_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
         {
-            // Only validate the Score column
-            if (e.ColumnIndex == dgvGrades.Columns["Score"].Index)
+            // Validate component columns (QuizzesActivities, PerformanceTask, Exam)
+            var columnName = dgvGrades.Columns[e.ColumnIndex].Name;
+            if (columnName == "QuizzesActivities" || columnName == "PerformanceTask" || columnName == "Exam")
             {
                 if (e.FormattedValue != null && !string.IsNullOrWhiteSpace(e.FormattedValue.ToString()))
                 {
@@ -524,8 +577,9 @@ namespace StudentReportInitial.Forms
 
         private void DgvGrades_CellEndEdit(object sender, DataGridViewCellEventArgs e)
         {
-            // Auto-cap score at max value after editing
-            if (e.ColumnIndex == dgvGrades.Columns["Score"].Index)
+            // Auto-cap score at max value after editing for component columns
+            var columnName = dgvGrades.Columns[e.ColumnIndex].Name;
+            if (columnName == "QuizzesActivities" || columnName == "PerformanceTask" || columnName == "Exam")
             {
                 var cell = dgvGrades.Rows[e.RowIndex].Cells[e.ColumnIndex];
                 if (cell.Value != null && decimal.TryParse(cell.Value.ToString(), out decimal score))
@@ -545,296 +599,7 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private void DgvGrades_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
-        {
-            // Only handle double-click on student rows (not header)
-            if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
 
-            var row = dgvGrades.Rows[e.RowIndex];
-            if (row.Cells["Id"].Value == null) return;
-
-            // Get current score and comments
-            var currentScore = row.Cells["Score"].Value != null 
-                ? Convert.ToDecimal(row.Cells["Score"].Value) 
-                : 0;
-            var currentComments = row.Cells["Comments"].Value?.ToString() ?? "";
-            var studentName = $"{row.Cells["FirstName"].Value} {row.Cells["LastName"].Value}";
-
-            // Show grade entry form
-            ShowGradeEntryForm(studentName, currentScore, currentComments, (newScore, newComments) =>
-            {
-                row.Cells["Score"].Value = newScore;
-                row.Cells["Comments"].Value = newComments;
-            });
-        }
-
-        private void BtnExportExcel_Click(object? sender, EventArgs e)
-        {
-            if (dgvGrades.DataSource is not DataTable table || table.Rows.Count == 0)
-            {
-                MessageBox.Show("No grade data to export. Load students and enter scores first.", "Export to Excel",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            using var dialog = new SaveFileDialog
-            {
-                Filter = "Excel Workbook (*.xlsx)|*.xlsx",
-                FileName = "Grades.xlsx",
-                Title = "Export Grades to Excel"
-            };
-
-            if (dialog.ShowDialog() != DialogResult.OK)
-            {
-                return;
-            }
-
-            try
-            {
-                OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
-                using var package = new OfficeOpenXml.ExcelPackage();
-                var ws = package.Workbook.Worksheets.Add("Grades");
-
-                // Headers
-                int row = 1;
-                int col = 1;
-                foreach (DataColumn column in table.Columns)
-                {
-                    ws.Cells[row, col].Value = column.ColumnName;
-                    ws.Cells[row, col].Style.Font.Bold = true;
-                    col++;
-                }
-
-                // Rows
-                row = 2;
-                foreach (DataRow dataRow in table.Rows)
-                {
-                    col = 1;
-                    foreach (DataColumn column in table.Columns)
-                    {
-                        ws.Cells[row, col].Value = dataRow[column] == DBNull.Value ? null : dataRow[column];
-                        col++;
-                    }
-                    row++;
-                }
-
-                ws.Cells[ws.Dimension.Address].AutoFitColumns();
-
-                var bytes = package.GetAsByteArray();
-                File.WriteAllBytes(dialog.FileName, bytes);
-
-                MessageBox.Show("Grades exported successfully.", "Export to Excel",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error exporting grades: {ex.Message}", "Export Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void ShowGradeEntryForm(string studentName, decimal currentScore, string currentComments, 
-            Action<decimal, string> onSave)
-        {
-            var form = new Form
-            {
-                Text = $"Grade Entry - {studentName}",
-                Size = new Size(500, 350),
-                StartPosition = FormStartPosition.CenterParent,
-                FormBorderStyle = FormBorderStyle.FixedDialog,
-                MaximizeBox = false,
-                MinimizeBox = false
-            };
-
-            var maxScore = nudMaxScore.Value;
-
-            // Component type
-            var lblComponentType = new Label 
-            { 
-                Text = "Component:", 
-                Location = new Point(20, 20), 
-                AutoSize = true 
-            };
-            var cmbFormComponentType = new ComboBox
-            {
-                Location = new Point(20, 40),
-                Size = new Size(200, 25),
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            cmbFormComponentType.Items.AddRange(new[] { "Quizzes", "PT/Activities", "Exam" });
-            if (cmbComponentType.SelectedIndex >= 0)
-            {
-                cmbFormComponentType.SelectedIndex = cmbComponentType.SelectedIndex;
-            }
-            else
-            {
-                cmbFormComponentType.SelectedIndex = 0;
-            }
-
-            // Quarter
-            var lblQuarter = new Label 
-            { 
-                Text = "Quarter:", 
-                Location = new Point(240, 20), 
-                AutoSize = true 
-            };
-            var cmbFormQuarter = new ComboBox
-            {
-                Location = new Point(240, 40),
-                Size = new Size(200, 25),
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            cmbFormQuarter.Items.AddRange(new[] { "Prelim", "Midterm", "PreFinal", "Final" });
-            if (cmbQuarter.SelectedIndex >= 0)
-            {
-                cmbFormQuarter.SelectedIndex = cmbQuarter.SelectedIndex;
-            }
-            else
-            {
-                cmbFormQuarter.SelectedIndex = 0;
-            }
-
-            // Assignment name
-            var lblAssignmentName = new Label 
-            { 
-                Text = "Assignment:", 
-                Location = new Point(20, 70), 
-                AutoSize = true 
-            };
-            var txtFormAssignmentName = new TextBox
-            {
-                Location = new Point(20, 90),
-                Size = new Size(420, 25),
-                Text = txtAssignmentName.Text
-            };
-
-            // Score
-            var lblScore = new Label 
-            { 
-                Text = $"Score (Max: {maxScore}):", 
-                Location = new Point(20, 120), 
-                AutoSize = true 
-            };
-            var nudFormScore = new NumericUpDown
-            {
-                Location = new Point(20, 140),
-                Size = new Size(200, 25),
-                Minimum = 0,
-                Maximum = maxScore,
-                DecimalPlaces = 2,
-                Value = currentScore > maxScore ? maxScore : (currentScore < 0 ? 0 : currentScore)
-            };
-
-            // Max score
-            var lblMaxScore = new Label 
-            { 
-                Text = "Max Score:", 
-                Location = new Point(240, 120), 
-                AutoSize = true 
-            };
-            var nudFormMaxScore = new NumericUpDown
-            {
-                Location = new Point(240, 140),
-                Size = new Size(200, 25),
-                Minimum = 1,
-                Maximum = 10000,
-                DecimalPlaces = 2,
-                Value = maxScore
-            };
-            nudFormMaxScore.ValueChanged += (s, e) =>
-            {
-                // Update score max when max score changes
-                nudFormScore.Maximum = nudFormMaxScore.Value;
-                lblScore.Text = $"Score (Max: {nudFormMaxScore.Value}):";
-            };
-
-            // Comments
-            var lblComments = new Label 
-            { 
-                Text = "Comments:", 
-                Location = new Point(20, 170), 
-                AutoSize = true 
-            };
-            var txtFormComments = new TextBox
-            {
-                Location = new Point(20, 190),
-                Size = new Size(420, 80),
-                Multiline = true,
-                Text = currentComments
-            };
-
-            // Buttons
-            var btnSave = new Button
-            {
-                Text = "Save",
-                Location = new Point(20, 280),
-                Size = new Size(100, 30),
-                BackColor = Color.FromArgb(34, 197, 94),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                DialogResult = DialogResult.OK
-            };
-
-            var btnCancel = new Button
-            {
-                Text = "Cancel",
-                Location = new Point(130, 280),
-                Size = new Size(100, 30),
-                BackColor = Color.FromArgb(107, 114, 128),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                DialogResult = DialogResult.Cancel
-            };
-
-            btnSave.Click += (s, e) =>
-            {
-                if (nudFormScore.Value > nudFormMaxScore.Value)
-                {
-                    MessageBox.Show($"Score cannot exceed the maximum score of {nudFormMaxScore.Value}.", "Validation Error",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                // Update the form's max score if changed
-                if (nudFormMaxScore.Value != nudMaxScore.Value)
-                {
-                    nudMaxScore.Value = nudFormMaxScore.Value;
-                }
-
-                // Update component type and quarter if changed
-                if (cmbFormComponentType.SelectedIndex != cmbComponentType.SelectedIndex)
-                {
-                    cmbComponentType.SelectedIndex = cmbFormComponentType.SelectedIndex;
-                }
-                if (cmbFormQuarter.SelectedIndex != cmbQuarter.SelectedIndex)
-                {
-                    cmbQuarter.SelectedIndex = cmbFormQuarter.SelectedIndex;
-                }
-                if (txtFormAssignmentName.Text != txtAssignmentName.Text)
-                {
-                    txtAssignmentName.Text = txtFormAssignmentName.Text;
-                }
-
-                onSave(nudFormScore.Value, txtFormComments.Text);
-                form.DialogResult = DialogResult.OK;
-                form.Close();
-            };
-
-            btnCancel.Click += (s, e) => form.Close();
-
-            form.Controls.AddRange(new Control[] 
-            { 
-                lblComponentType, cmbFormComponentType, lblQuarter, cmbFormQuarter,
-                lblAssignmentName, txtFormAssignmentName,
-                lblScore, nudFormScore, lblMaxScore, nudFormMaxScore,
-                lblComments, txtFormComments, btnSave, btnCancel 
-            });
-
-            UIStyleHelper.ApplyRoundedButton(btnSave, 10);
-            UIStyleHelper.ApplyRoundedButton(btnCancel, 10);
-
-            form.ShowDialog();
-        }
 
         private async void BtnSaveGrades_Click(object sender, EventArgs e)
         {
@@ -845,23 +610,11 @@ namespace StudentReportInitial.Forms
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(txtAssignmentName.Text))
-            {
-                MessageBox.Show("Please enter an assignment name.", "Warning", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            // Assignment name is now optional
 
             if (cmbQuarter.SelectedIndex == -1)
             {
                 MessageBox.Show("Please select a quarter.", "Warning", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (cmbComponentType.SelectedIndex == -1)
-            {
-                MessageBox.Show("Please select a component type.", "Warning", 
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -874,47 +627,102 @@ namespace StudentReportInitial.Forms
 
                 var gradeRecords = new List<Grade>();
                 var maxScore = nudMaxScore.Value;
+                var quarter = cmbQuarter.SelectedItem.ToString() ?? "Prelim";
+                var assignmentName = string.IsNullOrWhiteSpace(txtAssignmentName.Text) ? "Grade Entry" : txtAssignmentName.Text;
 
+                // Iterate through each row and check each component column
                 foreach (DataGridViewRow row in dgvGrades.Rows)
                 {
-                    if (row.Cells["Id"].Value != null && row.Cells["Score"].Value != null)
+                    if (row.Cells["Id"].Value == null) continue;
+
+                    var studentId = Convert.ToInt32(row.Cells["Id"].Value);
+                    var comments = row.Cells["Comments"].Value?.ToString() ?? "";
+
+                    // Check QuizzesActivities column
+                    if (row.Cells["QuizzesActivities"].Value != null)
                     {
-                        var score = Convert.ToDecimal(row.Cells["Score"].Value);
-                        if (score > 0) // Only save non-zero scores
+                        var score = Convert.ToDecimal(row.Cells["QuizzesActivities"].Value);
+                        if (score > 0)
                         {
-                            // Map display text to ComponentType value
-                            string componentTypeValue = MapComponentType(cmbComponentType.SelectedItem?.ToString() ?? "Quizzes");
-                            
-                            var grade = new Grade
+                            gradeRecords.Add(new Grade
                             {
-                                StudentId = Convert.ToInt32(row.Cells["Id"].Value),
+                                StudentId = studentId,
                                 ProfessorId = currentProfessor.Id,
                                 Subject = subjectName,
-                                Quarter = cmbQuarter.SelectedItem.ToString() ?? "Prelim",
-                                ComponentType = componentTypeValue,
-                                AssignmentType = cmbComponentType.SelectedItem.ToString() ?? "Quizzes", // Legacy field
-                                AssignmentName = txtAssignmentName.Text,
+                                Quarter = quarter,
+                                ComponentType = "QuizzesActivities",
+                                AssignmentType = "Quizzes",
+                                AssignmentName = assignmentName,
                                 Score = score,
                                 MaxScore = maxScore,
                                 Percentage = (score / maxScore) * 100,
-                                Comments = row.Cells["Comments"].Value?.ToString(),
+                                Comments = comments,
                                 DateRecorded = DateTime.Now,
                                 DueDate = dtpDueDate.Value.Date
-                            };
-                            gradeRecords.Add(grade);
+                            });
+                        }
+                    }
+
+                    // Check PerformanceTask column
+                    if (row.Cells["PerformanceTask"].Value != null)
+                    {
+                        var score = Convert.ToDecimal(row.Cells["PerformanceTask"].Value);
+                        if (score > 0)
+                        {
+                            gradeRecords.Add(new Grade
+                            {
+                                StudentId = studentId,
+                                ProfessorId = currentProfessor.Id,
+                                Subject = subjectName,
+                                Quarter = quarter,
+                                ComponentType = "PerformanceTask",
+                                AssignmentType = "PT/Activities",
+                                AssignmentName = assignmentName,
+                                Score = score,
+                                MaxScore = maxScore,
+                                Percentage = (score / maxScore) * 100,
+                                Comments = comments,
+                                DateRecorded = DateTime.Now,
+                                DueDate = dtpDueDate.Value.Date
+                            });
+                        }
+                    }
+
+                    // Check Exam column
+                    if (row.Cells["Exam"].Value != null)
+                    {
+                        var score = Convert.ToDecimal(row.Cells["Exam"].Value);
+                        if (score > 0)
+                        {
+                            gradeRecords.Add(new Grade
+                            {
+                                StudentId = studentId,
+                                ProfessorId = currentProfessor.Id,
+                                Subject = subjectName,
+                                Quarter = quarter,
+                                ComponentType = "Exam",
+                                AssignmentType = "Exam",
+                                AssignmentName = assignmentName,
+                                Score = score,
+                                MaxScore = maxScore,
+                                Percentage = (score / maxScore) * 100,
+                                Comments = comments,
+                                DateRecorded = DateTime.Now,
+                                DueDate = dtpDueDate.Value.Date
+                            });
                         }
                     }
                 }
 
                 if (gradeRecords.Count == 0)
                 {
-                    MessageBox.Show("No grades to save. Please enter at least one score.", "Warning", 
+                    MessageBox.Show("No grades to save. Please enter at least one score in any component column.", "Warning", 
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
                 var result = await SaveGradeRecordsAsync(gradeRecords);
-                string message = $"Grades saved successfully for {result.SavedCount} student(s)!";
+                string message = $"Grades saved successfully for {result.SavedCount} component(s)!";
                 if (result.SkippedCount > 0)
                 {
                     message += $"\n\n{result.SkippedCount} duplicate grade entry(ies) skipped:\n" + 
@@ -930,10 +738,9 @@ namespace StudentReportInitial.Forms
                 // Clear form
                 txtAssignmentName.Clear();
                 cmbQuarter.SelectedIndex = -1;
-                cmbComponentType.SelectedIndex = -1;
                 nudMaxScore.Value = 100;
                 dtpDueDate.Value = DateTime.Today;
-                dgvGrades.DataSource = null;
+                LoadStudents(); // Reload to clear entered grades
             }
             catch (Exception ex)
             {

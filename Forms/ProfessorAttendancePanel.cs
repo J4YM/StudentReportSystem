@@ -15,7 +15,6 @@ namespace StudentReportInitial.Forms
         private DateTimePicker dtpDate;
         private Button btnSaveAttendance;
         private Button btnRefresh;
-        private Button btnExportExcel;
         private Panel pnlAttendanceForm;
         private List<Student> currentStudents = new();
         private Label lblStats = null!;
@@ -117,26 +116,7 @@ namespace StudentReportInitial.Forms
             };
             btnRefresh.Click += BtnRefresh_Click;
 
-            // Export button (right-aligned)
-            btnExportExcel = new Button
-            {
-                Text = "Export to Excel",
-                Size = new Size(120, 27),
-                BackColor = Color.FromArgb(59, 130, 246),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand,
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            btnExportExcel.Click += BtnExportExcel_Click;
-
-            pnlHeader.Resize += (_, _) =>
-            {
-                btnExportExcel.Left = pnlHeader.ClientSize.Width - btnExportExcel.Width - 20;
-                btnExportExcel.Top = 47;
-            };
-
-            pnlHeader.Controls.AddRange(new Control[] { lblTitle, lblSubject, cmbSubject, lblDate, dtpDate, btnRefresh, btnExportExcel });
+            pnlHeader.Controls.AddRange(new Control[] { lblTitle, lblSubject, cmbSubject, lblDate, dtpDate, btnRefresh });
 
             // Students grid
             dgvStudents = new DataGridView
@@ -670,70 +650,6 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private void BtnExportExcel_Click(object? sender, EventArgs e)
-        {
-            if (dgvStudents.DataSource is not DataTable table || table.Rows.Count == 0)
-            {
-                MessageBox.Show("No attendance data to export. Load students first.", "Export to Excel",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            using var dialog = new SaveFileDialog
-            {
-                Filter = "Excel Workbook (*.xlsx)|*.xlsx",
-                FileName = "Attendance.xlsx",
-                Title = "Export Attendance to Excel"
-            };
-
-            if (dialog.ShowDialog() != DialogResult.OK)
-            {
-                return;
-            }
-
-            try
-            {
-                OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
-                using var package = new OfficeOpenXml.ExcelPackage();
-                var ws = package.Workbook.Worksheets.Add("Attendance");
-
-                // Headers
-                int row = 1;
-                int col = 1;
-                foreach (DataColumn column in table.Columns)
-                {
-                    ws.Cells[row, col].Value = column.ColumnName;
-                    ws.Cells[row, col].Style.Font.Bold = true;
-                    col++;
-                }
-
-                // Rows
-                row = 2;
-                foreach (DataRow dataRow in table.Rows)
-                {
-                    col = 1;
-                    foreach (DataColumn column in table.Columns)
-                    {
-                        ws.Cells[row, col].Value = dataRow[column] == DBNull.Value ? null : dataRow[column];
-                        col++;
-                    }
-                    row++;
-                }
-
-                ws.Cells[ws.Dimension.Address].AutoFitColumns();
-
-                var bytes = package.GetAsByteArray();
-                File.WriteAllBytes(dialog.FileName, bytes);
-
-                MessageBox.Show("Attendance exported successfully.", "Export to Excel",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error exporting attendance: {ex.Message}", "Export Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
 
         private AttendanceStatus GetAttendanceStatus(string? status)
         {

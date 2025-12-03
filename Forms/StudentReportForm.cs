@@ -1,8 +1,6 @@
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
-using OfficeOpenXml;
-using OfficeOpenXml.Style;
 using StudentReportInitial.Data;
 using StudentReportInitial.Models;
 
@@ -23,10 +21,12 @@ namespace StudentReportInitial.Forms
         private DataGridView dgvGrades = null!;
         private DataGridView dgvAttendance = null!;
         private Button btnPrint = null!;
-        private Button btnExportExcel = null!;
+        private ComboBox cmbQuarterFilter = null!;
+        private ComboBox cmbComponentFilter = null!;
 
         private DataTable? gradesTable;
         private DataTable? attendanceTable;
+        private DataTable? allGradesTable; // Store unfiltered data
 
         public StudentReportForm(User professor, int studentId)
         {
@@ -51,16 +51,16 @@ namespace StudentReportInitial.Forms
                 RowCount = 4,
                 Padding = new Padding(16),
             };
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); // header
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); // header (now taller with filters)
             mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); // summary
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 55)); // grades
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 45)); // attendance
 
-            // Header (student info + actions)
+            // Header (student info + actions + filters)
             var headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 70,
+                Height = 110,
             };
 
             lblStudentHeader = new Label
@@ -81,6 +81,46 @@ namespace StudentReportInitial.Forms
                 MaximumSize = new Size(650, 0)
             };
 
+            // Filters
+            var lblQuarterFilter = new Label
+            {
+                Text = "Quarter:",
+                Location = new Point(10, 70),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9)
+            };
+
+            cmbQuarterFilter = new ComboBox
+            {
+                Location = new Point(70, 68),
+                Size = new Size(120, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 9)
+            };
+            cmbQuarterFilter.Items.Add("All Quarters");
+            cmbQuarterFilter.SelectedIndex = 0;
+            cmbQuarterFilter.SelectedIndexChanged += CmbQuarterFilter_SelectedIndexChanged;
+
+            var lblComponentFilter = new Label
+            {
+                Text = "Component:",
+                Location = new Point(200, 70),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9)
+            };
+
+            cmbComponentFilter = new ComboBox
+            {
+                Location = new Point(280, 68),
+                Size = new Size(150, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 9)
+            };
+            cmbComponentFilter.Items.Add("All Components");
+            cmbComponentFilter.Items.AddRange(new[] { "QuizzesActivities", "PerformanceTask", "Exam" });
+            cmbComponentFilter.SelectedIndex = 0;
+            cmbComponentFilter.SelectedIndexChanged += CmbComponentFilter_SelectedIndexChanged;
+
             btnPrint = new Button
             {
                 Text = "Print",
@@ -94,34 +134,23 @@ namespace StudentReportInitial.Forms
             btnPrint.Click += BtnPrint_Click;
             UIStyleHelper.ApplyRoundedButton(btnPrint, 10);
 
-            btnExportExcel = new Button
-            {
-                Text = "Export to Excel",
-                Size = new Size(140, 32),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                BackColor = Color.FromArgb(59, 130, 246),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Location = new Point(Width - 140 - 40, 20)
-            };
-            btnExportExcel.Click += BtnExportExcel_Click;
-            UIStyleHelper.ApplyRoundedButton(btnExportExcel, 10);
-
             headerPanel.Controls.Add(lblStudentHeader);
             headerPanel.Controls.Add(lblGwaSummary);
+            headerPanel.Controls.Add(lblQuarterFilter);
+            headerPanel.Controls.Add(cmbQuarterFilter);
+            headerPanel.Controls.Add(lblComponentFilter);
+            headerPanel.Controls.Add(cmbComponentFilter);
             headerPanel.Controls.Add(btnPrint);
-            headerPanel.Controls.Add(btnExportExcel);
             headerPanel.Resize += (_, _) =>
             {
-                // Keep action buttons pinned to the right
-                btnExportExcel.Left = headerPanel.ClientSize.Width - btnExportExcel.Width - 10;
-                btnPrint.Left = btnExportExcel.Left - btnPrint.Width - 8;
+                // Keep print button pinned to the right
+                btnPrint.Left = headerPanel.ClientSize.Width - btnPrint.Width - 10;
             };
 
             // Grades section
             var gradesGroup = new GroupBox
             {
-                Text = "Grades (All Subjects / All Quarters)",
+                Text = "Grades",
                 Dock = DockStyle.Fill,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold)
             };
@@ -215,11 +244,24 @@ namespace StudentReportInitial.Forms
                 {
                     gradesCommand.Parameters.AddWithValue("@studentId", studentId);
                     using var adapter = new SqlDataAdapter(gradesCommand);
-                    gradesTable = new DataTable();
-                    adapter.Fill(gradesTable);
+                    allGradesTable = new DataTable();
+                    adapter.Fill(allGradesTable);
                 }
 
-                dgvGrades.DataSource = gradesTable;
+                // Populate quarter filter
+                cmbQuarterFilter.Items.Clear();
+                cmbQuarterFilter.Items.Add("All Quarters");
+                var quarters = allGradesTable.AsEnumerable()
+                    .Select(r => r.Field<string>("Quarter"))
+                    .Where(q => !string.IsNullOrEmpty(q))
+                    .Distinct()
+                    .OrderBy(q => q)
+                    .ToList();
+                cmbQuarterFilter.Items.AddRange(quarters.ToArray());
+                cmbQuarterFilter.SelectedIndex = 0;
+
+                // Apply initial filter
+                ApplyGradeFilters();
                 if (dgvGrades.Columns.Count > 0)
                 {
                     dgvGrades.Columns["Subject"].HeaderText = "Subject";
@@ -299,9 +341,80 @@ namespace StudentReportInitial.Forms
             }
         }
 
+        private void CmbQuarterFilter_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            ApplyGradeFilters();
+        }
+
+        private void CmbComponentFilter_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            ApplyGradeFilters();
+        }
+
+        private void ApplyGradeFilters()
+        {
+            if (allGradesTable == null) return;
+
+            var filterParts = new List<string>();
+
+            // Quarter filter
+            if (cmbQuarterFilter.SelectedIndex > 0)
+            {
+                var quarter = cmbQuarterFilter.SelectedItem?.ToString();
+                if (!string.IsNullOrEmpty(quarter))
+                {
+                    filterParts.Add($"Quarter = '{quarter.Replace("'", "''")}'");
+                }
+            }
+
+            // Component filter
+            if (cmbComponentFilter.SelectedIndex > 0)
+            {
+                var component = cmbComponentFilter.SelectedItem?.ToString();
+                if (!string.IsNullOrEmpty(component))
+                {
+                    filterParts.Add($"ComponentType = '{component.Replace("'", "''")}'");
+                }
+            }
+
+            // Apply filter
+            allGradesTable.DefaultView.RowFilter = filterParts.Count > 0
+                ? string.Join(" AND ", filterParts)
+                : string.Empty;
+
+            // Create filtered table
+            gradesTable = allGradesTable.DefaultView.ToTable();
+
+            // Update grid
+            dgvGrades.DataSource = gradesTable;
+
+            // Format columns
+            if (dgvGrades.Columns.Count > 0)
+            {
+                dgvGrades.Columns["Subject"].HeaderText = "Subject";
+                dgvGrades.Columns["Quarter"].HeaderText = "Quarter";
+                dgvGrades.Columns["ComponentType"].HeaderText = "Component";
+                dgvGrades.Columns["AssignmentName"].HeaderText = "Assignment";
+                dgvGrades.Columns["Score"].HeaderText = "Score";
+                dgvGrades.Columns["MaxScore"].HeaderText = "Max Score";
+                dgvGrades.Columns["Percentage"].HeaderText = "Percentage";
+                dgvGrades.Columns["Comments"].HeaderText = "Comments";
+                dgvGrades.Columns["DateRecorded"].HeaderText = "Recorded";
+                dgvGrades.Columns["DueDate"].HeaderText = "Due Date";
+
+                dgvGrades.Columns["DateRecorded"].DefaultCellStyle.Format = "MM/dd/yyyy";
+                dgvGrades.Columns["DueDate"].DefaultCellStyle.Format = "MM/dd/yyyy";
+                dgvGrades.Columns["Percentage"].DefaultCellStyle.Format = "0.0'%'";
+            }
+
+            // Update GWA with filtered data
+            UpdateGwaSummary();
+        }
+
         private void UpdateGwaSummary()
         {
-            if (gradesTable == null || gradesTable.Rows.Count == 0)
+            // Use allGradesTable for GWA calculation (cumulative, not filtered)
+            if (allGradesTable == null || allGradesTable.Rows.Count == 0)
             {
                 lblGwaSummary.Text = "No grades available yet for GWA computation.";
                 return;
@@ -309,7 +422,7 @@ namespace StudentReportInitial.Forms
 
             try
             {
-                var cumulative = CalculateGwaFromDataTable(gradesTable);
+                var cumulative = CalculateGwaFromDataTable(allGradesTable);
 
                 if (cumulative.HasValue)
                 {
@@ -484,106 +597,5 @@ namespace StudentReportInitial.Forms
             }
         }
 
-        private void BtnExportExcel_Click(object? sender, EventArgs e)
-        {
-            if (gradesTable == null && attendanceTable == null)
-            {
-                MessageBox.Show("No data to export.", "Export to Excel",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            using var saveDialog = new SaveFileDialog
-            {
-                Filter = "Excel Workbook (*.xlsx)|*.xlsx",
-                FileName = "StudentReport.xlsx",
-                Title = "Export Student Report to Excel"
-            };
-
-            if (saveDialog.ShowDialog(this) != DialogResult.OK)
-            {
-                return;
-            }
-
-            try
-            {
-                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
-                using var package = new ExcelPackage();
-
-                if (gradesTable != null)
-                {
-                    var wsGrades = package.Workbook.Worksheets.Add("Grades");
-                    ExportTableToWorksheet(wsGrades, gradesTable, "Grades");
-                }
-
-                if (attendanceTable != null)
-                {
-                    var wsAttendance = package.Workbook.Worksheets.Add("Attendance");
-                    ExportTableToWorksheet(wsAttendance, attendanceTable, "Attendance");
-                }
-
-                var bytes = package.GetAsByteArray();
-                File.WriteAllBytes(saveDialog.FileName, bytes);
-
-                MessageBox.Show("Student report exported successfully.", "Export to Excel",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error exporting to Excel: {ex.Message}", "Export Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private static void ExportTableToWorksheet(ExcelWorksheet ws, DataTable table, string title)
-        {
-            // Title
-            ws.Cells["A1"].Value = title;
-            ws.Cells["A1"].Style.Font.Size = 14;
-            ws.Cells["A1"].Style.Font.Bold = true;
-
-            // Headers
-            int startRow = 3;
-            int colIndex = 1;
-            foreach (DataColumn column in table.Columns)
-            {
-                // Skip internal numeric status column; use StatusText instead
-                if (column.ColumnName == "Status")
-                {
-                    continue;
-                }
-
-                ws.Cells[startRow, colIndex].Value = column.ColumnName;
-                ws.Cells[startRow, colIndex].Style.Font.Bold = true;
-                ws.Cells[startRow, colIndex].Style.Fill.PatternType = ExcelFillStyle.Solid;
-                ws.Cells[startRow, colIndex].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(226, 232, 240));
-                ws.Cells[startRow, colIndex].Style.Border.BorderAround(ExcelBorderStyle.Thin, Color.FromArgb(148, 163, 184));
-                colIndex++;
-            }
-
-            // Rows
-            int rowIndex = startRow + 1;
-            foreach (DataRow row in table.Rows)
-            {
-                colIndex = 1;
-                foreach (DataColumn column in table.Columns)
-                {
-                    if (column.ColumnName == "Status")
-                    {
-                        continue;
-                    }
-
-                    var value = row[column];
-                    ws.Cells[rowIndex, colIndex].Value = value == DBNull.Value ? null : value;
-                    ws.Cells[rowIndex, colIndex].Style.Border.BorderAround(ExcelBorderStyle.Hair, Color.FromArgb(203, 213, 225));
-                    colIndex++;
-                }
-
-                rowIndex++;
-            }
-
-            ws.Cells[ws.Dimension.Address].AutoFitColumns();
-        }
     }
 }
