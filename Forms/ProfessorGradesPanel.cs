@@ -18,6 +18,7 @@ namespace StudentReportInitial.Forms
         private Button btnAddGrade;
         private Button btnSaveGrades;
         private Button btnRefresh;
+        private Button btnExportExcel;
         private Panel pnlGradeForm;
         private List<Student> currentStudents = new();
 
@@ -35,6 +36,7 @@ namespace StudentReportInitial.Forms
 
             // Main container
             this.Size = new Size(1000, 600);
+            this.AutoScroll = true;
             this.BackColor = Color.FromArgb(248, 250, 252);
 
             // Header panel
@@ -181,43 +183,26 @@ namespace StudentReportInitial.Forms
                 lblDueDate, dtpDueDate, lblMaxScore, nudMaxScore, btnAddGrade, btnRefresh
             });
 
-            // Grades grid
+            // Grades grid (spreadsheet-like)
             dgvGrades = new DataGridView
             {
                 Dock = DockStyle.Fill,
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                SelectionMode = DataGridViewSelectionMode.CellSelect,
                 MultiSelect = true,
                 ReadOnly = false,
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                RowHeadersVisible = false
+                RowHeadersVisible = true,
+                EditMode = DataGridViewEditMode.EditOnEnter
             };
             dgvGrades.CellValidating += DgvGrades_CellValidating;
             dgvGrades.CellEndEdit += DgvGrades_CellEndEdit;
             dgvGrades.CellDoubleClick += DgvGrades_CellDoubleClick;
 
-            // Add score column
-            var scoreColumn = new DataGridViewTextBoxColumn
-            {
-                Name = "Score",
-                HeaderText = "Score",
-                DataPropertyName = "Score",
-                Width = 80
-            };
-            dgvGrades.Columns.Add(scoreColumn);
-
-            // Add comments column
-            var commentsColumn = new DataGridViewTextBoxColumn
-            {
-                Name = "Comments",
-                HeaderText = "Comments",
-                DataPropertyName = "Comments",
-                Width = 200
-            };
-            dgvGrades.Columns.Add(commentsColumn);
+            // Core editable columns will be added dynamically along with the data source
 
             // Action panel
             var pnlActions = new Panel
@@ -230,19 +215,38 @@ namespace StudentReportInitial.Forms
 
             btnSaveGrades = new Button
             {
-                Text = "Save Grades",
+                Text = "Save All",
                 Size = new Size(150, 35),
                 Location = new Point(20, 12),
                 BackColor = Color.FromArgb(34, 197, 94),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                
                 Cursor = Cursors.Hand,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold)
             };
             btnSaveGrades.Click += BtnSaveGrades_Click;
 
+            btnExportExcel = new Button
+            {
+                Text = "Export to Excel",
+                Size = new Size(140, 35),
+                BackColor = Color.FromArgb(59, 130, 246),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            btnExportExcel.Click += BtnExportExcel_Click;
+
+            pnlActions.Resize += (_, _) =>
+            {
+                btnExportExcel.Left = pnlActions.ClientSize.Width - btnExportExcel.Width - 20;
+                btnExportExcel.Top = 12;
+            };
+
             pnlActions.Controls.Add(btnSaveGrades);
+            pnlActions.Controls.Add(btnExportExcel);
 
             this.Controls.Add(dgvGrades);
             this.Controls.Add(pnlActions);
@@ -286,6 +290,10 @@ namespace StudentReportInitial.Forms
             dgvGrades.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
             dgvGrades.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(51, 65, 85);
             dgvGrades.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
+            dgvGrades.EnableHeadersVisualStyles = false;
+            dgvGrades.GridColor = Color.FromArgb(226, 232, 240);
+            dgvGrades.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
+            dgvGrades.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 64, 175);
         }
 
         private async void LoadSubjects()
@@ -376,19 +384,25 @@ namespace StudentReportInitial.Forms
                 adapter.Fill(dataTable);
 
                 // Add grade columns
-                dataTable.Columns.Add("Score", typeof(decimal));
-                dataTable.Columns.Add("Comments", typeof(string));
+                if (!dataTable.Columns.Contains("Score"))
+                {
+                    dataTable.Columns.Add("Score", typeof(decimal));
+                }
+                if (!dataTable.Columns.Contains("Comments"))
+                {
+                    dataTable.Columns.Add("Comments", typeof(string));
+                }
 
                 // Set default values
                 foreach (DataRow row in dataTable.Rows)
                 {
-                    row["Score"] = 0;
-                    row["Comments"] = "";
+                    if (row["Score"] == DBNull.Value) row["Score"] = 0m;
+                    if (row["Comments"] == DBNull.Value) row["Comments"] = "";
                 }
 
                 dgvGrades.DataSource = dataTable;
 
-                // Format columns
+                // Ensure columns are configured in a spreadsheet-like order
                 if (dgvGrades.Columns.Count > 0)
                 {
                     dgvGrades.Columns["Id"].Visible = false;
@@ -397,6 +411,25 @@ namespace StudentReportInitial.Forms
                     dgvGrades.Columns["LastName"].HeaderText = "Last Name";
                     dgvGrades.Columns["GradeLevel"].HeaderText = "Grade";
                     dgvGrades.Columns["Section"].HeaderText = "Section";
+
+                    dgvGrades.Columns["StudentId"].DisplayIndex = 0;
+                    dgvGrades.Columns["LastName"].DisplayIndex = 1;
+                    dgvGrades.Columns["FirstName"].DisplayIndex = 2;
+                    dgvGrades.Columns["GradeLevel"].DisplayIndex = 3;
+                    dgvGrades.Columns["Section"].DisplayIndex = 4;
+
+                    dgvGrades.Columns["Score"].HeaderText = "Score";
+                    dgvGrades.Columns["Comments"].HeaderText = "Comments";
+                    dgvGrades.Columns["Score"].DisplayIndex = 5;
+                    dgvGrades.Columns["Comments"].DisplayIndex = 6;
+
+                    dgvGrades.Columns["Score"].Width = 90;
+                    dgvGrades.Columns["Comments"].Width = 220;
+
+                    // Freeze identifying columns so they remain visible when scrolling horizontally
+                    dgvGrades.Columns["StudentId"].Frozen = true;
+                    dgvGrades.Columns["LastName"].Frozen = true;
+                    dgvGrades.Columns["FirstName"].Frozen = true;
                 }
             }
             catch (Exception ex)
@@ -533,6 +566,71 @@ namespace StudentReportInitial.Forms
                 row.Cells["Score"].Value = newScore;
                 row.Cells["Comments"].Value = newComments;
             });
+        }
+
+        private void BtnExportExcel_Click(object? sender, EventArgs e)
+        {
+            if (dgvGrades.DataSource is not DataTable table || table.Rows.Count == 0)
+            {
+                MessageBox.Show("No grade data to export. Load students and enter scores first.", "Export to Excel",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using var dialog = new SaveFileDialog
+            {
+                Filter = "Excel Workbook (*.xlsx)|*.xlsx",
+                FileName = "Grades.xlsx",
+                Title = "Export Grades to Excel"
+            };
+
+            if (dialog.ShowDialog() != DialogResult.OK)
+            {
+                return;
+            }
+
+            try
+            {
+                OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
+                using var package = new OfficeOpenXml.ExcelPackage();
+                var ws = package.Workbook.Worksheets.Add("Grades");
+
+                // Headers
+                int row = 1;
+                int col = 1;
+                foreach (DataColumn column in table.Columns)
+                {
+                    ws.Cells[row, col].Value = column.ColumnName;
+                    ws.Cells[row, col].Style.Font.Bold = true;
+                    col++;
+                }
+
+                // Rows
+                row = 2;
+                foreach (DataRow dataRow in table.Rows)
+                {
+                    col = 1;
+                    foreach (DataColumn column in table.Columns)
+                    {
+                        ws.Cells[row, col].Value = dataRow[column] == DBNull.Value ? null : dataRow[column];
+                        col++;
+                    }
+                    row++;
+                }
+
+                ws.Cells[ws.Dimension.Address].AutoFitColumns();
+
+                var bytes = package.GetAsByteArray();
+                File.WriteAllBytes(dialog.FileName, bytes);
+
+                MessageBox.Show("Grades exported successfully.", "Export to Excel",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error exporting grades: {ex.Message}", "Export Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void ShowGradeEntryForm(string studentName, decimal currentScore, string currentComments, 

@@ -90,6 +90,7 @@ namespace StudentReportInitial.Forms
             // Main container
             this.Size = new Size(1000, 600);
             this.BackColor = Color.FromArgb(248, 250, 252);
+            this.AutoScroll = true;
 
             // Header panel
             var pnlHeader = new Panel

@@ -1,7 +1,7 @@
 using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Windows.Forms;
-using StudentReportInitial.Properties;
+using STI_AimONE.Properties;
 
 namespace StudentReportInitial.Theming
 {

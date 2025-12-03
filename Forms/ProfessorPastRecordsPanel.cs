@@ -18,6 +18,7 @@ namespace StudentReportInitial.Forms
         private Button btnRefresh;
         private Button btnEdit;
         private Button btnDelete;
+        private Button btnViewFullReport;
         private TabControl tabControl;
 
         public ProfessorPastRecordsPanel(User professor)
@@ -189,7 +190,7 @@ namespace StudentReportInitial.Forms
             var pnlActions = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 50,
+                Height = 52,
                 BackColor = Color.White,
                 Padding = new Padding(20, 10, 20, 10)
             };
@@ -218,7 +219,27 @@ namespace StudentReportInitial.Forms
             };
             btnDelete.Click += BtnDelete_Click;
 
-            pnlActions.Controls.AddRange(new Control[] { btnEdit, btnDelete });
+            btnViewFullReport = new Button
+            {
+                Text = "View Full Student Report",
+                AutoSize = false,
+                Size = new Size(220, 30),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                BackColor = Color.FromArgb(34, 197, 94),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            btnViewFullReport.Click += BtnViewFullReport_Click;
+
+            // Position "View Full Student Report" to the right edge
+            pnlActions.Resize += (_, _) =>
+            {
+                btnViewFullReport.Left = pnlActions.ClientSize.Width - btnViewFullReport.Width - 20;
+                btnViewFullReport.Top = 10;
+            };
+
+            pnlActions.Controls.AddRange(new Control[] { btnEdit, btnDelete, btnViewFullReport });
 
             // Records grid
             dgvRecords = new DataGridView
@@ -802,6 +823,29 @@ namespace StudentReportInitial.Forms
                 MessageBox.Show($"Error deleting record: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void BtnViewFullReport_Click(object? sender, EventArgs e)
+        {
+            if (dgvRecords.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Please select a record first.", "View Student Report",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var selectedRow = dgvRecords.SelectedRows[0];
+            if (selectedRow.Cells["StudentId"].Value == null)
+            {
+                MessageBox.Show("Unable to determine the selected student.", "View Student Report",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var studentId = Convert.ToInt32(selectedRow.Cells["StudentId"].Value);
+
+            using var reportForm = new StudentReportForm(currentProfessor, studentId);
+            reportForm.ShowDialog();
         }
 
         private async Task EditGradeAsync(int gradeId)

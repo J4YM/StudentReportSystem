@@ -46,6 +46,7 @@ namespace StudentReportInitial.Forms
             // Main container
             this.Dock = DockStyle.Fill;
             this.BackColor = Color.FromArgb(248, 250, 252);
+            this.AutoScroll = true;
 
             // Search panel removed
 
@@ -123,7 +124,8 @@ namespace StudentReportInitial.Forms
                 Dock = DockStyle.Fill,
                 BackColor = Color.White,
                 Visible = false,
-                Padding = new Padding(20)
+                Padding = new Padding(20),
+                AutoScroll = true
             };
 
             pnlStudentFilters = pnlFilters;
